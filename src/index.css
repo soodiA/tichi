@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Vazirmatn', sans-serif;
+  direction: rtl;
+  text-align: right;
+  background-color: #FFF8F0;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-violet-600 text-white font-bold py-4 px-8 rounded-2xl text-lg shadow-lg;
+    transition: transform 100ms;
+    cursor: pointer;
+  }
+  .btn-primary:active { transform: scale(0.95); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-secondary {
+    @apply bg-amber-400 text-white font-bold py-4 px-8 rounded-2xl text-lg shadow-lg;
+    transition: transform 100ms;
+    cursor: pointer;
+  }
+  .btn-secondary:active { transform: scale(0.95); }
+
+  .btn-success {
+    @apply bg-emerald-500 text-white font-bold py-4 px-8 rounded-2xl text-lg shadow-lg;
+    transition: transform 100ms;
+    cursor: pointer;
+  }
+  .btn-success:active { transform: scale(0.95); }
+
+  .card {
+    @apply bg-white rounded-3xl shadow-md p-5;
+  }
+
+  .option-card {
+    @apply bg-white border-2 border-gray-200 rounded-2xl p-4 cursor-pointer text-center;
+    transition: all 150ms;
+    user-select: none;
+  }
+  .option-card:active { transform: scale(0.95); }
+
+  .option-card.selected {
+    @apply border-violet-500 bg-violet-50;
+  }
+
+  .option-card.correct {
+    @apply border-emerald-500 bg-emerald-50;
+  }
+
+  .option-card.wrong {
+    @apply border-red-400 bg-red-50;
+  }
+
+  .audio-btn {
+    @apply bg-amber-400 rounded-full shadow-lg cursor-pointer flex items-center justify-center;
+    transition: transform 100ms;
+  }
+  .audio-btn:active { transform: scale(0.9); }
+}

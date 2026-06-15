@@ -1,0 +1,231 @@
+import type { Unit } from '../types';
+
+// Sample curriculum — 3 units, each with 3 nodes
+// Real content will be populated via admin panel later
+export const UNITS: Unit[] = [
+  {
+    id: 'unit-alef',
+    letter: 'ا',
+    order: 1,
+    color: '#6366F1',
+    nodes: [
+      {
+        id: 'node-alef-1',
+        unitId: 'unit-alef',
+        order: 1,
+        type: 'lesson',
+        questions: [
+          {
+            id: 'q1',
+            type: 'audio_picture',
+            questionText: 'کدام شکل با حرف «ا» شروع می‌شود؟',
+            questionAudioUrl: '',
+            options: [
+              { id: 'a', text: 'اسب', imageUrl: '/images/horse.png', audioUrl: '' },
+              { id: 'b', text: 'گربه', imageUrl: '/images/cat.png', audioUrl: '' },
+              { id: 'c', text: 'ماهی', imageUrl: '/images/fish.png', audioUrl: '' },
+              { id: 'd', text: 'سگ', imageUrl: '/images/dog.png', audioUrl: '' },
+            ],
+            correctAnswer: 'a',
+          },
+          {
+            id: 'q2',
+            type: 'syllable_count',
+            questionText: 'نام شکل را بخش کن و تعداد بخش را بنویس.',
+            questionAudioUrl: '',
+            mediaImageUrl: '/images/apple.png',
+            mediaAudioUrl: '',
+            mediaLabel: 'سیب',
+            options: [],
+            correctAnswer: '1',
+            syllableCount: 1,
+          },
+          {
+            id: 'q3',
+            type: 'flower_count',
+            questionText: 'به تعداد بخش‌های شکل، گل‌ها را رنگ کن.',
+            questionAudioUrl: '',
+            mediaImageUrl: '/images/apple.png',
+            mediaAudioUrl: '',
+            mediaLabel: 'سیب',
+            options: [],
+            correctAnswer: '1',
+            syllableCount: 1,
+          },
+        ],
+      },
+      {
+        id: 'node-alef-2',
+        unitId: 'unit-alef',
+        order: 2,
+        type: 'lesson',
+        questions: [
+          {
+            id: 'q4',
+            type: 'fill_blanks',
+            questionText: 'کامل کن.',
+            questionAudioUrl: '',
+            mediaImageUrl: '/images/horse.png',
+            mediaAudioUrl: '',
+            mediaLabel: 'اسب',
+            template: [null, 'س', 'ب'],
+            options: [
+              { id: 'alef', text: 'ا' },
+              { id: 'be', text: 'ب' },
+              { id: 'pe', text: 'پ' },
+              { id: 'te', text: 'ت' },
+            ],
+            correctAnswer: 'alef',
+          },
+          {
+            id: 'q5',
+            type: 'sound_to_text',
+            questionText: 'کدام گزینه درست است؟',
+            questionAudioUrl: '',
+            mediaAudioUrl: '',
+            options: [
+              { id: 'a', text: 'اَ', audioUrl: '' },
+              { id: 'b', text: 'اِ', audioUrl: '' },
+              { id: 'c', text: 'اُ', audioUrl: '' },
+              { id: 'd', text: 'آ', audioUrl: '' },
+            ],
+            correctAnswer: 'a',
+          },
+        ],
+      },
+      {
+        id: 'node-alef-3',
+        unitId: 'unit-alef',
+        order: 3,
+        type: 'chest',
+        questions: [
+          {
+            id: 'q6',
+            type: 'arrange',
+            questionText: 'جمله را مرتب کن.',
+            questionAudioUrl: '',
+            words: ['من', 'اسب', 'دارم'],
+            options: [
+              { id: 'w1', text: 'من', audioUrl: '' },
+              { id: 'w2', text: 'اسب', audioUrl: '' },
+              { id: 'w3', text: 'دارم', audioUrl: '' },
+            ],
+            correctAnswer: ['w1', 'w2', 'w3'],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'unit-be',
+    letter: 'ب',
+    order: 2,
+    color: '#F59E0B',
+    nodes: [
+      {
+        id: 'node-be-1',
+        unitId: 'unit-be',
+        order: 1,
+        type: 'lesson',
+        questions: [
+          {
+            id: 'q7',
+            type: 'audio_picture',
+            questionText: 'کدام شکل با حرف «ب» شروع می‌شود؟',
+            questionAudioUrl: '',
+            options: [
+              { id: 'a', text: 'بز', imageUrl: '/images/goat.png', audioUrl: '' },
+              { id: 'b', text: 'گل', imageUrl: '/images/flower.png', audioUrl: '' },
+              { id: 'c', text: 'کتاب', imageUrl: '/images/book.png', audioUrl: '' },
+              { id: 'd', text: 'آفتاب', imageUrl: '/images/sun.png', audioUrl: '' },
+            ],
+            correctAnswer: 'a',
+          },
+        ],
+      },
+      {
+        id: 'node-be-2',
+        unitId: 'unit-be',
+        order: 2,
+        type: 'lesson',
+        questions: [
+          {
+            id: 'q8',
+            type: 'phoneme',
+            questionText: 'صداکشی کن.',
+            questionAudioUrl: '',
+            mediaImageUrl: '/images/goat.png',
+            mediaAudioUrl: '',
+            mediaLabel: 'بُز',
+            options: [
+              { id: 'be', text: 'بـ' },
+              { id: 'u', text: 'ُ' },
+              { id: 'ze', text: 'ز' },
+              { id: 'alef', text: 'ا' },
+            ],
+            correctAnswer: ['be', 'u', 'ze'],
+          },
+        ],
+      },
+      {
+        id: 'node-be-3',
+        unitId: 'unit-be',
+        order: 3,
+        type: 'chest',
+        questions: [
+          {
+            id: 'q9',
+            type: 'handwriting',
+            questionText: 'حرف «ب» را بنویس.',
+            questionAudioUrl: '',
+            options: [],
+            correctAnswer: 'ب',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'unit-pe',
+    letter: 'پ',
+    order: 3,
+    color: '#10B981',
+    nodes: [
+      {
+        id: 'node-pe-1',
+        unitId: 'unit-pe',
+        order: 1,
+        type: 'lesson',
+        questions: [
+          {
+            id: 'q10',
+            type: 'audio_picture',
+            questionText: 'کدام شکل با حرف «پ» شروع می‌شود؟',
+            questionAudioUrl: '',
+            options: [
+              { id: 'a', text: 'پروانه', imageUrl: '/images/butterfly.png', audioUrl: '' },
+              { id: 'b', text: 'گربه', imageUrl: '/images/cat.png', audioUrl: '' },
+              { id: 'c', text: 'خرگوش', imageUrl: '/images/rabbit.png', audioUrl: '' },
+              { id: 'd', text: 'فیل', imageUrl: '/images/elephant.png', audioUrl: '' },
+            ],
+            correctAnswer: 'a',
+          },
+        ],
+      },
+      {
+        id: 'node-pe-2',
+        unitId: 'unit-pe',
+        order: 2,
+        type: 'lesson',
+        questions: [],
+      },
+      {
+        id: 'node-pe-3',
+        unitId: 'unit-pe',
+        order: 3,
+        type: 'chest',
+        questions: [],
+      },
+    ],
+  },
+];
