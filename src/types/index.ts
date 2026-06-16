@@ -77,6 +77,7 @@ export interface NodeProgress {
   nodeId: string;
   userId: string;
   completed: boolean;
+  stars: number;           // 0–3
   accuracy: number;        // 0–100
   completedAt?: string;
   attempts: number;

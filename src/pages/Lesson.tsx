@@ -14,7 +14,6 @@ const Lesson: React.FC = () => {
   const { nodeId } = useParams<{ nodeId: string }>();
   const navigate = useNavigate();
   const currentUser = useStore((s) => s.currentUser);
-  const addDiamonds = useStore((s) => s.addDiamonds);
 
   const [node, setNode] = useState<Node | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -48,15 +47,16 @@ const Lesson: React.FC = () => {
           const accuracy = totalQ > 0 ? Math.round((correctCount / totalQ) * 100) : 100;
 
           if (currentUser) {
+            const stars = accuracy === 100 ? 3 : accuracy >= 80 ? 2 : 1;
             await db.progress.put({
               nodeId: node.id,
               userId: currentUser.id,
               completed: true,
+              stars,
               accuracy,
               completedAt: new Date().toISOString(),
               attempts: 1,
             });
-            addDiamonds(10);
           }
 
           navigate('/lesson-complete', { state: { accuracy, nodeId: node.id } });
@@ -65,7 +65,7 @@ const Lesson: React.FC = () => {
         }
       }, 800);
     },
-    [node, currentIndex, answers, feedback, currentUser, addDiamonds, navigate]
+    [node, currentIndex, answers, feedback, currentUser, navigate]
   );
 
   if (!node) {

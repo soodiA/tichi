@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import DiamondDisplay from '../components/ui/DiamondDisplay';
+import { syncProfileToCloud } from '../lib/sync';
 
 const AVATARS = [
   '🦉','🐸','🦁','🐧','🐯','🐼','🦊','🐰',
@@ -38,6 +39,7 @@ const Profile: React.FC = () => {
       const url = ev.target?.result as string;
       updateAvatar(url);
       setShowAvatarPicker(false);
+      if (currentUser) syncProfileToCloud({ ...currentUser, avatarUrl: url }).catch(() => {});
     };
     reader.readAsDataURL(file);
   };
@@ -45,6 +47,7 @@ const Profile: React.FC = () => {
   const handleEmojiSelect = (emoji: string) => {
     updateAvatar(emoji);
     setShowAvatarPicker(false);
+    if (currentUser) syncProfileToCloud({ ...currentUser, avatarUrl: emoji }).catch(() => {});
   };
 
   const isPhotoUrl = currentUser.avatarUrl?.startsWith('data:') || currentUser.avatarUrl?.startsWith('http');

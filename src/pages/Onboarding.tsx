@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { db } from '../db/db';
+import { syncProfileToCloud } from '../lib/sync';
 import type { UserProfile } from '../types';
 
 const AVATARS = ['🦁', '🐯', '🐸', '🐧', '🦊', '🐼'];
@@ -45,6 +46,7 @@ const Onboarding: React.FC = () => {
       };
       await db.profiles.add(profile);
       setCurrentUser(profile);
+      syncProfileToCloud(profile).catch(() => {});
       navigate('/home');
     } catch {
       setLoading(false);

@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useStore } from '../store/useStore';
+import { db } from '../db/db';
+import { syncProfileToCloud, syncProgressToCloud } from '../lib/sync';
 
 interface LocationState {
   accuracy?: number;
@@ -12,18 +15,50 @@ const LessonComplete: React.FC = () => {
   const location = useLocation();
   const state = (location.state as LocationState) ?? {};
   const accuracy = state.accuracy ?? 100;
+  const nodeId = state.nodeId ?? 'unknown';
 
+  const currentUser = useStore((s) => s.currentUser);
+  const addDiamonds = useStore((s) => s.addDiamonds);
+  const savedRef = useRef(false);
+
+  const starCount = accuracy === 100 ? 3 : accuracy >= 80 ? 2 : 1;
+  const diamondsEarned = 10 + (starCount - 1) * 5;
   const accuracyLabel =
     accuracy === 100 ? 'عالی! 🌟' : accuracy >= 80 ? 'خوب! 👍' : 'تلاش کن! 💪';
 
-  const starCount = accuracy === 100 ? 3 : accuracy >= 80 ? 2 : 1;
+  useEffect(() => {
+    if (savedRef.current || !currentUser) return;
+    savedRef.current = true;
+
+    addDiamonds(diamondsEarned);
+
+    const progress = {
+      nodeId,
+      userId: currentUser.id,
+      completed: true,
+      stars: starCount,
+      accuracy,
+      completedAt: new Date().toISOString(),
+      attempts: 1,
+    };
+
+    db.progress.put(progress).then(() => {
+      syncProgressToCloud(progress).catch(() => {});
+    });
+
+    const updatedUser = {
+      ...currentUser,
+      diamonds: currentUser.diamonds + diamondsEarned,
+      totalScore: currentUser.totalScore + diamondsEarned,
+    };
+    syncProfileToCloud(updatedUser).catch(() => {});
+  }, []);
 
   return (
     <div
       dir="rtl"
       className="min-h-full bg-gradient-to-b from-violet-50 to-amber-50 flex flex-col items-center justify-center px-5 py-10 gap-6"
     >
-      {/* Celebration animation */}
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: [0, 1.3, 1] }}
@@ -72,7 +107,9 @@ const LessonComplete: React.FC = () => {
         <div className="flex-1 card text-center">
           <div className="text-3xl mb-1">💎</div>
           <p className="text-gray-500 text-xs mb-1">الماس گرفتی</p>
-          <p className="text-2xl font-extrabold text-blue-600">۱۰</p>
+          <p className="text-2xl font-extrabold text-blue-600">
+            {diamondsEarned.toLocaleString('fa-IR')}
+          </p>
         </div>
         <div className="flex-1 card text-center">
           <div className="text-3xl mb-1">🎯</div>
@@ -84,7 +121,6 @@ const LessonComplete: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Continue button */}
       <motion.button
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
