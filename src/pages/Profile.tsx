@@ -1,11 +1,20 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import DiamondDisplay from '../components/ui/DiamondDisplay';
 
+const AVATARS = [
+  '🦉','🐸','🦁','🐧','🐯','🐼','🦊','🐰',
+  '🐻','🐨','🦄','🐙','🦋','🐬','🦕','🐲',
+  '🌸','⭐','🌈','🎈','🍀','🎯','🚀','🎸',
+];
+
 const Profile: React.FC = () => {
   const navigate = useNavigate();
   const currentUser = useStore((s) => s.currentUser);
+  const updateAvatar = useStore((s) => s.updateAvatar);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!currentUser) {
     return (
@@ -21,28 +30,56 @@ const Profile: React.FC = () => {
     day: 'numeric',
   });
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const url = ev.target?.result as string;
+      updateAvatar(url);
+      setShowAvatarPicker(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    updateAvatar(emoji);
+    setShowAvatarPicker(false);
+  };
+
+  const isPhotoUrl = currentUser.avatarUrl?.startsWith('data:') || currentUser.avatarUrl?.startsWith('http');
+
   return (
     <div dir="rtl" className="min-h-full bg-bg pb-24">
       {/* Header */}
       <div className="bg-gradient-to-b from-violet-100 to-bg pt-10 pb-6 px-5 flex items-start justify-between">
         <div className="flex flex-col items-center gap-3 flex-1">
-          <div className="w-24 h-24 rounded-full bg-violet-200 flex items-center justify-center text-5xl shadow-lg">
-            {currentUser.avatarUrl || '🦉'}
-          </div>
+          {/* Avatar with edit overlay */}
+          <button
+            onClick={() => setShowAvatarPicker(true)}
+            className="relative w-24 h-24 rounded-full bg-violet-200 flex items-center justify-center shadow-lg overflow-hidden group"
+          >
+            {isPhotoUrl ? (
+              <img
+                src={currentUser.avatarUrl}
+                alt="avatar"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-5xl">{currentUser.avatarUrl || '🦉'}</span>
+            )}
+            <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity rounded-full">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                <path d="M12 15.2A3.2 3.2 0 0 1 8.8 12 3.2 3.2 0 0 1 12 8.8 3.2 3.2 0 0 1 15.2 12 3.2 3.2 0 0 1 12 15.2M18.6 4H5.4A2.4 2.4 0 0 0 3 6.4V17.6A2.4 2.4 0 0 0 5.4 20H18.6A2.4 2.4 0 0 0 21 17.6V6.4A2.4 2.4 0 0 0 18.6 4M7.2 6l1.44-1.6h6.72L16.8 6m1.8 11.6H5.4V7.6h13.2z" />
+              </svg>
+            </div>
+          </button>
           <div className="text-center">
             <h1 className="text-2xl font-extrabold text-gray-800">{currentUser.name}</h1>
             <p className="text-violet-500 font-medium text-sm">@{currentUser.username}</p>
             <p className="text-gray-400 text-xs mt-1">عضویت: {joinedDate}</p>
           </div>
         </div>
-        <button
-          onClick={() => navigate(-1)}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow text-gray-500"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
-          </svg>
-        </button>
       </div>
 
       {/* Stats */}
@@ -85,6 +122,61 @@ const Profile: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Avatar picker modal */}
+      {showAvatarPicker && (
+        <div
+          className="fixed inset-0 z-50 flex items-end"
+          onClick={() => setShowAvatarPicker(false)}
+        >
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            className="relative w-full bg-white rounded-t-3xl p-5 pb-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-5" />
+            <h2 className="text-center font-extrabold text-gray-800 text-lg mb-4">
+              تصویر پروفایل
+            </h2>
+
+            {/* Upload photo button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full flex items-center gap-3 bg-violet-50 border-2 border-violet-200 rounded-2xl px-4 py-3 mb-4 text-violet-700 font-bold text-base active:scale-95 transition-transform"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z" />
+              </svg>
+              آپلود عکس از گوشی
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+
+            {/* Emoji grid */}
+            <p className="text-gray-500 text-sm font-medium mb-3">یا یک آواتار انتخاب کن:</p>
+            <div className="grid grid-cols-6 gap-2">
+              {AVATARS.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleEmojiSelect(emoji)}
+                  className={`text-3xl h-12 w-full rounded-xl flex items-center justify-center transition-all active:scale-90
+                    ${currentUser.avatarUrl === emoji
+                      ? 'bg-violet-200 ring-2 ring-violet-500'
+                      : 'bg-gray-100 hover:bg-violet-100'
+                    }`}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

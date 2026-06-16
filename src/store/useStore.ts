@@ -9,6 +9,7 @@ interface AppState {
   setCurrentSession: (session: LessonSession | null) => void;
   addDiamonds: (amount: number) => void;
   incrementStreak: () => void;
+  updateAvatar: (avatarUrl: string) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -24,6 +25,12 @@ export const useStore = create<AppState>()(
         const user = get().currentUser;
         if (!user) return;
         set({ currentUser: { ...user, diamonds: user.diamonds + amount, totalScore: user.totalScore + amount } });
+      },
+
+      updateAvatar: (avatarUrl) => {
+        const user = get().currentUser;
+        if (!user) return;
+        set({ currentUser: { ...user, avatarUrl } });
       },
 
       incrementStreak: () => {
