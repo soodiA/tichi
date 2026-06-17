@@ -6,6 +6,7 @@ import { db } from '../db/db';
 import { syncProfileToCloud } from '../lib/sync';
 import { supabase } from '../lib/supabase';
 import type { UserProfile } from '../types';
+import JalaliDatePicker from '../components/ui/JalaliDatePicker';
 
 const AVATARS = ['🦁', '🐯', '🐸', '🐧', '🦊', '🐼'];
 
@@ -147,14 +148,7 @@ const Onboarding: React.FC = () => {
           {/* Birth date */}
           <div>
             <label className="block text-gray-700 font-bold mb-1 text-sm">تاریخ تولد (اختیاری)</label>
-            <input
-              type="date"
-              value={birthDate}
-              onChange={(e) => setBirthDate(e.target.value)}
-              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg
-                         focus:outline-none focus:border-violet-500 transition-colors"
-              dir="ltr"
-            />
+            <JalaliDatePicker value={birthDate} onChange={(iso) => setBirthDate(iso)} />
           </div>
 
           <motion.button

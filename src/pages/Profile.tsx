@@ -5,6 +5,7 @@ import DiamondDisplay from '../components/ui/DiamondDisplay';
 import { syncProfileToCloud } from '../lib/sync';
 import { supabase } from '../lib/supabase';
 import { db } from '../db/db';
+import { toJalaliDisplay } from '../components/ui/JalaliDatePicker';
 
 const AVATARS = [
   '🦉','🐸','🦁','🐧','🐯','🐼','🦊','🐰',
@@ -94,6 +95,9 @@ const Profile: React.FC = () => {
             <h1 className="text-2xl font-extrabold text-gray-800">{currentUser.name}</h1>
             <p className="text-violet-500 font-medium text-sm">@{currentUser.username}</p>
             <p className="text-gray-400 text-xs mt-1">عضویت: {joinedDate}</p>
+            {currentUser.birthDate && (
+              <p className="text-gray-400 text-xs mt-0.5">تولد: {toJalaliDisplay(currentUser.birthDate)}</p>
+            )}
           </div>
         </div>
       </div>
