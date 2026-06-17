@@ -11,6 +11,7 @@ import Q8_SentenceComplete from './Q8_SentenceComplete';
 import Q9_Arrange from './Q9_Arrange';
 import Q11_Phoneme from './Q11_Phoneme';
 import Q13_SoundToText from './Q13_SoundToText';
+import Q14_ColorLetter from './Q14_ColorLetter';
 
 interface QuestionWrapperProps {
   question: Question;
@@ -67,6 +68,9 @@ const QuestionWrapper: React.FC<QuestionWrapperProps> = ({ question, onAnswer })
       )}
       {question.type === 'sound_to_text' && (
         <Q13_SoundToText question={question} onAnswer={onAnswer} />
+      )}
+      {question.type === 'color_letter' && (
+        <Q14_ColorLetter question={question} onAnswer={onAnswer} />
       )}
       {(question.type === 'record' ||
         question.type === 'similar_letters' ||

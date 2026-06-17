@@ -11,7 +11,8 @@ export type QuestionType =
   | 'similar_letters'    // Q10: pick correct similar letter (spelling)
   | 'phoneme'            // Q11: phoneme segmentation (صداکشی)
   | 'middle_blank'       // Q12: fill blank in middle of phrase
-  | 'sound_to_text';     // Q13: hear sound, pick written form
+  | 'sound_to_text'      // Q13: hear sound, pick written form
+  | 'color_letter';      // Q14: color hollow letter with finger
 
 export interface Option {
   id: string;
