@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { db } from '../db/db';
 import { syncProfileToCloud } from '../lib/sync';
+import { supabase } from '../lib/supabase';
 import type { UserProfile } from '../types';
 
 const AVATARS = ['🦁', '🐯', '🐸', '🐧', '🦊', '🐼'];
@@ -32,6 +33,27 @@ const Onboarding: React.FC = () => {
     if (!validate()) return;
     setLoading(true);
     try {
+      // Check username uniqueness in Supabase
+      if (navigator.onLine) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', username.trim())
+          .maybeSingle();
+        if (data) {
+          setErrors({ username: 'این نام کاربری قبلاً گرفته شده' });
+          setLoading(false);
+          return;
+        }
+      } else {
+        const existing = await db.profiles.where('username').equals(username.trim()).first();
+        if (existing) {
+          setErrors({ username: 'این نام کاربری قبلاً گرفته شده' });
+          setLoading(false);
+          return;
+        }
+      }
+
       const profile: UserProfile = {
         id: crypto.randomUUID(),
         name: name.trim(),

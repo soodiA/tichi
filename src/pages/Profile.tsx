@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import DiamondDisplay from '../components/ui/DiamondDisplay';
 import { syncProfileToCloud } from '../lib/sync';
+import { supabase } from '../lib/supabase';
+import { db } from '../db/db';
 
 const AVATARS = [
   '🦉','🐸','🦁','🐧','🐯','🐼','🦊','🐰',
@@ -13,9 +15,20 @@ const AVATARS = [
 const Profile: React.FC = () => {
   const navigate = useNavigate();
   const currentUser = useStore((s) => s.currentUser);
+  const setCurrentUser = useStore((s) => s.setCurrentUser);
   const updateAvatar = useStore((s) => s.updateAvatar);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut().catch(() => {});
+    if (currentUser) {
+      await db.profiles.delete(currentUser.id).catch(() => {});
+    }
+    setCurrentUser(null);
+    navigate('/onboarding');
+  };
 
   if (!currentUser) {
     return (
@@ -125,6 +138,32 @@ const Profile: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Logout */}
+      <div className="px-5 mt-4 mb-2">
+        <button
+          onClick={() => setShowLogoutConfirm(true)}
+          className="w-full py-3 rounded-2xl text-red-500 font-bold text-base border-2 border-red-100 bg-red-50 active:scale-95 transition-transform"
+        >
+          خروج از حساب
+        </button>
+      </div>
+
+      {/* Logout confirm */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-5" onClick={() => setShowLogoutConfirm(false)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative bg-white rounded-3xl p-6 w-full max-w-sm text-center" onClick={(e) => e.stopPropagation()}>
+            <div className="text-4xl mb-3">🚪</div>
+            <h2 className="font-extrabold text-gray-800 text-lg mb-2">خروج از حساب؟</h2>
+            <p className="text-gray-500 text-sm mb-5">پیشرفتت توی دیتابیس ذخیره شده و بعداً میتونی برگردی.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowLogoutConfirm(false)} className="flex-1 btn-secondary py-3">انصراف</button>
+              <button onClick={handleLogout} className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-bold active:scale-95 transition-transform">خروج</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Avatar picker modal */}
       {showAvatarPicker && (
