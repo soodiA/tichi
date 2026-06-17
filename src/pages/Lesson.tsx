@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { db } from '../db/db';
-import { UNITS } from '../data/curriculum';
+import { loadCurriculum } from '../lib/curriculum';
 import ProgressBar from '../components/ui/ProgressBar';
 import QuestionWrapper from '../components/questions/QuestionWrapper';
 import type { Node } from '../types';
@@ -22,8 +22,10 @@ const Lesson: React.FC = () => {
 
   useEffect(() => {
     if (!nodeId) return;
-    const found = UNITS.flatMap((u) => u.nodes).find((n) => n.id === nodeId);
-    setNode(found ?? null);
+    loadCurriculum().then((units) => {
+      const found = units.flatMap((u) => u.nodes).find((n) => n.id === nodeId);
+      setNode(found ?? null);
+    });
   }, [nodeId]);
 
   const handleAnswer = useCallback(
