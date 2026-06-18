@@ -20,9 +20,8 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
 
   const SR: any = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
 
-  const startRecording = (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    if (!SR || status === 'listening' || status === 'result') return;
+  const startRecording = () => {
+    if (!SR || status !== 'idle') return;
     setTranscript('');
     setCorrect(null);
     gotResultRef.current = false;
@@ -32,7 +31,7 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
     rec.lang = 'fa-IR';
     rec.interimResults = false;
     rec.maxAlternatives = 5;
-    rec.continuous = false;
+    rec.continuous = true; // keep listening until we manually stop
 
     rec.onstart = () => setStatus('listening');
 
@@ -45,11 +44,9 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
       setTranscript(heard);
       setCorrect(ok);
       setStatus('result');
-      // user must tap a button to proceed — no auto-advance
     };
 
     rec.onerror = () => setStatus('idle');
-
     rec.onend = () => {
       if (!gotResultRef.current) setStatus('idle');
     };
@@ -57,11 +54,10 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
     rec.start();
   };
 
-  const stopRecording = (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    if (recRef.current && status === 'listening') {
-      recRef.current.stop();
-    }
+  const stopRecording = () => {
+    const rec = recRef.current;
+    if (!rec) return;
+    try { rec.stop(); } catch { /* ignore */ }
   };
 
   const retry = () => {
@@ -87,37 +83,41 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
         <p className="text-6xl font-extrabold text-violet-700">{String(question.correctAnswer)}</p>
       </div>
 
-      {/* Push-to-talk mic button */}
-      {status !== 'result' && (
+      {/* IDLE: tap mic to start */}
+      {status === 'idle' && (
         <div className="flex flex-col items-center gap-3">
           <button
-            onMouseDown={startRecording}
-            onMouseUp={stopRecording}
-            onMouseLeave={stopRecording}
-            onTouchStart={startRecording}
-            onTouchEnd={stopRecording}
-            className={`w-28 h-28 rounded-full flex items-center justify-center shadow-xl select-none transition-all
-              ${status === 'listening'
-                ? 'bg-red-500 scale-110 shadow-red-200'
-                : 'bg-violet-600 active:scale-95'}`}
+            onClick={startRecording}
+            className="w-28 h-28 rounded-full bg-violet-600 flex items-center justify-center shadow-xl active:scale-95 transition-transform"
           >
             <svg width="46" height="46" viewBox="0 0 24 24" fill="white">
               <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
             </svg>
           </button>
-
-          {status === 'listening' ? (
-            <p className="text-red-500 font-bold animate-pulse">در حال ضبط... رها کن تا تموم شه</p>
-          ) : (
-            <p className="text-gray-400 text-sm">نگه‌دار و بگو، رها کن تا تموم شه</p>
-          )}
+          <p className="text-gray-400 text-sm">دکمه میکروفن را بزن و بگو</p>
         </div>
       )}
 
-      {/* Result */}
+      {/* LISTENING: pulsing indicator + stop button */}
+      {status === 'listening' && (
+        <div className="flex flex-col items-center gap-4 w-full px-4">
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-red-500 animate-ping" />
+            <p className="text-red-500 font-bold">در حال ضبط...</p>
+          </div>
+          <button
+            onClick={stopRecording}
+            className="w-full py-4 rounded-3xl bg-emerald-500 text-white font-extrabold text-xl shadow-lg active:scale-95 transition-transform"
+          >
+            تموم شد ✓
+          </button>
+        </div>
+      )}
+
+      {/* RESULT: feedback card + action buttons */}
       {status === 'result' && correct !== null && (
-        <div className="flex flex-col items-center gap-5 w-full px-4">
-          <div className={`w-full rounded-3xl py-5 text-center ${correct ? 'bg-emerald-50 border-2 border-emerald-200' : 'bg-red-50 border-2 border-red-200'}`}>
+        <div className="flex flex-col items-center gap-4 w-full px-4">
+          <div className={`w-full rounded-3xl py-5 px-4 text-center ${correct ? 'bg-emerald-50 border-2 border-emerald-200' : 'bg-red-50 border-2 border-red-200'}`}>
             <p className={`font-extrabold text-2xl mb-1 ${correct ? 'text-emerald-600' : 'text-red-500'}`}>
               {correct ? 'آفرین! ✅' : 'دقیق‌تر بگو ❌'}
             </p>
@@ -127,10 +127,7 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
           </div>
 
           {correct ? (
-            <button
-              onClick={() => onAnswer(true)}
-              className="w-full btn-primary py-4 text-lg"
-            >
+            <button onClick={() => onAnswer(true)} className="w-full btn-primary py-4 text-lg">
               ادامه ←
             </button>
           ) : (
