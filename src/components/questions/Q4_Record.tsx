@@ -41,8 +41,9 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
       const alts: string[] = Array.from(lastResult).map((r: any) => normalize(r.transcript));
       const expected = normalize(String(question.correctAnswer));
       const heard = alts[0] || '';
-      // require non-empty transcript — empty string would match everything
-      const ok = heard.length > 0 && alts.some((a) => a.length > 0 && (a.includes(expected) || expected.includes(a)));
+      // heard must contain expected (not the reverse — prevents ambient noise false-positives)
+      const ok = heard.length >= expected.length &&
+        alts.some((a) => a.length >= expected.length && a.includes(expected));
       setTranscript(heard);
       setCorrect(ok);
       setStatus('result');
