@@ -31,16 +31,18 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
     rec.lang = 'fa-IR';
     rec.interimResults = false;
     rec.maxAlternatives = 5;
-    rec.continuous = true; // keep listening until we manually stop
+    rec.continuous = false; // auto-stop after speech ends
 
     rec.onstart = () => setStatus('listening');
 
     rec.onresult = (e: any) => {
       gotResultRef.current = true;
-      const alts: string[] = Array.from(e.results[0]).map((r: any) => normalize(r.transcript));
+      const lastResult = e.results[e.results.length - 1];
+      const alts: string[] = Array.from(lastResult).map((r: any) => normalize(r.transcript));
       const expected = normalize(String(question.correctAnswer));
       const heard = alts[0] || '';
-      const ok = alts.some((a) => a.includes(expected) || expected.includes(a));
+      // require non-empty transcript — empty string would match everything
+      const ok = heard.length > 0 && alts.some((a) => a.length > 0 && (a.includes(expected) || expected.includes(a)));
       setTranscript(heard);
       setCorrect(ok);
       setStatus('result');
