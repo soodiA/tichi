@@ -15,8 +15,8 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
   const [status, setStatus] = useState<Status>('idle');
   const [transcript, setTranscript] = useState('');
   const [correct, setCorrect] = useState<boolean | null>(null);
+  const [noSpeech, setNoSpeech] = useState(false);
   const recRef = useRef<any>(null);
-  const gotResultRef = useRef(false);
 
   const SR: any = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
 
@@ -24,49 +24,52 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
     if (!SR || status !== 'idle') return;
     setTranscript('');
     setCorrect(null);
-    gotResultRef.current = false;
+    setNoSpeech(false);
 
     const rec = new SR();
     recRef.current = rec;
     rec.lang = 'fa-IR';
     rec.interimResults = false;
     rec.maxAlternatives = 5;
-    rec.continuous = false; // auto-stop after speech ends
+    rec.continuous = false;
 
     rec.onstart = () => setStatus('listening');
 
     rec.onresult = (e: any) => {
-      gotResultRef.current = true;
       const lastResult = e.results[e.results.length - 1];
       const alts: string[] = Array.from(lastResult).map((r: any) => normalize(r.transcript));
       const expected = normalize(String(question.correctAnswer));
       const heard = alts[0] || '';
-      // heard must contain expected (not the reverse — prevents ambient noise false-positives)
-      const ok = heard.length >= expected.length &&
-        alts.some((a) => a.length >= expected.length && a.includes(expected));
+
+      // Exact match for short answers (letters), contains-match for words
+      const ok = heard.length > 0 && (
+        expected.length <= 2
+          ? alts.some((a) => a === expected)
+          : alts.some((a) => a.length >= expected.length && a.includes(expected))
+      );
+
       setTranscript(heard);
       setCorrect(ok);
       setStatus('result');
     };
 
-    rec.onerror = () => setStatus('idle');
+    rec.onerror = (e: any) => {
+      if (e.error === 'no-speech') setNoSpeech(true);
+      setStatus('idle');
+    };
+
     rec.onend = () => {
-      if (!gotResultRef.current) setStatus('idle');
+      // if onresult didn't fire, go back to idle (already handled by onerror)
     };
 
     rec.start();
-  };
-
-  const stopRecording = () => {
-    const rec = recRef.current;
-    if (!rec) return;
-    try { rec.stop(); } catch { /* ignore */ }
   };
 
   const retry = () => {
     setStatus('idle');
     setTranscript('');
     setCorrect(null);
+    setNoSpeech(false);
   };
 
   if (!SR) {
@@ -86,7 +89,7 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
         <p className="text-6xl font-extrabold text-violet-700">{String(question.correctAnswer)}</p>
       </div>
 
-      {/* IDLE: tap mic to start */}
+      {/* IDLE: mic button */}
       {status === 'idle' && (
         <div className="flex flex-col items-center gap-3">
           <button
@@ -97,36 +100,33 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
               <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
             </svg>
           </button>
-          <p className="text-gray-400 text-sm">دکمه میکروفن را بزن و بگو</p>
+          {noSpeech
+            ? <p className="text-amber-500 text-sm font-bold">چیزی نشنیدم — دوباره بزن و بگو</p>
+            : <p className="text-gray-400 text-sm">میکروفن را بزن و کلمه را بگو</p>
+          }
         </div>
       )}
 
-      {/* LISTENING: pulsing indicator + stop button */}
+      {/* LISTENING: auto-stops on silence, no manual button */}
       {status === 'listening' && (
-        <div className="flex flex-col items-center gap-4 w-full px-4">
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-red-500 animate-ping" />
-            <p className="text-red-500 font-bold">در حال ضبط...</p>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-28 h-28 rounded-full bg-red-500 flex items-center justify-center shadow-xl animate-pulse">
+            <svg width="46" height="46" viewBox="0 0 24 24" fill="white">
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
+            </svg>
           </div>
-          <button
-            onClick={stopRecording}
-            className="w-full py-4 rounded-3xl bg-emerald-500 text-white font-extrabold text-xl shadow-lg active:scale-95 transition-transform"
-          >
-            تموم شد ✓
-          </button>
+          <p className="text-red-500 font-bold animate-pulse">گوش میدم... بگو</p>
         </div>
       )}
 
-      {/* RESULT: feedback card + action buttons */}
+      {/* RESULT */}
       {status === 'result' && correct !== null && (
         <div className="flex flex-col items-center gap-4 w-full px-4">
           <div className={`w-full rounded-3xl py-5 px-4 text-center ${correct ? 'bg-emerald-50 border-2 border-emerald-200' : 'bg-red-50 border-2 border-red-200'}`}>
             <p className={`font-extrabold text-2xl mb-1 ${correct ? 'text-emerald-600' : 'text-red-500'}`}>
               {correct ? 'آفرین! ✅' : 'دقیق‌تر بگو ❌'}
             </p>
-            {transcript && (
-              <p className="text-gray-400 text-sm">شنیدم: <span className="font-bold text-gray-600">{transcript}</span></p>
-            )}
+            <p className="text-gray-400 text-sm">شنیدم: <span className="font-bold text-gray-600">{transcript || '(چیزی نشنیدم)'}</span></p>
           </div>
 
           {correct ? (
