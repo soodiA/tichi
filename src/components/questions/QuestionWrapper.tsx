@@ -21,7 +21,7 @@ interface QuestionWrapperProps {
 const Unsupported: React.FC<{ type: string; onAnswer: (c: boolean) => void }> = ({ type, onAnswer }) => (
   <div className="flex flex-col items-center justify-center gap-4 py-10">
     <p className="text-gray-400 text-sm">نوع سوال «{type}» هنوز پشتیبانی نمی‌شود</p>
-    <button onClick={() => onAnswer(true)} className="btn-secondary text-sm py-2 px-6">
+    <button onClick={() => onAnswer(false)} className="btn-secondary text-sm py-2 px-6">
       رد شدن
     </button>
   </div>
