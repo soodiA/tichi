@@ -45,7 +45,7 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
       setTranscript(heard);
       setCorrect(ok);
       setStatus('result');
-      setTimeout(() => onAnswer(ok), 1400);
+      // user must tap a button to proceed — no auto-advance
     };
 
     rec.onerror = () => setStatus('idle');
@@ -116,17 +116,27 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
 
       {/* Result */}
       {status === 'result' && correct !== null && (
-        <div className="flex flex-col items-center gap-4">
-          <p className={`font-extrabold text-2xl ${correct ? 'text-emerald-600' : 'text-red-500'}`}>
-            {correct ? 'آفرین! ✅' : 'دقیق‌تر بگو ❌'}
-          </p>
-          {transcript && (
-            <p className="text-gray-400 text-sm">شنیدم: <span className="font-bold text-gray-600">{transcript}</span></p>
-          )}
-          {!correct && (
-            <div className="flex gap-3">
-              <button onClick={retry} className="btn-secondary py-3 px-6">دوباره</button>
-              <button onClick={() => onAnswer(false)} className="py-3 px-6 rounded-2xl bg-red-100 text-red-600 font-bold active:scale-95 transition-transform">رد شدن</button>
+        <div className="flex flex-col items-center gap-5 w-full px-4">
+          <div className={`w-full rounded-3xl py-5 text-center ${correct ? 'bg-emerald-50 border-2 border-emerald-200' : 'bg-red-50 border-2 border-red-200'}`}>
+            <p className={`font-extrabold text-2xl mb-1 ${correct ? 'text-emerald-600' : 'text-red-500'}`}>
+              {correct ? 'آفرین! ✅' : 'دقیق‌تر بگو ❌'}
+            </p>
+            {transcript && (
+              <p className="text-gray-400 text-sm">شنیدم: <span className="font-bold text-gray-600">{transcript}</span></p>
+            )}
+          </div>
+
+          {correct ? (
+            <button
+              onClick={() => onAnswer(true)}
+              className="w-full btn-primary py-4 text-lg"
+            >
+              ادامه ←
+            </button>
+          ) : (
+            <div className="flex gap-3 w-full">
+              <button onClick={retry} className="flex-1 btn-secondary py-4">دوباره</button>
+              <button onClick={() => onAnswer(false)} className="flex-1 py-4 rounded-2xl bg-red-100 text-red-600 font-bold active:scale-95 transition-transform">رد شدن</button>
             </div>
           )}
         </div>
