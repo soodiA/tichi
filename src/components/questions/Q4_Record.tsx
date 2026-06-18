@@ -9,31 +9,35 @@ interface Props {
 type Status = 'idle' | 'listening' | 'result';
 
 const normalize = (s: string) =>
-  s.trim().replace(/\s+/g, '').replace(/[ً-ٟ]/g, ''); // strip diacritics + spaces
+  s.trim().replace(/\s+/g, '').replace(/[ً-ٟ]/g, '');
 
 const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
   const [status, setStatus] = useState<Status>('idle');
   const [transcript, setTranscript] = useState('');
   const [correct, setCorrect] = useState<boolean | null>(null);
   const recRef = useRef<any>(null);
+  const gotResultRef = useRef(false);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const SR: any = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
 
-  const handleRecord = () => {
-    if (status === 'listening' || !SR) return;
+  const startRecording = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    if (!SR || status === 'listening' || status === 'result') return;
     setTranscript('');
     setCorrect(null);
+    gotResultRef.current = false;
 
     const rec = new SR();
     recRef.current = rec;
     rec.lang = 'fa-IR';
     rec.interimResults = false;
     rec.maxAlternatives = 5;
+    rec.continuous = false;
 
     rec.onstart = () => setStatus('listening');
 
     rec.onresult = (e: any) => {
+      gotResultRef.current = true;
       const alts: string[] = Array.from(e.results[0]).map((r: any) => normalize(r.transcript));
       const expected = normalize(String(question.correctAnswer));
       const heard = alts[0] || '';
@@ -45,9 +49,19 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
     };
 
     rec.onerror = () => setStatus('idle');
-    rec.onend = () => { /* handled by onresult */ };
+
+    rec.onend = () => {
+      if (!gotResultRef.current) setStatus('idle');
+    };
 
     rec.start();
+  };
+
+  const stopRecording = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    if (recRef.current && status === 'listening') {
+      recRef.current.stop();
+    }
   };
 
   const retry = () => {
@@ -73,22 +87,31 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
         <p className="text-6xl font-extrabold text-violet-700">{String(question.correctAnswer)}</p>
       </div>
 
-      {/* Mic button */}
+      {/* Push-to-talk mic button */}
       {status !== 'result' && (
-        <button
-          onClick={handleRecord}
-          disabled={status === 'listening'}
-          className={`w-24 h-24 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95
-            ${status === 'listening' ? 'bg-red-500 animate-pulse scale-110' : 'bg-violet-600'}`}
-        >
-          <svg width="42" height="42" viewBox="0 0 24 24" fill="white">
-            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
-          </svg>
-        </button>
-      )}
+        <div className="flex flex-col items-center gap-3">
+          <button
+            onMouseDown={startRecording}
+            onMouseUp={stopRecording}
+            onMouseLeave={stopRecording}
+            onTouchStart={startRecording}
+            onTouchEnd={stopRecording}
+            className={`w-28 h-28 rounded-full flex items-center justify-center shadow-xl select-none transition-all
+              ${status === 'listening'
+                ? 'bg-red-500 scale-110 shadow-red-200'
+                : 'bg-violet-600 active:scale-95'}`}
+          >
+            <svg width="46" height="46" viewBox="0 0 24 24" fill="white">
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
+            </svg>
+          </button>
 
-      {status === 'listening' && (
-        <p className="text-red-500 font-bold animate-pulse">در حال ضبط...</p>
+          {status === 'listening' ? (
+            <p className="text-red-500 font-bold animate-pulse">در حال ضبط... رها کن تا تموم شه</p>
+          ) : (
+            <p className="text-gray-400 text-sm">نگه‌دار و بگو، رها کن تا تموم شه</p>
+          )}
+        </div>
       )}
 
       {/* Result */}
@@ -107,10 +130,6 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
             </div>
           )}
         </div>
-      )}
-
-      {status === 'idle' && correct === null && (
-        <p className="text-gray-400 text-sm">دکمه میکروفن را بزن و کلمه را بگو</p>
       )}
     </div>
   );
