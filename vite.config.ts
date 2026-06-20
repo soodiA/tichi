@@ -40,8 +40,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        // Disable workbox injection minification (Node 18 crypto compat)
         disableDevLogs: true,
+        skipWaiting: true,
+        clientsClaim: true,
       },
       // Use generateSW strategy which avoids rollup/terser for the service worker
       strategies: 'generateSW',
