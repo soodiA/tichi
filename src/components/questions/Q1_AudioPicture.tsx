@@ -7,6 +7,17 @@ interface Props {
   onAnswer: (correct: boolean) => void;
 }
 
+const isUrl = (s: string) => s.startsWith('http') || s.startsWith('/') || s.startsWith('data:');
+
+const speakWord = (text: string) => {
+  if (!window.speechSynthesis || !text) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = 'fa-IR';
+  utt.rate = 0.85;
+  window.speechSynthesis.speak(utt);
+};
+
 const OptionCard: React.FC<{
   option: Option;
   selected: boolean;
@@ -14,10 +25,14 @@ const OptionCard: React.FC<{
 }> = ({ option, selected, onClick }) => {
   const handleClick = () => {
     if (option.audioUrl) {
-      new Audio(option.audioUrl).play().catch(() => {/* silent */});
+      new Audio(option.audioUrl).play().catch(() => {});
+    } else if (option.text) {
+      speakWord(option.text);
     }
     onClick();
   };
+
+  const img = option.imageUrl;
 
   return (
     <motion.button
@@ -26,24 +41,19 @@ const OptionCard: React.FC<{
       onClick={handleClick}
       className={`option-card flex flex-col items-center gap-2 w-full h-full min-h-[110px] ${selected ? 'selected' : ''}`}
     >
-      {option.imageUrl ? (
+      {img && isUrl(img) ? (
         <img
-          src={option.imageUrl}
+          src={img}
           alt={option.text ?? ''}
           className="w-14 h-14 object-contain"
-          onError={(e) => {
-            const target = e.currentTarget;
-            target.style.display = 'none';
-            const sibling = target.nextElementSibling as HTMLElement | null;
-            if (sibling) sibling.style.display = 'flex';
-          }}
         />
-      ) : null}
-      <div
-        className="w-14 h-14 rounded-full bg-violet-100 items-center justify-center text-2xl font-bold text-violet-600 hidden"
-      >
-        {option.text?.charAt(0) ?? '؟'}
-      </div>
+      ) : img ? (
+        <span className="text-5xl leading-none">{img}</span>
+      ) : (
+        <div className="w-14 h-14 rounded-full bg-violet-100 flex items-center justify-center text-2xl font-bold text-violet-600">
+          {option.text?.charAt(0) ?? '؟'}
+        </div>
+      )}
       {option.text && (
         <span className="text-sm font-bold text-gray-700">{option.text}</span>
       )}
@@ -63,7 +73,6 @@ const Q1_AudioPicture: React.FC<Props> = ({ question, onAnswer }) => {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* 2x2 grid */}
       <div className="grid grid-cols-2 gap-3">
         {question.options.map((opt) => (
           <OptionCard
