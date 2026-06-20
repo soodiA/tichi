@@ -9,7 +9,24 @@ interface UnitDividerProps {
   onPlayIntro?: () => void;
 }
 
-const UnitDivider: React.FC<UnitDividerProps> = ({ letter, color, unitNumber, subtitle = 'یاد بگیریم', onPlayIntro }) => {
+const BookIcon: React.FC<{ color: string }> = ({ color }) => (
+  <svg width="42" height="42" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+    {/* Notebook body */}
+    <rect x="7" y="5" width="28" height="33" rx="4" fill="white" opacity="0.95" />
+    {/* Spine */}
+    <rect x="7" y="5" width="6" height="33" rx="3" fill={color} opacity="0.7" />
+    {/* Lines */}
+    <rect x="17" y="13" width="14" height="2" rx="1" fill={color} opacity="0.4" />
+    <rect x="17" y="19" width="14" height="2" rx="1" fill={color} opacity="0.4" />
+    <rect x="17" y="25" width="10" height="2" rx="1" fill={color} opacity="0.4" />
+    {/* Ring bindings */}
+    <circle cx="10" cy="14" r="2" fill="white" stroke={color} strokeWidth="1.5" opacity="0.9" />
+    <circle cx="10" cy="21" r="2" fill="white" stroke={color} strokeWidth="1.5" opacity="0.9" />
+    <circle cx="10" cy="28" r="2" fill="white" stroke={color} strokeWidth="1.5" opacity="0.9" />
+  </svg>
+);
+
+const UnitDivider: React.FC<UnitDividerProps> = ({ color, unitNumber, subtitle = 'یاد بگیریم', onPlayIntro }) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -22,29 +39,32 @@ const UnitDivider: React.FC<UnitDividerProps> = ({ letter, color, unitNumber, su
         <span className="text-white text-xs font-semibold opacity-80">
           بخش {unitNumber.toLocaleString('fa-IR')}
         </span>
-        <span className="text-white text-base font-bold mt-0.5">
+        <span className="text-white text-lg font-extrabold mt-0.5 tracking-wide">
           {subtitle}
         </span>
       </div>
 
-      {/* Letter box — tappable to play intro */}
+      {/* Notebook button — tappable to play intro */}
       <button
         onClick={onPlayIntro}
         disabled={!onPlayIntro}
-        className="relative flex items-center justify-center w-16 h-16 rounded-2xl bg-white bg-opacity-20 shadow-inner active:scale-90 transition-transform disabled:cursor-default"
+        className="relative flex items-center justify-center w-16 h-16 rounded-2xl shadow-inner active:scale-90 transition-transform disabled:cursor-default"
+        style={{ backgroundColor: 'rgba(255,255,255,0.18)' }}
       >
-        <span
-          className="text-white font-extrabold"
-          style={{ fontSize: '2.5rem', lineHeight: 1 }}
-        >
-          {letter}
-        </span>
+        <BookIcon color={color} />
+
+        {/* Play badge */}
         {onPlayIntro && (
-          <span className="absolute -bottom-1 -left-1 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow">
+          <motion.span
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute -bottom-1.5 -left-1.5 w-6 h-6 rounded-full flex items-center justify-center shadow-md"
+            style={{ backgroundColor: color }}
+          >
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <path d="M2 1.5L8 5L2 8.5V1.5Z" fill={color} />
+              <path d="M2.5 1.5L8.5 5L2.5 8.5V1.5Z" fill="white" />
             </svg>
-          </span>
+          </motion.span>
         )}
       </button>
     </motion.div>
