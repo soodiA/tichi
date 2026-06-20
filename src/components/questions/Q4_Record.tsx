@@ -26,6 +26,7 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
   const [errorMsg, setErrorMsg] = useState('');
   const recRef = useRef<any>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastInterimRef = useRef(''); // accumulate interim transcript in case onresult fires late
 
   const SR: any = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
 
@@ -51,7 +52,6 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
     return clearTimer;
   }, [clearTimer]);
 
-  // Use SpeechRecognition itself to request mic permission (more reliable than getUserMedia for SR)
   const requestPermission = useCallback(() => {
     if (!SR) { setPermState('denied'); return; }
     setPermState('requesting');
@@ -60,19 +60,17 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
     rec.onstart = () => { try { rec.abort(); } catch {} };
     rec.onerror = (e: any) => {
       const code: string = e.error || '';
-      setPermState(
-        code === 'not-allowed' || code === 'service-not-allowed' ? 'denied' : 'granted'
-      );
+      setPermState(code === 'not-allowed' || code === 'service-not-allowed' ? 'denied' : 'granted');
     };
     rec.onend = () => setPermState((p) => p === 'requesting' ? 'granted' : p);
     try { rec.start(); } catch { setPermState('need_permission'); }
   }, [SR]);
 
-  // Push-to-talk: hold = record (continuous mode), release = rec.stop() → onend delivers result
   const handlePressStart = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     if (status !== 'idle' || !SR) return;
 
+    lastInterimRef.current = '';
     setErrorMsg('');
     setTranscript('');
     setCorrect(null);
@@ -81,30 +79,30 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
     const rec = new SR();
     recRef.current = rec;
     rec.lang = 'fa-IR';
-    rec.interimResults = false;
+    rec.interimResults = true;  // capture interim so release always has something
     rec.maxAlternatives = 5;
-    rec.continuous = true; // keep capturing until rec.stop() — ensures stop delivers audio
-
-    // Accumulate results in a closure variable (stable per recording session)
-    let lastHeard = '';
-    let lastOk = false;
-    let gotResult = false;
+    rec.continuous = false;
 
     rec.onresult = (ev: any) => {
-      for (let i = ev.resultIndex; i < ev.results.length; i++) {
-        if (ev.results[i].isFinal) {
-          const alts: string[] = Array.from(ev.results[i]).map((r: any) => normalize(r.transcript));
-          const expected = normalize(String(question.correctAnswer));
-          const heard = alts[0] || '';
-          const ok =
-            heard.length > 0 &&
-            (expected.length <= 2
-              ? alts.some((a) => a === expected)
-              : alts.some((a) => a.length >= expected.length && a.includes(expected)));
-          lastHeard = heard;
-          lastOk = ok;
-          gotResult = true;
-        }
+      clearTimer();
+      // Collect best transcript from any result (interim or final)
+      let bestHeard = '';
+      let bestAlts: string[] = [];
+      const lastResult = ev.results[ev.results.length - 1];
+      bestAlts = Array.from(lastResult).map((r: any) => normalize(r.transcript));
+      bestHeard = bestAlts[0] || '';
+      if (bestHeard) lastInterimRef.current = bestAlts[0] || '';
+
+      if (lastResult.isFinal) {
+        const expected = normalize(String(question.correctAnswer));
+        const ok =
+          bestHeard.length > 0 &&
+          (expected.length <= 2
+            ? bestAlts.some((a) => a === expected)
+            : bestAlts.some((a) => a.length >= expected.length && a.includes(expected)));
+        setTranscript(bestHeard);
+        setCorrect(ok);
+        setStatus('result');
       }
     };
 
@@ -113,27 +111,41 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
       const code: string = ev.error || 'unknown';
       if (code === 'not-allowed' || code === 'service-not-allowed') {
         setPermState('denied');
+        setStatus('idle');
       } else if (code === 'network') {
-        setErrorMsg('خطای شبکه — اتصال اینترنت رو چک کن');
-      } else if (code !== 'no-speech') {
-        setErrorMsg(`خطا: ${code}`);
-      }
-      setStatus('idle');
-    };
-
-    rec.onend = () => {
-      clearTimer();
-      if (gotResult) {
-        setTranscript(lastHeard);
-        setCorrect(lastOk);
-        setStatus('result');
-      } else {
+        setErrorMsg('خطای شبکه');
+        setStatus('idle');
+      } else if (code === 'no-speech') {
         setErrorMsg('چیزی نشنیدم — دوباره نگه‌دار و بگو');
+        setStatus('idle');
+      } else {
+        setErrorMsg(`خطا: ${code}`);
         setStatus('idle');
       }
     };
 
-    // Safety: abort after 15s
+    rec.onend = () => {
+      clearTimer();
+      // If we got an interim but onresult.isFinal never fired (browser ended early)
+      // use the last interim transcript
+      setStatus((prev) => {
+        if (prev !== 'listening') return prev; // result already set
+        const heard = normalize(lastInterimRef.current);
+        if (heard.length > 0) {
+          const expected = normalize(String(question.correctAnswer));
+          const ok =
+            expected.length <= 2
+              ? heard === expected
+              : heard.length >= expected.length && heard.includes(expected);
+          setTranscript(lastInterimRef.current);
+          setCorrect(ok);
+          return 'result';
+        }
+        setErrorMsg('چیزی نشنیدم — دوباره نگه‌دار و بگو');
+        return 'idle';
+      });
+    };
+
     timerRef.current = setTimeout(() => {
       try { rec.abort(); } catch {}
       setStatus('idle');
@@ -143,12 +155,13 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
     rec.start();
   }, [status, question.correctAnswer, SR, clearTimer]);
 
-  // Release: stop capturing — browser processes buffered audio and fires onend
   const handlePressEnd = useCallback(() => {
     if (status !== 'listening') return;
-    clearTimer();
-    try { recRef.current?.stop(); } catch {}
-  }, [status, clearTimer]);
+    // Small delay so last audio frames buffer before stop flushes
+    setTimeout(() => {
+      try { recRef.current?.stop(); } catch {}
+    }, 150);
+  }, [status]);
 
   const retry = () => {
     setStatus('idle');
