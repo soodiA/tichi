@@ -7,6 +7,7 @@ import PathNode from '../components/path/PathNode';
 import UnitDivider from '../components/path/UnitDivider';
 import DiamondDisplay from '../components/ui/DiamondDisplay';
 import UnitIntro_AA from '../components/questions/UnitIntro_AA';
+import UnitIntro_BA from '../components/questions/UnitIntro_BA';
 import type { Unit, NodeProgress } from '../types';
 
 const UNIT_SUBTITLE: Record<string, string> = {
@@ -16,6 +17,7 @@ const UNIT_SUBTITLE: Record<string, string> = {
 
 const UNIT_HAS_INTRO: Record<string, boolean> = {
   'unit-aa': true,
+  'unit-ba': true,
 };
 
 const Home: React.FC = () => {
@@ -67,9 +69,8 @@ const Home: React.FC = () => {
 
   return (
     <div dir="rtl" className="min-h-full bg-bg pb-24">
-      {introUnitId === 'unit-aa' && (
-        <UnitIntro_AA onComplete={() => setIntroUnitId(null)} />
-      )}
+      {introUnitId === 'unit-aa' && <UnitIntro_AA onComplete={() => setIntroUnitId(null)} />}
+      {introUnitId === 'unit-ba' && <UnitIntro_BA onComplete={() => setIntroUnitId(null)} />}
       {/* Header */}
       <div className="sticky top-0 z-10 bg-bg shadow-sm px-5 pt-5 pb-3">
         <div className="flex items-center justify-between">
