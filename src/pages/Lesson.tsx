@@ -150,7 +150,7 @@ const Lesson: React.FC = () => {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className={`fixed bottom-0 left-0 right-0 z-30 px-5 pt-5 pb-8 rounded-t-3xl shadow-2xl
+            className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 px-5 pt-5 pb-8 rounded-t-3xl shadow-2xl
               ${feedback === 'correct'
                 ? 'bg-emerald-50 border-t-2 border-emerald-200'
                 : 'bg-red-50 border-t-2 border-red-200'}`}
