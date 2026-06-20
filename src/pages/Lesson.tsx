@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store/useStore';
@@ -17,8 +17,10 @@ const Lesson: React.FC = () => {
 
   const [node, setNode] = useState<Node | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, boolean>>({});
+  const [, setAnswers] = useState<Record<string, boolean>>({});
   const [feedback, setFeedback] = useState<FeedbackState>('idle');
+  const [shownCorrectAnswer, setShownCorrectAnswer] = useState<string>('');
+  const answersRef = useRef<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!nodeId) return;
@@ -29,46 +31,58 @@ const Lesson: React.FC = () => {
   }, [nodeId]);
 
   const handleAnswer = useCallback(
-    async (correct: boolean) => {
+    (correct: boolean) => {
       if (!node || feedback !== 'idle') return;
       const question = node.questions[currentIndex];
       if (!question) return;
 
-      const newAnswers = { ...answers, [question.id]: correct };
+      const newAnswers = { ...answersRef.current, [question.id]: correct };
+      answersRef.current = newAnswers;
       setAnswers(newAnswers);
-      setFeedback(correct ? 'correct' : 'wrong');
 
-      setTimeout(async () => {
-        setFeedback('idle');
-        const nextIndex = currentIndex + 1;
-
-        if (nextIndex >= node.questions.length) {
-          // All done — save progress
-          const totalQ = node.questions.length;
-          const correctCount = Object.values(newAnswers).filter(Boolean).length;
-          const accuracy = totalQ > 0 ? Math.round((correctCount / totalQ) * 100) : 100;
-
-          if (currentUser) {
-            const stars = accuracy === 100 ? 3 : accuracy >= 80 ? 2 : 1;
-            await db.progress.put({
-              nodeId: node.id,
-              userId: currentUser.id,
-              completed: true,
-              stars,
-              accuracy,
-              completedAt: new Date().toISOString(),
-              attempts: 1,
-            });
-          }
-
-          navigate('/lesson-complete', { state: { accuracy, nodeId: node.id } });
-        } else {
-          setCurrentIndex(nextIndex);
+      // For wrong answers: find readable correct answer text
+      if (!correct) {
+        let correctDisplay = String(question.correctAnswer);
+        if (question.type === 'audio_picture' || question.type === 'audio_options') {
+          const opt = question.options?.find((o) => o.id === question.correctAnswer);
+          if (opt?.text) correctDisplay = opt.text;
         }
-      }, 800);
+        setShownCorrectAnswer(correctDisplay);
+      }
+
+      setFeedback(correct ? 'correct' : 'wrong');
     },
-    [node, currentIndex, answers, feedback, currentUser, navigate]
+    [node, currentIndex, feedback]
   );
+
+  const handleContinue = useCallback(async () => {
+    if (!node) return;
+    setFeedback('idle');
+    const nextIndex = currentIndex + 1;
+
+    if (nextIndex >= node.questions.length) {
+      const totalQ = node.questions.length;
+      const correctCount = Object.values(answersRef.current).filter(Boolean).length;
+      const accuracy = totalQ > 0 ? Math.round((correctCount / totalQ) * 100) : 100;
+
+      if (currentUser) {
+        const stars = accuracy === 100 ? 3 : accuracy >= 80 ? 2 : 1;
+        await db.progress.put({
+          nodeId: node.id,
+          userId: currentUser.id,
+          completed: true,
+          stars,
+          accuracy,
+          completedAt: new Date().toISOString(),
+          attempts: 1,
+        });
+      }
+
+      navigate('/lesson-complete', { state: { accuracy, nodeId: node.id } });
+    } else {
+      setCurrentIndex(nextIndex);
+    }
+  }, [node, currentIndex, currentUser, navigate]);
 
   if (!node) {
     return (
@@ -83,38 +97,15 @@ const Lesson: React.FC = () => {
       <div dir="rtl" className="h-full flex flex-col items-center justify-center gap-4 px-5">
         <p className="text-2xl">🎁</p>
         <p className="text-gray-600 font-bold">این درس هنوز سوال ندارد!</p>
-        <button onClick={() => navigate('/home')} className="btn-primary">
-          برگشت به خانه
-        </button>
+        <button onClick={() => navigate('/home')} className="btn-primary">برگشت به خانه</button>
       </div>
     );
   }
 
   const currentQuestion = node.questions[currentIndex];
 
-  const overlayColor =
-    feedback === 'correct'
-      ? 'bg-emerald-400'
-      : feedback === 'wrong'
-      ? 'bg-red-400'
-      : 'bg-transparent';
-
   return (
     <div dir="rtl" className="min-h-full flex flex-col bg-bg relative">
-      {/* Feedback overlay */}
-      <AnimatePresence>
-        {feedback !== 'idle' && (
-          <motion.div
-            key={feedback}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.18 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className={`absolute inset-0 z-20 pointer-events-none ${overlayColor}`}
-          />
-        )}
-      </AnimatePresence>
-
       {/* Top bar */}
       <div className="flex items-center gap-3 px-5 pt-5 pb-3">
         <button
@@ -132,7 +123,7 @@ const Lesson: React.FC = () => {
       </div>
 
       {/* Question */}
-      <div className="flex-1 flex flex-col px-5 pt-4 pb-6">
+      <div className={`flex-1 flex flex-col px-5 pt-4 transition-all duration-300 ${feedback !== 'idle' ? 'pb-44' : 'pb-6'}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={currentQuestion.id}
@@ -149,6 +140,56 @@ const Lesson: React.FC = () => {
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {/* Duolingo-style feedback panel */}
+      <AnimatePresence>
+        {feedback !== 'idle' && (
+          <motion.div
+            key="feedback"
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className={`fixed bottom-0 left-0 right-0 z-30 px-5 pt-5 pb-8 rounded-t-3xl shadow-2xl
+              ${feedback === 'correct'
+                ? 'bg-emerald-50 border-t-2 border-emerald-200'
+                : 'bg-red-50 border-t-2 border-red-200'}`}
+          >
+            <div className="flex items-center gap-4 mb-4">
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0
+                ${feedback === 'correct' ? 'bg-emerald-500' : 'bg-red-500'}`}>
+                {feedback === 'correct' ? (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                  </svg>
+                ) : (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                  </svg>
+                )}
+              </div>
+              <div>
+                {feedback === 'correct' ? (
+                  <p className="text-emerald-700 font-extrabold text-xl">آفرین! 🎉</p>
+                ) : (
+                  <>
+                    <p className="text-red-600 font-extrabold text-base">جواب درست:</p>
+                    <p className="text-red-800 font-bold text-2xl">{shownCorrectAnswer}</p>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <button
+              onClick={handleContinue}
+              className={`w-full py-4 rounded-2xl font-extrabold text-lg text-white active:scale-95 transition-transform
+                ${feedback === 'correct' ? 'bg-emerald-500' : 'bg-red-500'}`}
+            >
+              ادامه →
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
