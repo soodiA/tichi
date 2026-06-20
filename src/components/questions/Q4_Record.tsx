@@ -7,7 +7,7 @@ interface Props {
 }
 
 type PermState = 'checking' | 'need_permission' | 'requesting' | 'granted' | 'denied';
-type Status = 'idle' | 'listening' | 'result';
+type Status = 'idle' | 'listening' | 'processing' | 'result';
 
 const normalize = (s: string) =>
   s.trim().replace(/\s+/g, '').replace(/[ً-ٟ]/g, '');
@@ -18,6 +18,15 @@ const MicIcon = ({ color = 'white', size = 46 }: { color?: string; size?: number
   </svg>
 );
 
+const check = (alts: string[], expected: string): boolean => {
+  // For single letters: accept anything that starts with the expected letter
+  // For words: accept if any alt contains the expected word
+  if (expected.length <= 2) {
+    return alts.some((a) => a.length > 0 && a.startsWith(expected));
+  }
+  return alts.some((a) => a.length >= expected.length && a.includes(expected));
+};
+
 const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
   const [permState, setPermState] = useState<PermState>('checking');
   const [status, setStatus] = useState<Status>('idle');
@@ -26,12 +35,13 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
   const [errorMsg, setErrorMsg] = useState('');
   const recRef = useRef<any>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastInterimRef = useRef(''); // accumulate interim transcript in case onresult fires late
+  const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const SR: any = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    if (stopTimerRef.current) { clearTimeout(stopTimerRef.current); stopTimerRef.current = null; }
   }, []);
 
   useEffect(() => {
@@ -70,7 +80,6 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     if (status !== 'idle' || !SR) return;
 
-    lastInterimRef.current = '';
     setErrorMsg('');
     setTranscript('');
     setCorrect(null);
@@ -79,31 +88,20 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
     const rec = new SR();
     recRef.current = rec;
     rec.lang = 'fa-IR';
-    rec.interimResults = true;  // capture interim so release always has something
+    rec.interimResults = false;
     rec.maxAlternatives = 5;
     rec.continuous = false;
 
     rec.onresult = (ev: any) => {
       clearTimer();
-      // Collect best transcript from any result (interim or final)
-      let bestHeard = '';
-      let bestAlts: string[] = [];
       const lastResult = ev.results[ev.results.length - 1];
-      bestAlts = Array.from(lastResult).map((r: any) => normalize(r.transcript));
-      bestHeard = bestAlts[0] || '';
-      if (bestHeard) lastInterimRef.current = bestAlts[0] || '';
-
-      if (lastResult.isFinal) {
-        const expected = normalize(String(question.correctAnswer));
-        const ok =
-          bestHeard.length > 0 &&
-          (expected.length <= 2
-            ? bestAlts.some((a) => a === expected)
-            : bestAlts.some((a) => a.length >= expected.length && a.includes(expected)));
-        setTranscript(bestHeard);
-        setCorrect(ok);
-        setStatus('result');
-      }
+      const alts: string[] = Array.from(lastResult).map((r: any) => normalize(r.transcript));
+      const expected = normalize(String(question.correctAnswer));
+      const heard = alts[0] || '';
+      const ok = heard.length > 0 && check(alts, expected);
+      setTranscript(heard);
+      setCorrect(ok);
+      setStatus('result');
     };
 
     rec.onerror = (ev: any) => {
@@ -115,37 +113,26 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
       } else if (code === 'network') {
         setErrorMsg('خطای شبکه');
         setStatus('idle');
-      } else if (code === 'no-speech') {
-        setErrorMsg('چیزی نشنیدم — دوباره نگه‌دار و بگو');
-        setStatus('idle');
       } else {
-        setErrorMsg(`خطا: ${code}`);
+        // includes 'no-speech' and others
+        setErrorMsg('چیزی نشنیدم — دوباره نگه‌دار و بگو');
         setStatus('idle');
       }
     };
 
     rec.onend = () => {
       clearTimer();
-      // If we got an interim but onresult.isFinal never fired (browser ended early)
-      // use the last interim transcript
+      // If we're still in listening/processing but got no result
       setStatus((prev) => {
-        if (prev !== 'listening') return prev; // result already set
-        const heard = normalize(lastInterimRef.current);
-        if (heard.length > 0) {
-          const expected = normalize(String(question.correctAnswer));
-          const ok =
-            expected.length <= 2
-              ? heard === expected
-              : heard.length >= expected.length && heard.includes(expected);
-          setTranscript(lastInterimRef.current);
-          setCorrect(ok);
-          return 'result';
+        if (prev === 'listening' || prev === 'processing') {
+          setErrorMsg('چیزی نشنیدم — دوباره نگه‌دار و بگو');
+          return 'idle';
         }
-        setErrorMsg('چیزی نشنیدم — دوباره نگه‌دار و بگو');
-        return 'idle';
+        return prev;
       });
     };
 
+    // Safety: abort after 15s
     timerRef.current = setTimeout(() => {
       try { rec.abort(); } catch {}
       setStatus('idle');
@@ -157,10 +144,12 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
 
   const handlePressEnd = useCallback(() => {
     if (status !== 'listening') return;
-    // Small delay so last audio frames buffer before stop flushes
-    setTimeout(() => {
+    // Switch visual to "processing" immediately on release
+    setStatus('processing');
+    // Wait 800ms for Chrome SR to buffer and process the audio, then send stop
+    stopTimerRef.current = setTimeout(() => {
       try { recRef.current?.stop(); } catch {}
-    }, 150);
+    }, 800);
   }, [status]);
 
   const retry = () => {
@@ -175,12 +164,9 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
       <div className="flex flex-col items-center gap-4 py-10 px-4">
         <p className="text-gray-500 text-sm text-center">
           مرورگر شما از ضبط صدا پشتیبانی نمی‌کند
-          <br />
-          <span className="text-xs">(Chrome یا Edge توصیه میشه)</span>
+          <br /><span className="text-xs">(Chrome یا Edge توصیه میشه)</span>
         </p>
-        <button onClick={() => onAnswer(false)} className="btn-secondary text-sm py-2 px-6">
-          رد شدن
-        </button>
+        <button onClick={() => onAnswer(false)} className="btn-secondary text-sm py-2 px-6">رد شدن</button>
       </div>
     );
   }
@@ -221,8 +207,7 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
           <p className="text-red-500 text-sm font-bold">دسترسی میکروفن مسدود شده</p>
           <p className="text-gray-400 text-xs leading-relaxed">
             آیکون 🔒 کنار آدرس → Microphone → Allow
-            <br />
-            بعد صفحه رو رفرش کن
+            <br />بعد صفحه رو رفرش کن
           </p>
           <div className="flex gap-3 mt-2">
             <button onClick={requestPermission} className="btn-secondary text-sm py-2 px-4">تلاش مجدد</button>
@@ -237,16 +222,21 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
             onPointerDown={handlePressStart}
             onPointerUp={handlePressEnd}
             onPointerCancel={handlePressEnd}
+            disabled={status === 'processing'}
             className={`w-28 h-28 rounded-full flex items-center justify-center shadow-xl transition-all select-none
               ${status === 'listening'
                 ? 'bg-red-500 scale-110 animate-pulse'
-                : 'bg-violet-600 active:scale-95'}`}
+                : status === 'processing'
+                  ? 'bg-orange-400 cursor-wait'
+                  : 'bg-violet-600 active:scale-95'}`}
             style={{ touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' } as React.CSSProperties}
           >
             <MicIcon />
           </button>
           {status === 'listening' ? (
             <p className="text-red-500 font-bold animate-pulse">🎙 داری میگی... رها کن</p>
+          ) : status === 'processing' ? (
+            <p className="text-orange-500 font-bold animate-pulse">⏳ در حال پردازش...</p>
           ) : errorMsg ? (
             <p className="text-amber-600 text-sm font-bold text-center px-4">{errorMsg}</p>
           ) : (
