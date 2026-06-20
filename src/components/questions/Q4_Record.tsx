@@ -25,10 +25,15 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
   const [correct, setCorrect] = useState<boolean | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const recRef = useRef<any>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const SR: any = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
 
-  // Check existing microphone permission on mount
+  const clearTimer = useCallback(() => {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+  }, []);
+
+  // Check if microphone permission already granted
   useEffect(() => {
     if (!SR) return;
     if (navigator.permissions) {
@@ -44,22 +49,33 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
     } else {
       setPermState('need_permission');
     }
-  }, []);
+    return clearTimer;
+  }, [clearTimer]);
 
-  // First tap: ask browser for microphone permission via getUserMedia
-  const requestPermission = async () => {
+  // Use SpeechRecognition itself to trigger the permission dialog (more reliable than getUserMedia)
+  const requestPermission = useCallback(() => {
+    if (!SR) { setPermState('denied'); return; }
     setPermState('requesting');
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((t) => t.stop());
-      setPermState('granted');
-    } catch {
-      setPermState('denied');
-    }
-  };
+    const rec = new SR();
+    rec.lang = 'fa-IR';
+    rec.onstart = () => { try { rec.abort(); } catch {} };
+    rec.onerror = (e: any) => {
+      const code: string = e.error || '';
+      if (code === 'not-allowed' || code === 'service-not-allowed') {
+        setPermState('denied');
+      } else {
+        setPermState('granted');
+      }
+    };
+    rec.onend = () => {
+      setPermState((prev) => (prev === 'requesting' ? 'granted' : prev));
+    };
+    try { rec.start(); } catch { setPermState('need_permission'); }
+  }, [SR]);
 
-  // Push-to-talk: press = start, release = stop
-  const handlePressStart = useCallback(() => {
+  // Push-to-talk start: capture pointer so release is always detected
+  const handlePressStart = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
     if (status !== 'idle' || !SR) return;
     setErrorMsg('');
     setTranscript('');
@@ -73,8 +89,9 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
     rec.maxAlternatives = 5;
     rec.continuous = false;
 
-    rec.onresult = (e: any) => {
-      const lastResult = e.results[e.results.length - 1];
+    rec.onresult = (ev: any) => {
+      clearTimer();
+      const lastResult = ev.results[ev.results.length - 1];
       const alts: string[] = Array.from(lastResult).map((r: any) => normalize(r.transcript));
       const expected = normalize(String(question.correctAnswer));
       const heard = alts[0] || '';
@@ -88,33 +105,44 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
       setStatus('result');
     };
 
-    rec.onerror = (e: any) => {
-      const code: string = e.error || 'unknown';
+    rec.onerror = (ev: any) => {
+      clearTimer();
+      const code: string = ev.error || 'unknown';
       if (code === 'no-speech') {
-        setErrorMsg('چیزی نشنیدم — دوباره امتحان کن');
+        setErrorMsg('چیزی نشنیدم — نگه‌دار و بگو');
       } else if (code === 'not-allowed' || code === 'service-not-allowed') {
         setPermState('denied');
+        setStatus('idle');
       } else if (code === 'network') {
-        setErrorMsg('خطای شبکه');
+        setErrorMsg('خطای شبکه — اتصال اینترنت رو چک کن');
+        setStatus('idle');
       } else {
         setErrorMsg(`خطا: ${code}`);
+        setStatus('idle');
       }
-      setStatus('idle');
     };
 
     rec.onend = () => {
+      clearTimer();
       setStatus((prev) => (prev === 'listening' ? 'idle' : prev));
     };
 
-    rec.start();
-  }, [status, question.correctAnswer, SR]);
+    // Safety: go back to idle after 15s in case events never fire
+    timerRef.current = setTimeout(() => {
+      try { rec.abort(); } catch {}
+      setStatus('idle');
+      setErrorMsg('وقت تموم شد — دوباره امتحان کن');
+    }, 15000);
 
+    rec.start();
+  }, [status, question.correctAnswer, SR, clearTimer]);
+
+  // Push-to-talk end: stop recording — onresult fires with buffered audio
   const handlePressEnd = useCallback(() => {
     if (status !== 'listening') return;
-    try {
-      recRef.current?.stop();
-    } catch {}
-  }, [status]);
+    clearTimer();
+    try { recRef.current?.stop(); } catch {}
+  }, [status, clearTimer]);
 
   const retry = () => {
     setStatus('idle');
@@ -146,15 +174,15 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
         <p className="text-6xl font-extrabold text-violet-700">{String(question.correctAnswer)}</p>
       </div>
 
-      {/* Checking */}
+      {/* Checking permission */}
       {permState === 'checking' && (
         <div className="w-28 h-28 rounded-full bg-gray-100 flex items-center justify-center animate-pulse">
           <MicIcon color="#9ca3af" />
         </div>
       )}
 
-      {/* Need permission or requesting */}
-      {(permState === 'need_permission' || permState === 'requesting') && status !== 'result' && (
+      {/* Need permission: one-time tap to trigger Chrome's dialog */}
+      {(permState === 'need_permission' || permState === 'requesting') && (
         <div className="flex flex-col items-center gap-3">
           <button
             onClick={requestPermission}
@@ -166,7 +194,7 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
           <p className="text-violet-600 text-sm font-bold text-center px-6">
             {permState === 'requesting'
               ? 'در حال دریافت دسترسی...'
-              : 'روی میکروفن بزن تا دسترسی بگیریم'}
+              : 'روی میکروفن بزن تا دسترسی بده'}
           </p>
         </div>
       )}
@@ -179,23 +207,23 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
           </div>
           <p className="text-red-500 text-sm font-bold">دسترسی میکروفن مسدود شده</p>
           <p className="text-gray-400 text-xs leading-relaxed">
-            در مرورگر → تنظیمات سایت → میکروفن → Allow
+            آیکون 🔒 کنار آدرس → Microphone → Allow
             <br />
-            بعد صفحه را رفرش کن
+            بعد صفحه رو رفرش کن
           </p>
-          <button onClick={() => onAnswer(false)} className="btn-secondary text-sm py-2 px-6 mt-1">
-            رد شدن
-          </button>
+          <div className="flex gap-3 mt-2">
+            <button onClick={requestPermission} className="btn-secondary text-sm py-2 px-4">تلاش مجدد</button>
+            <button onClick={() => onAnswer(false)} className="btn-secondary text-sm py-2 px-4">رد شدن</button>
+          </div>
         </div>
       )}
 
-      {/* Push-to-talk button */}
+      {/* Push-to-talk: hold = record, release = check */}
       {permState === 'granted' && status !== 'result' && (
         <div className="flex flex-col items-center gap-3">
           <button
             onPointerDown={handlePressStart}
             onPointerUp={handlePressEnd}
-            onPointerLeave={handlePressEnd}
             onPointerCancel={handlePressEnd}
             className={`w-28 h-28 rounded-full flex items-center justify-center shadow-xl transition-all select-none
               ${status === 'listening'
@@ -210,7 +238,7 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
           ) : errorMsg ? (
             <p className="text-amber-600 text-sm font-bold text-center px-4">{errorMsg}</p>
           ) : (
-            <p className="text-gray-400 text-sm text-center">نگه‌دار و بگو — رها کن تا چک کنه</p>
+            <p className="text-gray-400 text-sm text-center">نگه‌دار ← بگو ← رها کن</p>
           )}
         </div>
       )}
@@ -220,21 +248,14 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
         <div className="flex flex-col items-center gap-4 w-full px-4">
           <div
             className={`w-full rounded-3xl py-5 px-4 text-center ${
-              correct
-                ? 'bg-emerald-50 border-2 border-emerald-200'
-                : 'bg-red-50 border-2 border-red-200'
+              correct ? 'bg-emerald-50 border-2 border-emerald-200' : 'bg-red-50 border-2 border-red-200'
             }`}
           >
-            <p
-              className={`font-extrabold text-2xl mb-1 ${
-                correct ? 'text-emerald-600' : 'text-red-500'
-              }`}
-            >
+            <p className={`font-extrabold text-2xl mb-1 ${correct ? 'text-emerald-600' : 'text-red-500'}`}>
               {correct ? 'آفرین! ✅' : 'دقیق‌تر بگو ❌'}
             </p>
             <p className="text-gray-400 text-sm">
-              شنیدم:{' '}
-              <span className="font-bold text-gray-600">{transcript || '(چیزی نشنیدم)'}</span>
+              شنیدم: <span className="font-bold text-gray-600">{transcript || '(چیزی نشنیدم)'}</span>
             </p>
           </div>
           {correct ? (
@@ -243,9 +264,7 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
             </button>
           ) : (
             <div className="flex gap-3 w-full">
-              <button onClick={retry} className="flex-1 btn-secondary py-4">
-                دوباره
-              </button>
+              <button onClick={retry} className="flex-1 btn-secondary py-4">دوباره</button>
               <button
                 onClick={() => onAnswer(false)}
                 className="flex-1 py-4 rounded-2xl bg-red-100 text-red-600 font-bold active:scale-95 transition-transform"
