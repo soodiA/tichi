@@ -43,7 +43,7 @@ export interface Node {
   id: string;
   unitId: string;
   order: number;         // position within unit (1-3)
-  type: 'lesson' | 'chest' | 'review';
+  type: 'lesson' | 'chest' | 'review' | 'intro';
   questions: Question[];
 }
 

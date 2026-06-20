@@ -6,6 +6,7 @@ import { db } from '../db/db';
 import { loadCurriculum } from '../lib/curriculum';
 import ProgressBar from '../components/ui/ProgressBar';
 import QuestionWrapper from '../components/questions/QuestionWrapper';
+import UnitIntro_AA from '../components/questions/UnitIntro_AA';
 import type { Node } from '../types';
 
 type FeedbackState = 'idle' | 'correct' | 'wrong';
@@ -90,6 +91,24 @@ const Lesson: React.FC = () => {
         <p className="text-gray-500">درس پیدا نشد</p>
       </div>
     );
+  }
+
+  if (node.type === 'intro') {
+    const completeIntro = async () => {
+      if (currentUser) {
+        await db.progress.put({
+          nodeId: node.id,
+          userId: currentUser.id,
+          completed: true,
+          stars: 3,
+          accuracy: 100,
+          completedAt: new Date().toISOString(),
+          attempts: 1,
+        });
+      }
+      navigate('/home');
+    };
+    return <UnitIntro_AA onComplete={completeIntro} />;
   }
 
   if (node.questions.length === 0) {
