@@ -13,13 +13,8 @@ const normalize = (s: string) =>
   s.trim().replace(/\s+/g, '').replace(/[ً-ٟ]/g, '');
 
 const check = (alts: string[], expected: string): boolean => {
-  // Single letter: accept any word that contains or starts with the letter
-  // (SR can't reliably detect a standalone short vowel like "آ")
-  if (expected.length === 1) return alts.some((a) => a.length > 0 && a.includes(expected));
-  // Two chars: accept startsWith (e.g. "آه" for "آه")
-  if (expected.length === 2) return alts.some((a) => a.startsWith(expected));
-  // Words: accept if any alt contains the expected word
-  return alts.some((a) => a.length >= expected.length && a.includes(expected));
+  // Strict: any alternative must match exactly
+  return alts.some((a) => a === expected);
 };
 
 const MicIcon = ({ color = 'white', size = 46 }: { color?: string; size?: number }) => (
