@@ -221,7 +221,7 @@ const UnitIntro_AA: React.FC<Props> = ({ onComplete }) => {
               onClick={(e) => { e.stopPropagation(); onComplete(); }}
               className="mt-4 bg-white text-violet-700 font-extrabold text-xl px-10 py-4 rounded-2xl shadow-xl active:scale-95 transition-transform"
             >
-              شروع ←
+              بستن ✕
             </motion.button>
           )}
 

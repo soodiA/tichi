@@ -6,7 +6,17 @@ import { loadCurriculum } from '../lib/curriculum';
 import PathNode from '../components/path/PathNode';
 import UnitDivider from '../components/path/UnitDivider';
 import DiamondDisplay from '../components/ui/DiamondDisplay';
+import UnitIntro_AA from '../components/questions/UnitIntro_AA';
 import type { Unit, NodeProgress } from '../types';
+
+const UNIT_SUBTITLE: Record<string, string> = {
+  'آ': 'آ  ا',
+  'ب': 'بـ  ب',
+};
+
+const UNIT_HAS_INTRO: Record<string, boolean> = {
+  'unit-aa': true,
+};
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -14,6 +24,7 @@ const Home: React.FC = () => {
   const [progressMap, setProgressMap] = useState<Record<string, NodeProgress>>({});
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
+  const [introUnitId, setIntroUnitId] = useState<string | null>(null);
 
   useEffect(() => {
     loadCurriculum().then((u) => { setUnits(u); setLoading(false); });
@@ -56,6 +67,9 @@ const Home: React.FC = () => {
 
   return (
     <div dir="rtl" className="min-h-full bg-bg pb-24">
+      {introUnitId === 'unit-aa' && (
+        <UnitIntro_AA onComplete={() => setIntroUnitId(null)} />
+      )}
       {/* Header */}
       <div className="sticky top-0 z-10 bg-bg shadow-sm px-5 pt-5 pb-3">
         <div className="flex items-center justify-between">
@@ -80,7 +94,13 @@ const Home: React.FC = () => {
           units.map((unit) => (
             <React.Fragment key={unit.id}>
               <div className="w-full">
-                <UnitDivider letter={unit.letter} color={unit.color} unitNumber={unit.order} />
+                <UnitDivider
+                  letter={unit.letter}
+                  color={unit.color}
+                  unitNumber={unit.order}
+                  subtitle={UNIT_SUBTITLE[unit.letter]}
+                  onPlayIntro={UNIT_HAS_INTRO[unit.id] ? () => setIntroUnitId(unit.id) : undefined}
+                />
               </div>
 
               {unit.nodes.map((node) => {
