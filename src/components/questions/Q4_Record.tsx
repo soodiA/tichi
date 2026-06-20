@@ -12,75 +12,62 @@ type Status = 'idle' | 'listening' | 'processing' | 'result';
 const normalize = (s: string) =>
   s.trim().replace(/\s+/g, '').replace(/[ً-ٟ]/g, '');
 
+const check = (alts: string[], expected: string): boolean => {
+  // Single letter: accept any word that contains or starts with the letter
+  // (SR can't reliably detect a standalone short vowel like "آ")
+  if (expected.length === 1) return alts.some((a) => a.length > 0 && a.includes(expected));
+  // Two chars: accept startsWith (e.g. "آه" for "آه")
+  if (expected.length === 2) return alts.some((a) => a.startsWith(expected));
+  // Words: accept if any alt contains the expected word
+  return alts.some((a) => a.length >= expected.length && a.includes(expected));
+};
+
 const MicIcon = ({ color = 'white', size = 46 }: { color?: string; size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
     <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
   </svg>
 );
 
-const check = (alts: string[], expected: string): boolean => {
-  // For single letters: accept anything that starts with the expected letter
-  // For words: accept if any alt contains the expected word
-  if (expected.length <= 2) {
-    return alts.some((a) => a.length > 0 && a.startsWith(expected));
-  }
-  return alts.some((a) => a.length >= expected.length && a.includes(expected));
-};
-
 const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
   const [permState, setPermState] = useState<PermState>('checking');
   const [status, setStatus] = useState<Status>('idle');
   const [transcript, setTranscript] = useState('');
   const [correct, setCorrect] = useState<boolean | null>(null);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [debugMsg, setDebugMsg] = useState('');
   const recRef = useRef<any>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const safetyRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const SR: any = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
 
-  const clearTimer = useCallback(() => {
-    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
-    if (stopTimerRef.current) { clearTimeout(stopTimerRef.current); stopTimerRef.current = null; }
-  }, []);
+  const clearSafety = () => {
+    if (safetyRef.current) { clearTimeout(safetyRef.current); safetyRef.current = null; }
+  };
 
+  // Ask mic permission via getUserMedia (shows real browser dialog)
   useEffect(() => {
     if (!SR) return;
-    if (navigator.permissions) {
-      navigator.permissions
-        .query({ name: 'microphone' as PermissionName })
-        .then((result) => {
-          const map = (s: string): PermState =>
-            s === 'granted' ? 'granted' : s === 'denied' ? 'denied' : 'need_permission';
-          setPermState(map(result.state));
-          result.onchange = () => setPermState(map(result.state));
-        })
-        .catch(() => setPermState('need_permission'));
-    } else {
-      setPermState('need_permission');
-    }
-    return clearTimer;
-  }, [clearTimer]);
+    navigator.mediaDevices?.getUserMedia({ audio: true })
+      .then((s) => { s.getTracks().forEach((t) => t.stop()); setPermState('granted'); })
+      .catch((err) => {
+        const name = (err as Error).name || '';
+        setPermState(name === 'NotAllowedError' || name === 'PermissionDeniedError' ? 'denied' : 'need_permission');
+      });
+  }, []);
 
-  const requestPermission = useCallback(() => {
-    if (!SR) { setPermState('denied'); return; }
+  const requestPermission = useCallback(async () => {
     setPermState('requesting');
-    const rec = new SR();
-    rec.lang = 'fa-IR';
-    rec.onstart = () => { try { rec.abort(); } catch {} };
-    rec.onerror = (e: any) => {
-      const code: string = e.error || '';
-      setPermState(code === 'not-allowed' || code === 'service-not-allowed' ? 'denied' : 'granted');
-    };
-    rec.onend = () => setPermState((p) => p === 'requesting' ? 'granted' : p);
-    try { rec.start(); } catch { setPermState('need_permission'); }
-  }, [SR]);
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+      s.getTracks().forEach((t) => t.stop());
+      setPermState('granted');
+    } catch {
+      setPermState('denied');
+    }
+  }, []);
 
-  const handlePressStart = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
+  const startListening = useCallback(() => {
     if (status !== 'idle' || !SR) return;
-
-    setErrorMsg('');
+    setDebugMsg('');
     setTranscript('');
     setCorrect(null);
     setStatus('listening');
@@ -90,10 +77,10 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
     rec.lang = 'fa-IR';
     rec.interimResults = false;
     rec.maxAlternatives = 5;
-    rec.continuous = false;
+    rec.continuous = false; // auto-stop after speech detected + silence
 
     rec.onresult = (ev: any) => {
-      clearTimer();
+      clearSafety();
       const lastResult = ev.results[ev.results.length - 1];
       const alts: string[] = Array.from(lastResult).map((r: any) => normalize(r.transcript));
       const expected = normalize(String(question.correctAnswer));
@@ -105,27 +92,22 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
     };
 
     rec.onerror = (ev: any) => {
-      clearTimer();
+      clearSafety();
       const code: string = ev.error || 'unknown';
       if (code === 'not-allowed' || code === 'service-not-allowed') {
         setPermState('denied');
         setStatus('idle');
-      } else if (code === 'network') {
-        setErrorMsg('خطای شبکه');
-        setStatus('idle');
       } else {
-        // includes 'no-speech' and others
-        setErrorMsg('چیزی نشنیدم — دوباره نگه‌دار و بگو');
+        setDebugMsg(`(${code})`);
         setStatus('idle');
       }
     };
 
     rec.onend = () => {
-      clearTimer();
-      // If we're still in listening/processing but got no result
+      clearSafety();
       setStatus((prev) => {
         if (prev === 'listening' || prev === 'processing') {
-          setErrorMsg('چیزی نشنیدم — دوباره نگه‌دار و بگو');
+          setDebugMsg('(no-result)');
           return 'idle';
         }
         return prev;
@@ -133,30 +115,33 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
     };
 
     // Safety: abort after 15s
-    timerRef.current = setTimeout(() => {
+    safetyRef.current = setTimeout(() => {
       try { rec.abort(); } catch {}
       setStatus('idle');
-      setErrorMsg('وقت تموم شد — دوباره امتحان کن');
+      setDebugMsg('(timeout)');
     }, 15000);
 
     rec.start();
-  }, [status, question.correctAnswer, SR, clearTimer]);
+  }, [status, question.correctAnswer, SR]);
 
+  // On press: start recording
+  const handlePressStart = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    startListening();
+  }, [startListening]);
+
+  // On release: switch visual to "processing" — do NOT call rec.stop()
+  // Chrome auto-detects silence and fires onresult itself
   const handlePressEnd = useCallback(() => {
     if (status !== 'listening') return;
-    // Switch visual to "processing" immediately on release
     setStatus('processing');
-    // Wait 800ms for Chrome SR to buffer and process the audio, then send stop
-    stopTimerRef.current = setTimeout(() => {
-      try { recRef.current?.stop(); } catch {}
-    }, 800);
   }, [status]);
 
   const retry = () => {
     setStatus('idle');
     setTranscript('');
     setCorrect(null);
-    setErrorMsg('');
+    setDebugMsg('');
   };
 
   if (!SR) {
@@ -178,24 +163,26 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
         <p className="text-6xl font-extrabold text-violet-700">{String(question.correctAnswer)}</p>
       </div>
 
+      {/* Permission: auto-check on mount via getUserMedia */}
       {permState === 'checking' && (
         <div className="w-28 h-28 rounded-full bg-gray-100 flex items-center justify-center animate-pulse">
           <MicIcon color="#9ca3af" />
         </div>
       )}
 
-      {(permState === 'need_permission' || permState === 'requesting') && (
+      {permState === 'need_permission' && (
         <div className="flex flex-col items-center gap-3">
-          <button
-            onClick={requestPermission}
-            disabled={permState === 'requesting'}
-            className="w-28 h-28 rounded-full bg-violet-600 flex items-center justify-center shadow-xl active:scale-95 transition-transform disabled:opacity-60"
-          >
+          <button onClick={requestPermission}
+            className="w-28 h-28 rounded-full bg-violet-600 flex items-center justify-center shadow-xl active:scale-95 transition-transform">
             <MicIcon />
           </button>
-          <p className="text-violet-600 text-sm font-bold text-center px-6">
-            {permState === 'requesting' ? 'در حال دریافت دسترسی...' : 'روی میکروفن بزن تا دسترسی بده'}
-          </p>
+          <p className="text-violet-600 text-sm font-bold text-center px-6">روی میکروفن بزن تا دسترسی بده</p>
+        </div>
+      )}
+
+      {permState === 'requesting' && (
+        <div className="w-28 h-28 rounded-full bg-violet-400 flex items-center justify-center animate-pulse">
+          <MicIcon />
         </div>
       )}
 
@@ -233,13 +220,16 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
           >
             <MicIcon />
           </button>
-          {status === 'listening' ? (
-            <p className="text-red-500 font-bold animate-pulse">🎙 داری میگی... رها کن</p>
-          ) : status === 'processing' ? (
-            <p className="text-orange-500 font-bold animate-pulse">⏳ در حال پردازش...</p>
-          ) : errorMsg ? (
-            <p className="text-amber-600 text-sm font-bold text-center px-4">{errorMsg}</p>
-          ) : (
+
+          {status === 'listening' && <p className="text-red-500 font-bold animate-pulse">🎙 داری میگی... رها کن</p>}
+          {status === 'processing' && <p className="text-orange-500 font-bold animate-pulse">⏳ صبر کن...</p>}
+          {status === 'idle' && debugMsg && (
+            <p className="text-amber-600 text-sm font-bold text-center px-4">
+              چیزی نشنیدم — دوباره نگه‌دار و بگو
+              <br /><span className="text-xs text-gray-400">{debugMsg}</span>
+            </p>
+          )}
+          {status === 'idle' && !debugMsg && (
             <p className="text-gray-400 text-sm text-center">نگه‌دار ← بگو ← رها کن</p>
           )}
         </div>
