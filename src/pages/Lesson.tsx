@@ -105,7 +105,7 @@ const Lesson: React.FC = () => {
   const currentQuestion = node.questions[currentIndex];
 
   return (
-    <div dir="rtl" className="min-h-full flex flex-col bg-bg relative">
+    <div dir="rtl" className="min-h-screen flex flex-col bg-bg relative">
       {/* Top bar */}
       <div className="flex items-center gap-3 px-5 pt-5 pb-3">
         <button
