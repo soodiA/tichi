@@ -11,6 +11,9 @@ import type { Node } from '../types';
 
 type FeedbackState = 'idle' | 'correct' | 'wrong';
 
+const PRAISE = ['آفرین! 🎉', 'خیلی خوب بود! ⭐', 'احسنت! 🌟', 'عالی بود! 🎊', 'آفرین تیچی خوشحال شد! 🦉', 'فوق‌العاده! ✨'];
+const randomPraise = () => PRAISE[Math.floor(Math.random() * PRAISE.length)];
+
 const Lesson: React.FC = () => {
   const { nodeId } = useParams<{ nodeId: string }>();
   const navigate = useNavigate();
@@ -21,6 +24,7 @@ const Lesson: React.FC = () => {
   const [, setAnswers] = useState<Record<string, boolean>>({});
   const [feedback, setFeedback] = useState<FeedbackState>('idle');
   const [shownCorrectAnswer, setShownCorrectAnswer] = useState<string>('');
+  const [praiseText, setPraiseText] = useState('');
   const answersRef = useRef<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -51,6 +55,7 @@ const Lesson: React.FC = () => {
         setShownCorrectAnswer(correctDisplay);
       }
 
+      if (correct) setPraiseText(randomPraise());
       setFeedback(correct ? 'correct' : 'wrong');
     },
     [node, currentIndex, feedback]
@@ -189,7 +194,7 @@ const Lesson: React.FC = () => {
               </div>
               <div>
                 {feedback === 'correct' ? (
-                  <p className="text-emerald-700 font-extrabold text-xl">آفرین! 🎉</p>
+                  <p className="text-emerald-700 font-extrabold text-xl">{praiseText}</p>
                 ) : (
                   <>
                     <p className="text-red-600 font-extrabold text-base">جواب درست:</p>
