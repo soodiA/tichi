@@ -43,8 +43,8 @@ const ProfileCard: React.FC<{
       <p className="font-bold text-gray-800 truncate">{profile.name}</p>
       <p className="text-gray-400 text-sm truncate">@{profile.username}</p>
     </div>
-    <div className="flex items-center gap-1 text-blue-500 text-sm font-bold flex-shrink-0">
-      💎 {profile.diamonds.toLocaleString('fa-IR')}
+    <div className="flex items-center gap-1 text-amber-500 text-sm font-bold flex-shrink-0">
+      🪙 {profile.diamonds.toLocaleString('fa-IR')}
     </div>
     <button
       onClick={() => onAdd(profile.id)}
@@ -84,11 +84,11 @@ const Friends: React.FC = () => {
         const friendIds = new Set<string>((friendData ?? []).map((r: any) => r.friend_id));
         setAdded(friendIds);
 
-        // Fetch 50 profiles, shuffle, take 10 excluding self + friends
+        // Fetch 50 profiles, shuffle, take 10 excluding self (by local_id) + friends
         const { data } = await supabase
           .from('profiles')
           .select('id, name, username, avatar_url, diamonds')
-          .neq('id', currentUser.id)
+          .neq('local_id', currentUser.id)
           .order('diamonds', { ascending: false })
           .limit(50);
 
@@ -117,7 +117,7 @@ const Friends: React.FC = () => {
       .from('profiles')
       .select('id, name, username, avatar_url, diamonds')
       .ilike('username', `%${q}%`)
-      .neq('id', currentUser.id)
+      .neq('local_id', currentUser.id)
       .limit(20);
 
     if (error) {
@@ -126,7 +126,7 @@ const Friends: React.FC = () => {
         .from('profiles')
         .select('id, name, username, avatar_url, diamonds')
         .ilike('name', `%${q}%`)
-        .neq('id', currentUser.id)
+        .neq('local_id', currentUser.id)
         .limit(20);
       setResults((data2 as Profile[]) ?? []);
     } else {
@@ -152,7 +152,7 @@ const Friends: React.FC = () => {
   };
 
   return (
-    <div dir="rtl" className="min-h-full relative pb-24 overflow-hidden">
+    <div dir="rtl" className="min-h-screen relative pb-24 overflow-hidden">
       <PageBg variant="green" />
       {/* Header */}
       <div className="relative z-10 flex items-center gap-3 px-5 pt-6 pb-4 bg-white/70 backdrop-blur-sm shadow-sm">
