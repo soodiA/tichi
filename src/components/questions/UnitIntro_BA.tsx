@@ -12,6 +12,7 @@ interface Scene {
   accent: string;
   emoji?: string;
   word?: string;
+  words?: { text: string; label: string; color: string }[]; // dual display
   highlightChar?: string;
   highlightColor?: string;
   title: string;
@@ -71,10 +72,13 @@ const SCENES: Scene[] = [
     id: 4,
     bg: '#F5F0FF',
     accent: '#7C3AED',
-    word: 'بـ',
-    title: 'گاهی بـ میشه',
-    subtitle: 'وقتی اول کلمه و چسبیده باشه',
-    speak: 'گاهی ب به شکل بـ میشه',
+    words: [
+      { text: 'بـ', label: 'اول کلمه', color: '#7C3AED' },
+      { text: 'ب', label: 'آخر کلمه', color: '#2563EB' },
+    ],
+    title: 'حرف ب دو شکل داره!',
+    subtitle: 'بـ وقتی چسبیده‌ست — ب وقتی جداست',
+    speak: 'حرف ب دو شکل داره. بـ وقتی چسبیده، ب وقتی جداست',
     mascotExpression: 'thinking',
   },
   {
@@ -85,9 +89,9 @@ const SCENES: Scene[] = [
     word: 'بابا',
     highlightChar: 'ب',
     highlightColor: '#7C3AED',
-    title: 'بـ — اول و وسط',
-    subtitle: 'بابا — ب هم اول هم وسطه',
-    speak: 'بابا. ب هم اول هم وسط کلمه‌ست',
+    title: 'بـ — اول کلمه',
+    subtitle: 'در بابا — بـ چسبیده به بقیه',
+    speak: 'بابا. بـ اول کلمه‌ست و چسبیده',
     mascotExpression: 'happy',
   },
   {
@@ -224,6 +228,29 @@ const UnitIntro_BA: React.FC<Props> = ({ onComplete }) => {
               className="text-5xl -mt-4"
             >
               {scene.emoji}
+            </motion.div>
+          )}
+
+          {scene.words && (
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 18, delay: 0.15 }}
+              className="flex gap-4 w-full justify-center"
+            >
+              {scene.words.map((w, i) => (
+                <div key={i} className="flex flex-col items-center gap-2">
+                  <div
+                    className="rounded-2xl px-6 py-4 flex items-center justify-center shadow-md"
+                    style={{ backgroundColor: w.color + '22', border: `2px solid ${w.color}55`, minWidth: 80 }}
+                  >
+                    <span style={{ fontSize: '4rem', fontFamily: 'Vazirmatn, serif', fontWeight: 900, color: w.color, lineHeight: 1 }}>
+                      {w.text}
+                    </span>
+                  </div>
+                  <span className="text-sm font-bold" style={{ color: w.color }}>{w.label}</span>
+                </div>
+              ))}
             </motion.div>
           )}
 
