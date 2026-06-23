@@ -130,7 +130,7 @@ const Lesson: React.FC = () => {
   const currentQuestion = node.questions[currentIndex];
 
   return (
-    <div dir="rtl" className="min-h-screen flex flex-col relative overflow-hidden">
+    <div dir="rtl" className="h-full flex flex-col relative overflow-hidden">
       <PageBg variant="blue" />
       {/* Top bar */}
       <div className="relative z-10 flex items-center gap-3 px-5 pt-5 pb-3">
