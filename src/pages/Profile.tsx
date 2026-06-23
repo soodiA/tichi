@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import DiamondDisplay from '../components/ui/DiamondDisplay';
+import PageBg from '../components/ui/PageBg';
 import { syncProfileToCloud } from '../lib/sync';
 import { supabase } from '../lib/supabase';
 import { db } from '../db/db';
@@ -67,9 +68,10 @@ const Profile: React.FC = () => {
   const isPhotoUrl = currentUser.avatarUrl?.startsWith('data:') || currentUser.avatarUrl?.startsWith('http');
 
   return (
-    <div dir="rtl" className="min-h-full bg-bg pb-24">
+    <div dir="rtl" className="min-h-full relative pb-24 overflow-hidden">
+      <PageBg variant="purple" />
       {/* Header */}
-      <div className="bg-gradient-to-b from-violet-100 to-bg pt-10 pb-6 px-5 flex items-start justify-between">
+      <div className="relative z-10 bg-gradient-to-b from-violet-100/80 to-transparent pt-10 pb-6 px-5 flex items-start justify-between">
         <button
           onClick={() => navigate('/home')}
           className="w-10 h-10 flex items-center justify-center rounded-full bg-white/60 text-violet-700 active:scale-95 transition-transform mt-1"
@@ -112,7 +114,7 @@ const Profile: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="px-5 mt-2">
+      <div className="relative z-10 px-5 mt-2">
         <div className="grid grid-cols-2 gap-3">
           <div className="card text-center">
             <div className="text-3xl mb-1">🔥</div>
@@ -153,7 +155,7 @@ const Profile: React.FC = () => {
       </div>
 
       {/* Logout */}
-      <div className="px-5 mt-4 mb-2">
+      <div className="relative z-10 px-5 mt-4 mb-2">
         <button
           onClick={() => setShowLogoutConfirm(true)}
           className="w-full py-3 rounded-2xl text-red-500 font-bold text-base border-2 border-red-100 bg-red-50 active:scale-95 transition-transform"

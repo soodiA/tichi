@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
+import PageBg from '../components/ui/PageBg';
 
 interface Profile {
   id: string;
@@ -151,9 +152,10 @@ const Friends: React.FC = () => {
   };
 
   return (
-    <div dir="rtl" className="min-h-full bg-bg pb-24">
+    <div dir="rtl" className="min-h-full relative pb-24 overflow-hidden">
+      <PageBg variant="green" />
       {/* Header */}
-      <div className="flex items-center gap-3 px-5 pt-6 pb-4 bg-white shadow-sm">
+      <div className="relative z-10 flex items-center gap-3 px-5 pt-6 pb-4 bg-white/70 backdrop-blur-sm shadow-sm">
         <button
           onClick={() => navigate(-1)}
           className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
@@ -165,7 +167,7 @@ const Friends: React.FC = () => {
         <h1 className="text-xl font-extrabold text-gray-800">دوستان</h1>
       </div>
 
-      <div className="px-5 pt-5">
+      <div className="relative z-10 px-5 pt-5">
         {/* Search bar */}
         <div className="flex gap-2 mb-6">
           <div className="relative flex-1">

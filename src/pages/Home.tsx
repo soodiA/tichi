@@ -8,6 +8,7 @@ import UnitDivider from '../components/path/UnitDivider';
 import DiamondDisplay from '../components/ui/DiamondDisplay';
 import UnitIntro_AA from '../components/questions/UnitIntro_AA';
 import UnitIntro_BA from '../components/questions/UnitIntro_BA';
+import PageBg from '../components/ui/PageBg';
 import type { Unit, NodeProgress } from '../types';
 
 const UNIT_SUBTITLE: Record<string, string> = {
@@ -68,11 +69,12 @@ const Home: React.FC = () => {
   const greetText = greetHour < 12 ? 'صبح بخیر' : greetHour < 17 ? 'روز بخیر' : 'شب بخیر';
 
   return (
-    <div dir="rtl" className="min-h-full bg-bg pb-24">
+    <div dir="rtl" className="min-h-full relative pb-24 overflow-hidden">
+      <PageBg variant="blue" />
       {introUnitId === 'unit-aa' && <UnitIntro_AA onComplete={() => setIntroUnitId(null)} />}
       {introUnitId === 'unit-ba' && <UnitIntro_BA onComplete={() => setIntroUnitId(null)} />}
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-bg shadow-sm px-5 pt-5 pb-3">
+      <div className="sticky top-0 z-10 bg-white/70 backdrop-blur-sm shadow-sm px-5 pt-5 pb-3">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-gray-500 text-sm">{greetText}،</p>
@@ -88,7 +90,7 @@ const Home: React.FC = () => {
       </div>
 
       {/* Path */}
-      <div className="flex flex-col items-center gap-4 px-5 pt-6">
+      <div className="relative z-10 flex flex-col items-center gap-4 px-5 pt-6">
         {units.length === 0 ? (
           <p className="text-gray-400 text-center py-10">محتوایی یافت نشد</p>
         ) : (
