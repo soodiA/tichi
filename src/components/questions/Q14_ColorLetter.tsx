@@ -3,7 +3,7 @@ import type { Question } from '../../types';
 
 const SIZE = 300;
 const BRUSH_R = 22;
-const THRESHOLD = 65;
+const THRESHOLD = 82;
 const PAINT_COLOR = '#7c3aed';
 const EMPTY_COLOR = '#ede9fe';
 
