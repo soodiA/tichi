@@ -9,7 +9,7 @@ import { db } from '../db/db';
 import { toJalaliDisplay } from '../components/ui/JalaliDatePicker';
 
 const AVATARS = [
-  '🦉','🐸','🦁','🐧','🐯','🐼','🦊','🐰',
+  '🐼','🐸','🦁','🐧','🐯','🦊','🐰','🐻',
   '🐻','🐨','🦄','🐙','🦋','🐬','🦕','🐲',
   '🌸','⭐','🌈','🎈','🍀','🎯','🚀','🎸',
 ];
@@ -94,7 +94,7 @@ const Profile: React.FC = () => {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span className="text-5xl">{currentUser.avatarUrl || '🦉'}</span>
+              <span className="text-5xl">{currentUser.avatarUrl || '🐼'}</span>
             )}
             <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity rounded-full">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="white">

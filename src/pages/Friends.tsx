@@ -20,7 +20,7 @@ const Avatar: React.FC<{ profile: Profile }> = ({ profile }) => {
       {isUrl ? (
         <img src={profile.avatar_url!} alt="avatar" className="w-full h-full object-cover" />
       ) : (
-        <span>{profile.avatar_url || '🦉'}</span>
+        <span>{profile.avatar_url || '🐼'}</span>
       )}
     </div>
   );

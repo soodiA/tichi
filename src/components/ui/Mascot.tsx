@@ -25,156 +25,119 @@ const Mascot: React.FC<MascotProps> = ({
     >
       <svg
         width={size}
-        height={size * 1.15}
-        viewBox="0 0 140 161"
+        height={size * 1.1}
+        viewBox="0 0 200 220"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <defs>
-          <radialGradient id="headGrad" cx="50%" cy="40%" r="55%">
-            <stop offset="0%" stopColor="#FFFFFF" />
-            <stop offset="100%" stopColor="#F0F0F0" />
-          </radialGradient>
-          <radialGradient id="bodyGrad" cx="50%" cy="40%" r="60%">
-            <stop offset="0%" stopColor="#FFFFFF" />
-            <stop offset="100%" stopColor="#E8E8E8" />
-          </radialGradient>
-          <radialGradient id="eyeWhiteL" cx="40%" cy="35%" r="60%">
-            <stop offset="0%" stopColor="#FFFFFF" />
-            <stop offset="100%" stopColor="#F5F5F5" />
-          </radialGradient>
-          <radialGradient id="eyeWhiteR" cx="60%" cy="35%" r="60%">
-            <stop offset="0%" stopColor="#FFFFFF" />
-            <stop offset="100%" stopColor="#F5F5F5" />
-          </radialGradient>
-          <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#00000018" />
-          </filter>
-        </defs>
-
         {/* Ground shadow */}
-        <ellipse cx="70" cy="157" rx="32" ry="5" fill="rgba(0,0,0,0.08)" />
+        <ellipse cx="100" cy="215" rx="45" ry="6" fill="rgba(0,0,0,0.10)" />
 
-        {/* Body outline ring */}
-        <ellipse cx="70" cy="126" rx="35" ry="29" fill="#AAAAAA" opacity="0.55" />
-        {/* Body */}
-        <ellipse cx="70" cy="126" rx="33" ry="27" fill="url(#bodyGrad)" filter="url(#softShadow)" />
-        {/* Belly circle */}
-        <ellipse cx="70" cy="130" rx="18" ry="16" fill="#F7F7F7" opacity="0.7" />
+        {/* ── BODY ── */}
+        <ellipse cx="100" cy="178" rx="48" ry="40" fill="white" stroke="#1A1A1A" strokeWidth="3" />
+        {/* Belly patch */}
+        <ellipse cx="100" cy="185" rx="28" ry="24" fill="#F5F5F5" stroke="#E0E0E0" strokeWidth="1.5" />
 
-        {/* Left arm */}
-        <ellipse cx="38" cy="122" rx="11" ry="9" fill="#1C1C1C" transform="rotate(-25 38 122)" />
-        <ellipse cx="29" cy="133" rx="8" ry="7" fill="#1C1C1C" transform="rotate(-10 29 133)" />
-        {/* Left arm white paw tip */}
-        <ellipse cx="26" cy="138" rx="5" ry="4" fill="#F0F0F0" opacity="0.5" />
+        {/* Arms */}
+        <ellipse cx="56"  cy="172" rx="16" ry="12" fill="#1A1A1A" stroke="#1A1A1A" strokeWidth="2" transform="rotate(-30 56 172)" />
+        <ellipse cx="144" cy="172" rx="16" ry="12" fill="#1A1A1A" stroke="#1A1A1A" strokeWidth="2" transform="rotate(30 144 172)" />
+        {/* Paw tips */}
+        <ellipse cx="44"  cy="183" rx="10" ry="8"  fill="white" stroke="#1A1A1A" strokeWidth="2" />
+        <ellipse cx="156" cy="183" rx="10" ry="8"  fill="white" stroke="#1A1A1A" strokeWidth="2" />
 
-        {/* Right arm */}
-        <ellipse cx="102" cy="122" rx="11" ry="9" fill="#1C1C1C" transform="rotate(25 102 122)" />
-        <ellipse cx="111" cy="133" rx="8" ry="7" fill="#1C1C1C" transform="rotate(10 111 133)" />
-        {/* Right arm white paw tip */}
-        <ellipse cx="114" cy="138" rx="5" ry="4" fill="#F0F0F0" opacity="0.5" />
+        {/* Feet */}
+        <ellipse cx="76"  cy="210" rx="20" ry="11" fill="#1A1A1A" />
+        <ellipse cx="124" cy="210" rx="20" ry="11" fill="#1A1A1A" />
+        <ellipse cx="70"  cy="213" rx="9"  ry="4"  fill="white" opacity="0.35" />
+        <ellipse cx="130" cy="213" rx="9"  ry="4"  fill="white" opacity="0.35" />
 
-        {/* Legs/Feet */}
-        <ellipse cx="53" cy="149" rx="14" ry="8" fill="#1C1C1C" />
-        <ellipse cx="87" cy="149" rx="14" ry="8" fill="#1C1C1C" />
-        {/* Foot white tips */}
-        <ellipse cx="48" cy="152" rx="6" ry="3.5" fill="#F0F0F0" opacity="0.4" />
-        <ellipse cx="92" cy="152" rx="6" ry="3.5" fill="#F0F0F0" opacity="0.4" />
+        {/* ── HEAD ── */}
+        {/* Ears (behind head) */}
+        <circle cx="46"  cy="48" r="26" fill="#1A1A1A" stroke="#1A1A1A" strokeWidth="2" />
+        <circle cx="154" cy="48" r="26" fill="#1A1A1A" stroke="#1A1A1A" strokeWidth="2" />
+        <circle cx="46"  cy="48" r="15" fill="#2E2E2E" />
+        <circle cx="154" cy="48" r="15" fill="#2E2E2E" />
 
-        {/* Head outline ring */}
-        <circle cx="70" cy="62" r="52" fill="#AAAAAA" opacity="0.50" />
-        {/* Head */}
-        <circle cx="70" cy="62" r="50" fill="url(#headGrad)" filter="url(#softShadow)" />
+        {/* Head white circle */}
+        <circle cx="100" cy="100" r="72" fill="white" stroke="#1A1A1A" strokeWidth="3" />
 
-        {/* Ears */}
-        <circle cx="28" cy="22" r="20" fill="#1C1C1C" />
-        <circle cx="112" cy="22" r="20" fill="#1C1C1C" />
-        {/* Ear inner */}
-        <circle cx="28" cy="22" r="12" fill="#2E2E2E" />
-        <circle cx="112" cy="22" r="12" fill="#2E2E2E" />
-        {/* Ear cute highlight */}
-        <circle cx="23" cy="17" r="4" fill="#3D3D3D" opacity="0.6" />
-        <circle cx="107" cy="17" r="4" fill="#3D3D3D" opacity="0.6" />
+        {/* Eye patches — large oval */}
+        <ellipse cx="70"  cy="98" rx="28" ry="27" fill="#1A1A1A" />
+        <ellipse cx="130" cy="98" rx="28" ry="27" fill="#1A1A1A" />
 
-        {/* Eye patches — rounder, bigger */}
-        <ellipse cx="50" cy="63" rx="21" ry="20" fill="#1C1C1C" />
-        <ellipse cx="90" cy="63" rx="21" ry="20" fill="#1C1C1C" />
+        {/* Eye whites */}
+        <ellipse cx="70"  cy="94" rx="21" ry="22" fill="white" />
+        <ellipse cx="130" cy="94" rx="21" ry="22" fill="white" />
 
-        {/* Eye whites — large anime style */}
-        <ellipse cx="50" cy="60" rx="15" ry="16" fill="url(#eyeWhiteL)" />
-        <ellipse cx="90" cy="60" rx="15" ry="16" fill="url(#eyeWhiteR)" />
-
-        {/* Pupils & expressions */}
+        {/* Pupils + expressions */}
         {isThinking ? (
           <>
-            {/* Swirly/confused eyes for thinking */}
-            <ellipse cx="50" cy="61" rx="9" ry="9" fill="#1C1C1C" />
-            <circle cx="53" cy="56" r="3.5" fill="white" />
-            <circle cx="47" cy="65" r="2" fill="white" opacity="0.6" />
-            <ellipse cx="90" cy="61" rx="9" ry="9" fill="#1C1C1C" />
-            <circle cx="93" cy="56" r="3.5" fill="white" />
-            <circle cx="87" cy="65" r="2" fill="white" opacity="0.6" />
-            {/* Thinking squiggle brow */}
-            <path d="M42 46 Q50 42 58 46" stroke="#1C1C1C" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-            <path d="M82 46 Q90 42 98 46" stroke="#1C1C1C" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+            {/* Half-closed thinking eyes */}
+            <ellipse cx="70"  cy="96" rx="14" ry="10" fill="#1A1A1A" />
+            <ellipse cx="130" cy="96" rx="14" ry="10" fill="#1A1A1A" />
+            {/* Shine */}
+            <circle cx="75"  cy="90" r="5" fill="white" />
+            <circle cx="135" cy="90" r="5" fill="white" />
+            <circle cx="62"  cy="100" r="2.5" fill="white" opacity="0.6" />
+            <circle cx="122" cy="100" r="2.5" fill="white" opacity="0.6" />
+            {/* Thinking brow */}
+            <path d="M55 76 Q70 70 85 76"  stroke="#1A1A1A" strokeWidth="3" strokeLinecap="round" fill="none" />
+            <path d="M115 76 Q130 70 145 76" stroke="#1A1A1A" strokeWidth="3" strokeLinecap="round" fill="none" />
           </>
         ) : isExcited ? (
           <>
-            {/* Happy arc eyes */}
-            <path d="M38 60 Q50 70 62 60" stroke="#1C1C1C" strokeWidth="3.5" strokeLinecap="round" fill="none" />
-            <path d="M78 60 Q90 70 102 60" stroke="#1C1C1C" strokeWidth="3.5" strokeLinecap="round" fill="none" />
-            {/* Shine dots above arcs */}
-            <circle cx="44" cy="53" r="2.5" fill="#1C1C1C" />
-            <circle cx="96" cy="53" r="2.5" fill="#1C1C1C" />
+            {/* Arc/happy eyes */}
+            <path d="M52 94 Q70 112 88 94"  stroke="#1A1A1A" strokeWidth="4.5" strokeLinecap="round" fill="none" />
+            <path d="M112 94 Q130 112 148 94" stroke="#1A1A1A" strokeWidth="4.5" strokeLinecap="round" fill="none" />
           </>
         ) : (
           <>
-            {/* Normal big cute pupils */}
-            <ellipse cx="50" cy="62" rx="10" ry="11" fill="#1C1C1C" />
-            <circle cx="54" cy="56" r="4" fill="white" />
-            <circle cx="45" cy="67" r="2" fill="white" opacity="0.55" />
-            <ellipse cx="90" cy="62" rx="10" ry="11" fill="#1C1C1C" />
-            <circle cx="94" cy="56" r="4" fill="white" />
-            <circle cx="85" cy="67" r="2" fill="white" opacity="0.55" />
+            {/* Normal large cute pupils */}
+            <ellipse cx="70"  cy="96" rx="14" ry="15" fill="#1A1A1A" />
+            <ellipse cx="130" cy="96" rx="14" ry="15" fill="#1A1A1A" />
+            {/* Main shine dot */}
+            <circle cx="77"  cy="87" r="6" fill="white" />
+            <circle cx="137" cy="87" r="6" fill="white" />
+            {/* Secondary shine */}
+            <circle cx="62"  cy="103" r="3" fill="white" opacity="0.55" />
+            <circle cx="122" cy="103" r="3" fill="white" opacity="0.55" />
           </>
         )}
 
-        {/* Nose — cute small heart shape via two circles + triangle */}
-        <circle cx="67" cy="79" r="3.5" fill="#1C1C1C" />
-        <circle cx="73" cy="79" r="3.5" fill="#1C1C1C" />
-        <polygon points="63.5,81 76.5,81 70,86" fill="#1C1C1C" />
+        {/* Nose — small round oval */}
+        <ellipse cx="100" cy="116" rx="7" ry="5" fill="#1A1A1A" />
 
         {/* Mouth */}
         {isExcited ? (
           <>
-            <path d="M58 87 Q70 100 82 87" stroke="#1C1C1C" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+            <path d="M82 124 Q100 142 118 124" stroke="#1A1A1A" strokeWidth="3" strokeLinecap="round" fill="none" />
             {/* Tongue */}
-            <ellipse cx="70" cy="96" rx="8" ry="6" fill="#F48FB1" />
-            <line x1="70" y1="90" x2="70" y2="102" stroke="#E57399" strokeWidth="1.5" />
+            <ellipse cx="100" cy="136" rx="11" ry="8" fill="#F48FB1" stroke="#E57399" strokeWidth="1" />
+            <line x1="100" y1="128" x2="100" y2="144" stroke="#E57399" strokeWidth="1.5" />
           </>
         ) : isThinking ? (
-          <path d="M60 89 Q68 94 80 87" stroke="#1C1C1C" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <path d="M84 126 Q100 134 116 122" stroke="#1A1A1A" strokeWidth="3" strokeLinecap="round" fill="none" />
         ) : (
-          <path d="M59 88 Q70 99 81 88" stroke="#1C1C1C" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <path d="M83 124 Q100 140 117 124" stroke="#1A1A1A" strokeWidth="3" strokeLinecap="round" fill="none" />
         )}
 
-        {/* Blush cheeks — bigger, softer */}
-        <ellipse cx="26" cy="78" rx="11" ry="7" fill="#FFB3C1" opacity="0.6" />
-        <ellipse cx="114" cy="78" rx="11" ry="7" fill="#FFB3C1" opacity="0.6" />
+        {/* Blush cheeks */}
+        <ellipse cx="36"  cy="118" rx="16" ry="10" fill="#FFB3C8" opacity="0.65" />
+        <ellipse cx="164" cy="118" rx="16" ry="10" fill="#FFB3C8" opacity="0.65" />
 
         {/* Celebrating sparkles */}
         {expression === 'celebrating' && (
           <>
-            <text x="2" y="34" fontSize="16">✨</text>
-            <text x="114" y="42" fontSize="13">⭐</text>
-            <text x="5" y="78" fontSize="11">🌟</text>
-            <text x="118" y="80" fontSize="10">💫</text>
+            <text x="2"   y="40"  fontSize="20">✨</text>
+            <text x="168" y="50"  fontSize="16">⭐</text>
+            <text x="5"   y="100" fontSize="14">🌟</text>
+            <text x="170" y="105" fontSize="13">💫</text>
           </>
         )}
         {expression === 'excited' && (
           <>
-            <text x="2" y="40" fontSize="13">💛</text>
-            <text x="118" y="46" fontSize="11">✨</text>
+            <text x="4"   y="50"  fontSize="16">💛</text>
+            <text x="172" y="58"  fontSize="13">✨</text>
           </>
         )}
       </svg>

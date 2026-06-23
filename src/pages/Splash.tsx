@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
+import Mascot from '../components/ui/Mascot';
 
 const Splash: React.FC = () => {
   const navigate = useNavigate();
@@ -27,9 +28,8 @@ const Splash: React.FC = () => {
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 200, damping: 14 }}
-        className="text-8xl select-none"
       >
-        🦉
+        <Mascot size={160} expression="excited" />
       </motion.div>
 
       <motion.h1

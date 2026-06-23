@@ -7,6 +7,7 @@ import { syncProfileToCloud } from '../lib/sync';
 import { supabase } from '../lib/supabase';
 import type { UserProfile } from '../types';
 import JalaliDatePicker from '../components/ui/JalaliDatePicker';
+import Mascot from '../components/ui/Mascot';
 
 const AVATARS = ['🦁', '🐯', '🐸', '🐧', '🦊', '🐼'];
 
@@ -85,7 +86,7 @@ const Onboarding: React.FC = () => {
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <div className="text-6xl mb-3">🦉</div>
+          <div className="mb-3 flex justify-center"><Mascot size={110} expression="happy" /></div>
           <h1 className="text-3xl font-extrabold text-violet-700">به تیچی خوش اومدی!</h1>
           <p className="text-gray-500 mt-2">بیا باهم آشنا بشیم</p>
         </div>
