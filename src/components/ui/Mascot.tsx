@@ -14,8 +14,8 @@ const Mascot: React.FC<MascotProps> = ({
   animate = true,
   className = '',
 }) => {
-  const eyeOpen = expression !== 'thinking';
-  const mouthCurve = expression === 'excited' || expression === 'celebrating' ? 'M46 78 Q60 90 74 78' : 'M48 76 Q60 84 72 76';
+  const isExcited = expression === 'excited' || expression === 'celebrating';
+  const isThinking = expression === 'thinking';
 
   return (
     <motion.div
@@ -25,104 +25,105 @@ const Mascot: React.FC<MascotProps> = ({
     >
       <svg
         width={size}
-        height={size * 1.2}
-        viewBox="0 0 120 144"
+        height={size * 1.1}
+        viewBox="0 0 120 132"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
         {/* Shadow */}
-        <ellipse cx="60" cy="140" rx="32" ry="5" fill="rgba(0,0,0,0.08)" />
+        <ellipse cx="60" cy="128" rx="28" ry="5" fill="rgba(0,0,0,0.10)" />
 
         {/* Body */}
-        <ellipse cx="60" cy="102" rx="36" ry="38" fill="#C17F47" />
+        <ellipse cx="60" cy="106" rx="30" ry="24" fill="#F8F8F8" />
+        {/* Body black belly patch */}
+        <ellipse cx="60" cy="112" rx="16" ry="14" fill="#1a1a1a" opacity="0.08" />
 
-        {/* Belly */}
-        <ellipse cx="60" cy="108" rx="22" ry="27" fill="#FEF3C7" />
+        {/* Left arm */}
+        <ellipse cx="32" cy="106" rx="10" ry="8" fill="#1a1a1a" transform="rotate(-20, 32, 106)" />
+        <ellipse cx="24" cy="115" rx="7" ry="6" fill="#1a1a1a" transform="rotate(-10, 24, 115)" />
 
-        {/* Left Wing */}
-        <path d="M24 90 Q8 80 14 60 Q20 75 30 82 Z" fill="#A86C38" />
-        {/* Right Wing */}
-        <path d="M96 90 Q112 80 106 60 Q100 75 90 82 Z" fill="#A86C38" />
+        {/* Right arm */}
+        <ellipse cx="88" cy="106" rx="10" ry="8" fill="#1a1a1a" transform="rotate(20, 88, 106)" />
+        <ellipse cx="96" cy="115" rx="7" ry="6" fill="#1a1a1a" transform="rotate(10, 96, 115)" />
 
-        {/* Left Foot */}
-        <g transform="translate(40, 135)">
-          <path d="M0 0 L-8 10" stroke="#F97316" strokeWidth="3" strokeLinecap="round" />
-          <path d="M0 0 L0 11" stroke="#F97316" strokeWidth="3" strokeLinecap="round" />
-          <path d="M0 0 L8 10" stroke="#F97316" strokeWidth="3" strokeLinecap="round" />
-        </g>
-        {/* Right Foot */}
-        <g transform="translate(80, 135)">
-          <path d="M0 0 L-8 10" stroke="#F97316" strokeWidth="3" strokeLinecap="round" />
-          <path d="M0 0 L0 11" stroke="#F97316" strokeWidth="3" strokeLinecap="round" />
-          <path d="M0 0 L8 10" stroke="#F97316" strokeWidth="3" strokeLinecap="round" />
-        </g>
+        {/* Feet */}
+        <ellipse cx="45" cy="126" rx="12" ry="7" fill="#1a1a1a" />
+        <ellipse cx="75" cy="126" rx="12" ry="7" fill="#1a1a1a" />
 
         {/* Head */}
-        <circle cx="60" cy="54" r="38" fill="#C17F47" />
+        <circle cx="60" cy="52" r="42" fill="#F8F8F8" />
 
-        {/* Ear tufts */}
-        <path d="M30 24 Q26 8 38 16 Q34 22 32 28 Z" fill="#A86C38" />
-        <path d="M90 24 Q94 8 82 16 Q86 22 88 28 Z" fill="#A86C38" />
+        {/* Ears (black) */}
+        <circle cx="25" cy="18" r="17" fill="#1a1a1a" />
+        <circle cx="95" cy="18" r="17" fill="#1a1a1a" />
+        {/* Ear inner (slightly lighter) */}
+        <circle cx="25" cy="18" r="10" fill="#2d2d2d" />
+        <circle cx="95" cy="18" r="10" fill="#2d2d2d" />
 
-        {/* Face lighter patch */}
-        <ellipse cx="60" cy="60" rx="26" ry="24" fill="#E8A96A" opacity="0.4" />
+        {/* Left eye patch */}
+        <ellipse cx="43" cy="53" rx="18" ry="17" fill="#1a1a1a" />
+        {/* Right eye patch */}
+        <ellipse cx="77" cy="53" rx="18" ry="17" fill="#1a1a1a" />
 
-        {/* Left Eye white */}
-        <circle cx="44" cy="54" r="14" fill="white" />
-        {/* Right Eye white */}
-        <circle cx="76" cy="54" r="14" fill="white" />
+        {/* Left eye white */}
+        <circle cx="43" cy="51" r="12" fill="white" />
+        {/* Right eye white */}
+        <circle cx="77" cy="51" r="12" fill="white" />
 
-        {/* Left Eye iris */}
-        {eyeOpen ? (
-          <>
-            <circle cx="44" cy="54" r="9" fill="#1F2937" />
-            <circle cx="44" cy="54" r="4" fill="#3B1F0A" />
-            <circle cx="47" cy="50" r="3" fill="white" />
-          </>
+        {/* Left pupil */}
+        {isThinking ? (
+          <path d="M36 51 Q43 56 50 51" stroke="#1a1a1a" strokeWidth="3" strokeLinecap="round" fill="none" />
         ) : (
-          <path d="M34 54 Q44 62 54 54" stroke="#1F2937" strokeWidth="3" strokeLinecap="round" fill="none" />
+          <>
+            <circle cx="45" cy="52" r="8" fill="#1a1a1a" />
+            <circle cx="47" cy="48" r="3" fill="white" />
+            <circle cx="41" cy="55" r="1.5" fill="white" opacity="0.7" />
+          </>
         )}
 
-        {/* Right Eye iris */}
-        {eyeOpen ? (
-          <>
-            <circle cx="76" cy="54" r="9" fill="#1F2937" />
-            <circle cx="76" cy="54" r="4" fill="#3B1F0A" />
-            <circle cx="79" cy="50" r="3" fill="white" />
-          </>
+        {/* Right pupil */}
+        {isThinking ? (
+          <path d="M70 51 Q77 56 84 51" stroke="#1a1a1a" strokeWidth="3" strokeLinecap="round" fill="none" />
         ) : (
-          <path d="M66 54 Q76 62 86 54" stroke="#1F2937" strokeWidth="3" strokeLinecap="round" fill="none" />
+          <>
+            <circle cx="79" cy="52" r="8" fill="#1a1a1a" />
+            <circle cx="81" cy="48" r="3" fill="white" />
+            <circle cx="75" cy="55" r="1.5" fill="white" opacity="0.7" />
+          </>
         )}
 
-        {/* Glasses */}
-        <circle cx="44" cy="54" r="14" fill="none" stroke="#7C3AED" strokeWidth="2.5" />
-        <circle cx="76" cy="54" r="14" fill="none" stroke="#7C3AED" strokeWidth="2.5" />
-        <path d="M58 54 L62 54" stroke="#7C3AED" strokeWidth="2.5" strokeLinecap="round" />
-        <path d="M30 50 Q26 48 24 52" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" fill="none" />
-        <path d="M90 50 Q94 48 96 52" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" fill="none" />
+        {/* Nose */}
+        <ellipse cx="60" cy="67" rx="5" ry="4" fill="#1a1a1a" />
 
-        {/* Beak */}
-        <path d="M54 68 L66 68 L60 76" fill="#F97316" />
+        {/* Mouth */}
+        {isExcited ? (
+          <>
+            <path d="M50 73 Q60 84 70 73" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+            {/* Tongue */}
+            <ellipse cx="60" cy="80" rx="7" ry="5" fill="#F48FB1" />
+          </>
+        ) : isThinking ? (
+          <path d="M52 74 Q58 78 68 72" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+        ) : (
+          <path d="M51 74 Q60 82 69 74" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+        )}
 
-        {/* Smile */}
-        <path d={mouthCurve} stroke="#A86C38" strokeWidth="2" strokeLinecap="round" fill="none" />
+        {/* Blush cheeks */}
+        <ellipse cx="25" cy="68" rx="8" ry="5" fill="#FFB3C1" opacity="0.55" />
+        <ellipse cx="95" cy="68" rx="8" ry="5" fill="#FFB3C1" opacity="0.55" />
 
-        {/* Graduation cap base */}
-        <ellipse cx="60" cy="20" rx="32" ry="6" fill="#4C1D95" />
-        {/* Cap top */}
-        <rect x="36" y="6" width="48" height="16" rx="4" fill="#4C1D95" />
-        {/* Tassel string */}
-        <line x1="92" y1="20" x2="92" y2="36" stroke="#F59E0B" strokeWidth="2" />
-        {/* Tassel ball */}
-        <circle cx="92" cy="38" r="4" fill="#F59E0B" />
-        {/* Tassel fringe */}
-        <path d="M88 38 L84 46 M92 40 L90 48 M96 38 L98 46" stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" />
-
-        {/* Celebrating stars */}
+        {/* Excited sparkles / celebrating */}
         {expression === 'celebrating' && (
           <>
-            <motion.text x="5" y="30" fontSize="16" animate={{ rotate: [-15, 15], opacity: [1, 0.5, 1] }} transition={{ duration: 1, repeat: Infinity }}>⭐</motion.text>
-            <motion.text x="98" y="35" fontSize="12" animate={{ rotate: [15, -15], opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.2, repeat: Infinity }}>✨</motion.text>
+            <text x="5" y="30" fontSize="14">✨</text>
+            <text x="98" y="38" fontSize="12">⭐</text>
+            <text x="8" y="65" fontSize="10">🌟</text>
+          </>
+        )}
+        {expression === 'excited' && (
+          <>
+            <text x="4" y="36" fontSize="12">💛</text>
+            <text x="100" y="42" fontSize="10">✨</text>
           </>
         )}
       </svg>
