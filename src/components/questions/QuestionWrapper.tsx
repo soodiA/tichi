@@ -41,7 +41,7 @@ const QuestionWrapper: React.FC<QuestionWrapperProps> = ({ question, onAnswer })
   return (
     <div className="flex flex-col gap-4 h-full">
       {/* Question text + audio */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 bg-white/90 rounded-2xl px-4 py-3 shadow-sm">
         {question.questionAudioUrl && (
           <AudioButton audioUrl={question.questionAudioUrl} size="md" />
         )}

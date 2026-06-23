@@ -7,7 +7,6 @@ import { loadCurriculum } from '../lib/curriculum';
 import ProgressBar from '../components/ui/ProgressBar';
 import QuestionWrapper from '../components/questions/QuestionWrapper';
 import UnitIntro_AA from '../components/questions/UnitIntro_AA';
-import PageBg from '../components/ui/PageBg';
 import type { Node } from '../types';
 
 type FeedbackState = 'idle' | 'correct' | 'wrong';
@@ -130,13 +129,16 @@ const Lesson: React.FC = () => {
   const currentQuestion = node.questions[currentIndex];
 
   return (
-    <div dir="rtl" className="min-h-screen max-h-screen flex flex-col relative overflow-hidden">
-      <PageBg variant="blue" />
+    <div
+      dir="rtl"
+      className="min-h-screen max-h-screen flex flex-col relative overflow-hidden"
+      style={{ background: 'repeating-linear-gradient(135deg, #7C3AED 0px, #7C3AED 44px, #6D28D9 44px, #6D28D9 88px)' }}
+    >
       {/* Top bar */}
       <div className="relative z-10 flex items-center gap-3 px-5 pt-5 pb-3">
         <button
           onClick={() => navigate('/home')}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors flex-shrink-0"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-white/30 text-white hover:bg-white/40 transition-colors flex-shrink-0"
           aria-label="بستن درس"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
