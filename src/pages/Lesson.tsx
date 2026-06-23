@@ -7,6 +7,7 @@ import { loadCurriculum } from '../lib/curriculum';
 import ProgressBar from '../components/ui/ProgressBar';
 import QuestionWrapper from '../components/questions/QuestionWrapper';
 import UnitIntro_AA from '../components/questions/UnitIntro_AA';
+import PageBg from '../components/ui/PageBg';
 import type { Node } from '../types';
 
 type FeedbackState = 'idle' | 'correct' | 'wrong';
@@ -20,6 +21,7 @@ const Lesson: React.FC = () => {
   const currentUser = useStore((s) => s.currentUser);
 
   const [node, setNode] = useState<Node | null>(null);
+  const [loadingNode, setLoadingNode] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [, setAnswers] = useState<Record<string, boolean>>({});
   const [feedback, setFeedback] = useState<FeedbackState>('idle');
@@ -32,6 +34,7 @@ const Lesson: React.FC = () => {
     loadCurriculum().then((units) => {
       const found = units.flatMap((u) => u.nodes).find((n) => n.id === nodeId);
       setNode(found ?? null);
+      setLoadingNode(false);
     });
   }, [nodeId]);
 
@@ -90,6 +93,14 @@ const Lesson: React.FC = () => {
     }
   }, [node, currentIndex, currentUser, navigate]);
 
+  if (loadingNode) {
+    return (
+      <div dir="rtl" className="h-full flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-4 border-violet-300 border-t-violet-600 animate-spin" />
+      </div>
+    );
+  }
+
   if (!node) {
     return (
       <div dir="rtl" className="h-full flex items-center justify-center">
@@ -132,13 +143,13 @@ const Lesson: React.FC = () => {
     <div
       dir="rtl"
       className="min-h-screen max-h-screen flex flex-col relative overflow-hidden"
-      style={{ background: 'repeating-linear-gradient(135deg, #7C3AED 0px, #7C3AED 44px, #6D28D9 44px, #6D28D9 88px)' }}
     >
+      <PageBg variant="blue" />
       {/* Top bar */}
       <div className="relative z-10 flex items-center gap-3 px-5 pt-5 pb-3">
         <button
           onClick={() => navigate('/home')}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-white/30 text-white hover:bg-white/40 transition-colors flex-shrink-0"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-white/70 text-gray-600 hover:bg-white/90 transition-colors flex-shrink-0"
           aria-label="بستن درس"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
