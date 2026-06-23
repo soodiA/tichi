@@ -11,7 +11,7 @@ import type { Node } from '../types';
 
 type FeedbackState = 'idle' | 'correct' | 'wrong';
 
-const PRAISE = ['آفرین! 🎉', 'خیلی خوب بود! ⭐', 'احسنت! 🌟', 'عالی بود! 🎊', 'آفرین تیچی خوشحال شد! 🦉', 'فوق‌العاده! ✨'];
+const PRAISE = ['آفرین! 🎉', 'خیلی خوب بود! ⭐', 'احسنت! 🌟', 'عالی بود! 🎊', 'آفرین، تیچی خوشحال شد! 🦉', 'فوق‌العاده! ✨', 'دمت گرم! 🌟'];
 const randomPraise = () => PRAISE[Math.floor(Math.random() * PRAISE.length)];
 
 const Lesson: React.FC = () => {
