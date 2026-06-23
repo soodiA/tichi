@@ -55,8 +55,10 @@ const Mascot: React.FC<MascotProps> = ({
         {/* Ground shadow */}
         <ellipse cx="70" cy="157" rx="32" ry="5" fill="rgba(0,0,0,0.08)" />
 
+        {/* Body outline ring */}
+        <ellipse cx="70" cy="126" rx="35" ry="29" fill="#AAAAAA" opacity="0.55" />
         {/* Body */}
-        <ellipse cx="70" cy="126" rx="33" ry="27" fill="url(#bodyGrad)" stroke="#D0D0D0" strokeWidth="1.5" filter="url(#softShadow)" />
+        <ellipse cx="70" cy="126" rx="33" ry="27" fill="url(#bodyGrad)" filter="url(#softShadow)" />
         {/* Belly circle */}
         <ellipse cx="70" cy="130" rx="18" ry="16" fill="#F7F7F7" opacity="0.7" />
 
@@ -79,8 +81,10 @@ const Mascot: React.FC<MascotProps> = ({
         <ellipse cx="48" cy="152" rx="6" ry="3.5" fill="#F0F0F0" opacity="0.4" />
         <ellipse cx="92" cy="152" rx="6" ry="3.5" fill="#F0F0F0" opacity="0.4" />
 
+        {/* Head outline ring */}
+        <circle cx="70" cy="62" r="52" fill="#AAAAAA" opacity="0.50" />
         {/* Head */}
-        <circle cx="70" cy="62" r="50" fill="url(#headGrad)" stroke="#D0D0D0" strokeWidth="1.5" filter="url(#softShadow)" />
+        <circle cx="70" cy="62" r="50" fill="url(#headGrad)" filter="url(#softShadow)" />
 
         {/* Ears */}
         <circle cx="28" cy="22" r="20" fill="#1C1C1C" />
