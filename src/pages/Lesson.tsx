@@ -144,7 +144,7 @@ const Lesson: React.FC = () => {
       dir="rtl"
       className="min-h-screen max-h-screen flex flex-col relative overflow-hidden"
     >
-      <PageBg variant="blue" />
+      <PageBg variant="purple" />
       {/* Top bar */}
       <div className="relative z-10 flex items-center gap-3 px-5 pt-5 pb-3">
         <button

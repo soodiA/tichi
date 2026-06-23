@@ -84,13 +84,18 @@ const Friends: React.FC = () => {
         const friendIds = new Set<string>((friendData ?? []).map((r: any) => r.friend_id));
         setAdded(friendIds);
 
-        // Fetch 50 profiles, shuffle, take 10 excluding self (by local_id) + friends
-        const { data } = await supabase
+        // Get Supabase auth id to properly exclude self
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+
+        // Fetch 50 profiles, shuffle, take 10 excluding self + friends
+        const query = supabase
           .from('profiles')
           .select('id, name, username, avatar_url, diamonds')
-          .neq('local_id', currentUser.id)
           .order('diamonds', { ascending: false })
           .limit(50);
+        if (authUser?.id) query.neq('id', authUser.id);
+        else query.neq('local_id', currentUser.id);
+        const { data } = await query;
 
         if (data) {
           const filtered = (data as Profile[]).filter((p) => !friendIds.has(p.id));
@@ -113,11 +118,14 @@ const Friends: React.FC = () => {
     setResults([]);
 
     // Search by username (unique identifier)
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const selfId = authUser?.id;
+
     const { data, error } = await supabase
       .from('profiles')
       .select('id, name, username, avatar_url, diamonds')
       .ilike('username', `%${q}%`)
-      .neq('local_id', currentUser.id)
+      .neq(selfId ? 'id' : 'local_id', selfId ?? currentUser.id)
       .limit(20);
 
     if (error) {
@@ -126,7 +134,7 @@ const Friends: React.FC = () => {
         .from('profiles')
         .select('id, name, username, avatar_url, diamonds')
         .ilike('name', `%${q}%`)
-        .neq('local_id', currentUser.id)
+        .neq(selfId ? 'id' : 'local_id', selfId ?? currentUser.id)
         .limit(20);
       setResults((data2 as Profile[]) ?? []);
     } else {

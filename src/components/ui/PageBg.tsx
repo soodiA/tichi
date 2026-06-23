@@ -1,10 +1,19 @@
 import React from 'react';
 
 interface PageBgProps {
-  variant?: 'blue' | 'peach' | 'green' | 'purple';
+  variant?: 'blue' | 'purple' | 'green' | 'peach';
 }
 
+const COLORS = {
+  blue:   { sky1: '#B8C4EE', sky2: '#CDD6F7', sky3: '#DDE4FF', mtn1: '#9DAAD6', mtn2: '#A8B3D8' },
+  purple: { sky1: '#C4B0F5', sky2: '#D9CCFF', sky3: '#EDE6FF', mtn1: '#9B84D4', mtn2: '#B09EE0' },
+  green:  { sky1: '#A8D8C0', sky2: '#C2EAD6', sky3: '#D8F5E8', mtn1: '#7EC0A0', mtn2: '#96CEB4' },
+  peach:  { sky1: '#F5CBA0', sky2: '#FAD9B8', sky3: '#FDEBD4', mtn1: '#D4A870', mtn2: '#E0BA8C' },
+};
+
 const PageBg: React.FC<PageBgProps> = ({ variant = 'blue' }) => {
+  const c = COLORS[variant];
+  const id = variant;
   return (
     <svg
       className="absolute inset-0 w-full h-full pointer-events-none"
@@ -13,23 +22,23 @@ const PageBg: React.FC<PageBgProps> = ({ variant = 'blue' }) => {
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-        <linearGradient id={`pgSky-${variant}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="#B8C4EE" />
-          <stop offset="50%"  stopColor="#CDD6F7" />
-          <stop offset="100%" stopColor="#DDE4FF" />
+        <linearGradient id={`pgSky-${id}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor={c.sky1} />
+          <stop offset="50%"  stopColor={c.sky2} />
+          <stop offset="100%" stopColor={c.sky3} />
         </linearGradient>
-        <linearGradient id={`pgHill-${variant}`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`pgHill-${id}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#6DC96D" />
           <stop offset="100%" stopColor="#4AAD4A" />
         </linearGradient>
       </defs>
 
       {/* Sky */}
-      <rect width="390" height="844" fill={`url(#pgSky-${variant})`} />
+      <rect width="390" height="844" fill={`url(#pgSky-${id})`} />
 
       {/* Distant mountains */}
-      <ellipse cx="90"  cy="700" rx="190" ry="150" fill="#9DAAD6" opacity="0.40" />
-      <ellipse cx="300" cy="720" rx="175" ry="140" fill="#A8B3D8" opacity="0.35" />
+      <ellipse cx="90"  cy="700" rx="190" ry="150" fill={c.mtn1} opacity="0.45" />
+      <ellipse cx="300" cy="720" rx="175" ry="140" fill={c.mtn2} opacity="0.38" />
 
       {/* Clouds */}
       <g opacity="0.88">
@@ -48,7 +57,7 @@ const PageBg: React.FC<PageBgProps> = ({ variant = 'blue' }) => {
       </g>
 
       {/* Green hills at bottom */}
-      <path d="M0 720 Q95 620 200 668 Q305 620 390 660 L390 844 L0 844 Z" fill={`url(#pgHill-${variant})`} opacity="0.85" />
+      <path d="M0 720 Q95 620 200 668 Q305 620 390 660 L390 844 L0 844 Z" fill={`url(#pgHill-${id})`} opacity="0.85" />
       <rect x="0" y="800" width="390" height="44" fill="#5AAE5A" opacity="0.7" />
 
       {/* Small flowers */}
