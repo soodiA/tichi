@@ -6,20 +6,10 @@ import { loadCurriculum } from '../lib/curriculum';
 import PathNode from '../components/path/PathNode';
 import UnitDivider from '../components/path/UnitDivider';
 import DiamondDisplay from '../components/ui/DiamondDisplay';
-import UnitIntro_AA from '../components/questions/UnitIntro_AA';
-import UnitIntro_BA from '../components/questions/UnitIntro_BA';
+import UnitIntroGeneric from '../components/questions/UnitIntroGeneric';
 import PageBg from '../components/ui/PageBg';
+import { UNIT_INTROS } from '../data/unitIntros';
 import type { Unit, NodeProgress } from '../types';
-
-const UNIT_SUBTITLE: Record<string, string> = {
-  'آ': 'آ  ا',
-  'ب': 'بـ  ب',
-};
-
-const UNIT_HAS_INTRO: Record<string, boolean> = {
-  'unit-aa': true,
-  'unit-ba': true,
-};
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -27,7 +17,7 @@ const Home: React.FC = () => {
   const [progressMap, setProgressMap] = useState<Record<string, NodeProgress>>({});
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
-  const [introUnitId, setIntroUnitId] = useState<string | null>(null);
+  const [introUnit, setIntroUnit] = useState<Unit | null>(null);
 
   useEffect(() => {
     loadCurriculum().then((u) => { setUnits(u); setLoading(false); });
@@ -54,7 +44,10 @@ const Home: React.FC = () => {
     );
   }
 
-  const allNodes = units.flatMap((u) => u.nodes.map((n) => ({ ...n, unitColor: u.color })));
+  // Exclude intro nodes from the path — intro is shown via UnitDivider book button
+  const allNodes = units.flatMap((u) =>
+    u.nodes.filter((n) => n.type !== 'intro').map((n) => ({ ...n, unitColor: u.color }))
+  );
 
   const isNodeCompleted = (nodeId: string) => !!progressMap[nodeId]?.completed;
   const isNodeUnlocked = (nodeId: string): boolean => {
@@ -68,11 +61,20 @@ const Home: React.FC = () => {
   const greetHour = new Date().getHours();
   const greetText = greetHour < 12 ? 'صبح بخیر' : greetHour < 17 ? 'روز بخیر' : 'شب بخیر';
 
+  const introData = introUnit ? UNIT_INTROS[introUnit.letter] : null;
+
   return (
     <div dir="rtl" className="min-h-full relative pb-24 overflow-hidden">
       <PageBg variant="blue" />
-      {introUnitId === 'unit-aa' && <UnitIntro_AA onComplete={() => setIntroUnitId(null)} />}
-      {introUnitId === 'unit-ba' && <UnitIntro_BA onComplete={() => setIntroUnitId(null)} />}
+
+      {/* Unit intro overlay — shown for any unit */}
+      {introUnit && introData && (
+        <UnitIntroGeneric
+          data={introData}
+          onComplete={() => setIntroUnit(null)}
+        />
+      )}
+
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white/70 backdrop-blur-sm shadow-sm px-5 pt-5 pb-3">
         <div className="flex items-center justify-between">
@@ -94,41 +96,45 @@ const Home: React.FC = () => {
         {units.length === 0 ? (
           <p className="text-gray-400 text-center py-10">محتوایی یافت نشد</p>
         ) : (
-          units.map((unit) => (
-            <React.Fragment key={unit.id}>
-              <div className="w-full">
-                <UnitDivider
-                  letter={unit.letter}
-                  color={unit.color}
-                  unitNumber={unit.order}
-                  subtitle={UNIT_SUBTITLE[unit.letter]}
-                  onPlayIntro={UNIT_HAS_INTRO[unit.id] ? () => setIntroUnitId(unit.id) : undefined}
-                />
-              </div>
+          units.map((unit) => {
+            const lessonNodes = unit.nodes.filter((n) => n.type !== 'intro');
+            const introAvailable = !!UNIT_INTROS[unit.letter];
 
-              {unit.nodes.map((node) => {
-                const unlocked = isNodeUnlocked(node.id);
-                const completed = isNodeCompleted(node.id);
-                const isCurrent = node.id === firstIncompleteNodeId && unlocked;
-
-                return (
-                  <PathNode
-                    key={node.id}
-                    node={node}
-                    isUnlocked={unlocked}
-                    isCurrent={isCurrent}
-                    isCompleted={completed}
-                    unitColor={unit.color}
-                    onClick={() => {
-                      if (unlocked || completed) navigate(`/lesson/${node.id}`);
-                    }}
+            return (
+              <React.Fragment key={unit.id}>
+                <div className="w-full">
+                  <UnitDivider
+                    letter={unit.letter}
+                    color={unit.color}
+                    unitNumber={unit.order}
+                    onPlayIntro={introAvailable ? () => setIntroUnit(unit) : undefined}
                   />
-                );
-              })}
+                </div>
 
-              <div className="w-1 h-6 bg-gray-200 rounded-full" />
-            </React.Fragment>
-          ))
+                {lessonNodes.map((node) => {
+                  const unlocked = isNodeUnlocked(node.id);
+                  const completed = isNodeCompleted(node.id);
+                  const isCurrent = node.id === firstIncompleteNodeId && unlocked;
+
+                  return (
+                    <PathNode
+                      key={node.id}
+                      node={node}
+                      isUnlocked={unlocked}
+                      isCurrent={isCurrent}
+                      isCompleted={completed}
+                      unitColor={unit.color}
+                      onClick={() => {
+                        if (unlocked || completed) navigate(`/lesson/${node.id}`);
+                      }}
+                    />
+                  );
+                })}
+
+                <div className="w-1 h-6 bg-gray-200 rounded-full" />
+              </React.Fragment>
+            );
+          })
         )}
       </div>
     </div>
