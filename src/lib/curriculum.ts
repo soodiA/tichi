@@ -30,6 +30,21 @@ interface RawUnit {
 }
 
 function toQuestion(r: RawQuestion): Question & { nodeId: string } {
+  // Extract template stored as a __template__ sentinel option (fill_blanks questions)
+  let template: (string | null)[] | undefined;
+  let options = r.options ?? [];
+  const templateOpt = options.find((o: any) => o.id === '__template__');
+  if (templateOpt) {
+    try { template = JSON.parse((templateOpt as any).text); } catch {}
+    options = options.filter((o: any) => o.id !== '__template__');
+  }
+
+  // Parse correctAnswer as string[] if stored as JSON array (phoneme, arrange)
+  let correctAnswer: string | string[] = r.correct_answer;
+  if (typeof r.correct_answer === 'string' && r.correct_answer.startsWith('[')) {
+    try { correctAnswer = JSON.parse(r.correct_answer); } catch {}
+  }
+
   return {
     id: r.id,
     nodeId: r.node_id,
@@ -37,9 +52,10 @@ function toQuestion(r: RawQuestion): Question & { nodeId: string } {
     questionText: r.question_text,
     questionAudioUrl: r.question_audio_url ?? undefined,
     mediaLabel: r.media_label ?? undefined,
-    options: r.options ?? [],
-    correctAnswer: r.correct_answer,
+    options,
+    correctAnswer,
     syllableCount: r.syllable_count ?? undefined,
+    template,
   };
 }
 
