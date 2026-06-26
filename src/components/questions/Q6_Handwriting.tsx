@@ -6,6 +6,18 @@ const BRUSH_R = 9;
 const COVERAGE_THRESHOLD = 94; // high enough to require dot coverage on dotted letters (ب etc.)
 const PEN_COLOR = '#4c1d95'; // violet-900
 
+// Stroke guide paths per letter: array of [x,y] waypoints in 300×300 canvas space.
+// Coordinates tuned for Vazirmatn bold at fontSize=234, centered x=150, cy=186.
+const STROKE_PATHS: Record<string, [number, number][]> = {
+  'آ': [[152, 72], [150, 160], [148, 252]],   // alef-madda: single top-to-bottom stroke
+  'ا': [[152, 88], [150, 170], [148, 252]],   // alef: single top-to-bottom stroke
+};
+
+function waypointsToSVGPath(pts: [number, number][]): string {
+  return pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0]} ${p[1]}`).join(' ');
+}
+
+
 interface Props {
   question: Question;
   onAnswer: (correct: boolean) => void;
@@ -25,6 +37,7 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
 
   const [coverage, setCoverage] = useState(0);
   const [done, setDone] = useState(false);
+  const [guideVisible, setGuideVisible] = useState(true);
 
   const fontSize = Math.round(SIZE * 0.78);
   const cy = Math.round(SIZE * 0.62);
@@ -124,6 +137,7 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
     if (!paint) return;
     paint.getContext('2d')!.clearRect(0, 0, SIZE, SIZE);
     setCoverage(0);
+    setGuideVisible(true);
     render();
   }, [render]);
 
@@ -150,24 +164,86 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
     return { x: (clientX - rect.left) * scale, y: (clientY - rect.top) * scale };
   };
 
+  const strokePts = STROKE_PATHS[letter];
+  const svgPath = strokePts ? waypointsToSVGPath(strokePts) : null;
+  const startPt = strokePts?.[0];
+  const endPt = strokePts?.[strokePts.length - 1];
+
+  const handleDrawStart = useCallback((x: number, y: number) => {
+    setGuideVisible(false);
+    drawingRef.current = true;
+    drawAt(x, y);
+  }, [drawAt]);
+
   return (
     <div className="flex flex-col items-center gap-4 flex-1 justify-center">
       <p className="text-gray-500 text-sm">حرف را روی راهنما بنویس</p>
 
-      <div className="rounded-3xl overflow-hidden shadow-lg border-2 border-violet-200" style={{ width: 280, height: 280 }}>
+      <div className="relative rounded-3xl overflow-hidden shadow-lg border-2 border-violet-200" style={{ width: 280, height: 280 }}>
         <canvas
           ref={canvasRef}
           width={SIZE}
           height={SIZE}
           className="w-full h-full touch-none"
-          onTouchStart={(e) => { e.preventDefault(); drawingRef.current = true; const t = e.touches[0]; const p = canvasPos(t.clientX, t.clientY); if (p) drawAt(p.x, p.y); }}
+          onTouchStart={(e) => { e.preventDefault(); const t = e.touches[0]; const p = canvasPos(t.clientX, t.clientY); if (p) handleDrawStart(p.x, p.y); }}
           onTouchMove={(e) => { e.preventDefault(); if (!drawingRef.current) return; const t = e.touches[0]; const p = canvasPos(t.clientX, t.clientY); if (p) drawAt(p.x, p.y); }}
           onTouchEnd={() => { drawingRef.current = false; }}
-          onMouseDown={(e) => { drawingRef.current = true; const p = canvasPos(e.clientX, e.clientY); if (p) drawAt(p.x, p.y); }}
+          onMouseDown={(e) => { const p = canvasPos(e.clientX, e.clientY); if (p) handleDrawStart(p.x, p.y); }}
           onMouseMove={(e) => { if (!drawingRef.current) return; const p = canvasPos(e.clientX, e.clientY); if (p) drawAt(p.x, p.y); }}
           onMouseUp={() => { drawingRef.current = false; }}
           onMouseLeave={() => { drawingRef.current = false; }}
         />
+
+        {/* Stroke-direction guide overlay — hidden once user starts drawing */}
+        {svgPath && guideVisible && !done && (
+          <svg
+            viewBox={`0 0 ${SIZE} ${SIZE}`}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+          >
+            <style>{`
+              @keyframes travelDot {
+                0%   { offset-distance: 0%;   opacity: 1; }
+                85%  { offset-distance: 100%; opacity: 1; }
+                100% { offset-distance: 100%; opacity: 0; }
+              }
+              .travel-dot {
+                offset-path: path('${svgPath}');
+                animation: travelDot 1.6s ease-in-out infinite;
+              }
+            `}</style>
+
+            {/* Dashed guide path */}
+            <path
+              d={svgPath}
+              stroke="#7c3aed"
+              strokeWidth="5"
+              strokeDasharray="10 7"
+              fill="none"
+              opacity="0.35"
+              strokeLinecap="round"
+            />
+
+            {/* Start-point circle */}
+            {startPt && (
+              <circle cx={startPt[0]} cy={startPt[1]} r="9" fill="#7c3aed" opacity="0.75">
+                <animate attributeName="r" values="9;12;9" dur="1.2s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.75;0.4;0.75" dur="1.2s" repeatCount="indefinite" />
+              </circle>
+            )}
+
+            {/* Arrowhead at end point */}
+            {endPt && (
+              <polygon
+                points={`${endPt[0]},${endPt[1] + 14} ${endPt[0] - 7},${endPt[1]} ${endPt[0] + 7},${endPt[1]}`}
+                fill="#7c3aed"
+                opacity="0.5"
+              />
+            )}
+
+            {/* Animated travelling dot */}
+            <circle r="8" fill="#7c3aed" className="travel-dot" />
+          </svg>
+        )}
       </div>
 
       <div className="w-64 h-3 bg-violet-100 rounded-full overflow-hidden">
