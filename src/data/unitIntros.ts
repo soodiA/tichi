@@ -89,7 +89,7 @@ export const UNIT_INTROS: Record<string, UnitIntroData> = {
     examples: [
       { emoji: '🌿', word: 'سَر', highlight: 'سَ', pos: 'اول' },
       { emoji: '🚪', word: 'دَر', highlight: 'دَ', pos: 'اول' },
-      { emoji: '💔', word: 'بَد', highlight: 'بَ', pos: 'اول' },
+      { emoji: '🐑', word: 'بَره', highlight: 'بَ', pos: 'اول' },
     ],
   },
 
