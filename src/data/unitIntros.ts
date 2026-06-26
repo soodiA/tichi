@@ -86,9 +86,8 @@ export const UNIT_INTROS: Record<string, UnitIntroData> = {
     description: 'صدای کوتاه «اَ» (فتحه) — روی حرف میاد',
     ...C.rose,
     forms: [
-      { text: 'اَ',  label: 'اول کلمه',  color: '#E11D48' },
-      { text: 'ـَـ', label: 'غیر اول',   color: SEC[2] },
-      { text: 'ـَ',  label: 'آخر کلمه',  color: SEC[2] },
+      { text: 'اَ',  label: 'اول کلمه', color: '#E11D48' },
+      { text: 'ـَـ', label: 'غیر اول',  color: SEC[2] },
     ],
     examples: [
       { emoji: '🌿', word: 'سَر',  highlight: 'سَ', pos: 'اول' },
@@ -313,7 +312,6 @@ export const UNIT_INTROS: Record<string, UnitIntroData> = {
     forms: [
       { text: 'اُ',  label: 'اول کلمه', color: '#059669' },
       { text: 'ـُـ', label: 'غیر اول',  color: SEC[3] },
-      { text: 'ـُ',  label: 'آخر کلمه', color: SEC[3] },
     ],
     examples: [
       { emoji: '🌸', word: 'گُل',   highlight: 'گُ', pos: 'اول' },
