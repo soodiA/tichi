@@ -3,20 +3,21 @@ import type { Question } from '../../types';
 
 const SIZE = 300;
 const BRUSH_R = 9;
-const COVERAGE_THRESHOLD = 94; // high enough to require dot coverage on dotted letters (ب etc.)
-const PEN_COLOR = '#4c1d95'; // violet-900
+const HIT_RADIUS = 32;        // px in canvas space — how close counts as "on waypoint"
+const PEN_COLOR = '#4c1d95';  // violet-900
 
-// Stroke guide paths per letter: array of [x,y] waypoints in 300×300 canvas space.
-// Coordinates tuned for Vazirmatn bold at fontSize=234, centered x=150, cy=186.
+// Path-following waypoints in 300×300 canvas space.
+// Tuned for Vazirmatn bold fontSize=234, centered x=150, cy=186.
+// آ: madda arc (right → top → left) then stem downward.
+// ا: stem only, top → bottom.
 const STROKE_PATHS: Record<string, [number, number][]> = {
-  'آ': [[152, 72], [150, 160], [148, 252]],   // alef-madda: single top-to-bottom stroke
-  'ا': [[152, 88], [150, 170], [148, 252]],   // alef: single top-to-bottom stroke
+  'آ': [[174, 74], [150, 52], [126, 74], [149, 155], [148, 252]],
+  'ا': [[150, 85], [149, 168], [148, 252]],
 };
 
 function waypointsToSVGPath(pts: [number, number][]): string {
   return pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0]} ${p[1]}`).join(' ');
 }
-
 
 interface Props {
   question: Question;
@@ -25,6 +26,7 @@ interface Props {
 
 const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
   const letter = String(question.correctAnswer);
+  const strokePts = STROKE_PATHS[letter] ?? null;
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const paintRef = useRef<HTMLCanvasElement | null>(null);
@@ -38,6 +40,9 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
   const [coverage, setCoverage] = useState(0);
   const [done, setDone] = useState(false);
   const [guideVisible, setGuideVisible] = useState(true);
+  // path-following state
+  const [nextWpt, setNextWpt] = useState(0);
+  const nextWptRef = useRef(0);
 
   const fontSize = Math.round(SIZE * 0.78);
   const cy = Math.round(SIZE * 0.62);
@@ -68,11 +73,9 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
     const ctx = canvas.getContext('2d')!;
     ctx.clearRect(0, 0, SIZE, SIZE);
 
-    // Background
     ctx.fillStyle = '#fdf4ff';
     ctx.fillRect(0, 0, SIZE, SIZE);
 
-    // Letter guide (very faint)
     ctx.fillStyle = '#ede9fe';
     ctx.font = `bold ${fontSize}px Vazirmatn, serif`;
     ctx.textAlign = 'center';
@@ -88,7 +91,6 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
     tCtx.globalCompositeOperation = 'source-over';
     ctx.drawImage(temp, 0, 0);
 
-    // Letter outline on top
     ctx.strokeStyle = '#7c3aed';
     ctx.lineWidth = 1.5;
     ctx.strokeText(letter, SIZE / 2, cy);
@@ -106,7 +108,7 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
     if (doneRef.current) return;
     const paint = paintRef.current;
     const mask = maskRef.current;
-    if (!paint || !mask || totalRef.current === 0) return;
+    if (!paint || !mask) return;
 
     const pCtx = paint.getContext('2d')!;
     pCtx.fillStyle = PEN_COLOR;
@@ -115,21 +117,38 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
     pCtx.fill();
     render();
 
-    const now = Date.now();
-    if (now - lastCheckRef.current < 120) return;
-    lastCheckRef.current = now;
-
-    const mCtx = mask.getContext('2d')!;
-    const pData = pCtx.getImageData(0, 0, SIZE, SIZE).data;
-    const mData = mCtx.getImageData(0, 0, SIZE, SIZE).data;
-    let painted = 0;
-    for (let i = 3; i < mData.length; i += 4) {
-      if (mData[i] > 128 && pData[i] > 128) painted++;
+    if (strokePts) {
+      // Path-following mode: check if user hit the next waypoint
+      const idx = nextWptRef.current;
+      if (idx < strokePts.length) {
+        const [wx, wy] = strokePts[idx];
+        const dx = x - wx, dy = y - wy;
+        if (dx * dx + dy * dy <= HIT_RADIUS * HIT_RADIUS) {
+          const next = idx + 1;
+          nextWptRef.current = next;
+          setNextWpt(next);
+          setCoverage(Math.round((next / strokePts.length) * 100));
+          if (next >= strokePts.length) complete();
+        }
+      }
+    } else {
+      // Coverage mode (fallback for letters without a defined path)
+      const now = Date.now();
+      if (now - lastCheckRef.current < 120) return;
+      lastCheckRef.current = now;
+      if (totalRef.current === 0) return;
+      const mCtx = mask.getContext('2d')!;
+      const pData = pCtx.getImageData(0, 0, SIZE, SIZE).data;
+      const mData = mCtx.getImageData(0, 0, SIZE, SIZE).data;
+      let painted = 0;
+      for (let i = 3; i < mData.length; i += 4) {
+        if (mData[i] > 128 && pData[i] > 128) painted++;
+      }
+      const pct = Math.round((painted / totalRef.current) * 100);
+      setCoverage(pct);
+      if (pct >= 94) complete();
     }
-    const pct = Math.round((painted / totalRef.current) * 100);
-    setCoverage(pct);
-    if (pct >= COVERAGE_THRESHOLD) complete();
-  }, [render, complete]);
+  }, [render, complete, strokePts]);
 
   const clearCanvas = useCallback(() => {
     if (doneRef.current) return;
@@ -138,6 +157,8 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
     paint.getContext('2d')!.clearRect(0, 0, SIZE, SIZE);
     setCoverage(0);
     setGuideVisible(true);
+    nextWptRef.current = 0;
+    setNextWpt(0);
     render();
   }, [render]);
 
@@ -164,16 +185,19 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
     return { x: (clientX - rect.left) * scale, y: (clientY - rect.top) * scale };
   };
 
-  const strokePts = STROKE_PATHS[letter];
-  const svgPath = strokePts ? waypointsToSVGPath(strokePts) : null;
-  const startPt = strokePts?.[0];
-  const endPt = strokePts?.[strokePts.length - 1];
-
   const handleDrawStart = useCallback((x: number, y: number) => {
     setGuideVisible(false);
     drawingRef.current = true;
     drawAt(x, y);
   }, [drawAt]);
+
+  // SVG paths
+  const fullSvgPath = strokePts ? waypointsToSVGPath(strokePts) : null;
+  const doneSvgPath = strokePts && nextWpt > 0
+    ? waypointsToSVGPath(strokePts.slice(0, nextWpt + 1))
+    : null;
+  const startPt = strokePts?.[0];
+  const currentTarget = strokePts && nextWpt < strokePts.length ? strokePts[nextWpt] : null;
 
   return (
     <div className="flex flex-col items-center gap-4 flex-1 justify-center">
@@ -194,60 +218,72 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
           onMouseLeave={() => { drawingRef.current = false; }}
         />
 
-        {/* Stroke-direction guide overlay — hidden once user starts drawing */}
-        {svgPath && guideVisible && !done && (
+        {fullSvgPath && !done && (
           <svg
             viewBox={`0 0 ${SIZE} ${SIZE}`}
             className="absolute inset-0 w-full h-full pointer-events-none"
           >
-            <style>{`
-              @keyframes travelDot {
-                0%   { offset-distance: 0%;   opacity: 1; }
-                85%  { offset-distance: 100%; opacity: 1; }
-                100% { offset-distance: 100%; opacity: 0; }
-              }
-              .travel-dot {
-                offset-path: path('${svgPath}');
-                animation: travelDot 1.6s ease-in-out infinite;
-              }
-            `}</style>
+            {guideVisible && (
+              <style>{`
+                @keyframes travelDot {
+                  0%   { offset-distance: 0%;   opacity: 1; }
+                  85%  { offset-distance: 100%; opacity: 1; }
+                  100% { offset-distance: 100%; opacity: 0; }
+                }
+                .travel-dot {
+                  offset-path: path('${fullSvgPath}');
+                  animation: travelDot 1.8s ease-in-out infinite;
+                }
+              `}</style>
+            )}
 
-            {/* Dashed guide path */}
+            {/* Dashed guide — full path */}
             <path
-              d={svgPath}
+              d={fullSvgPath}
               stroke="#7c3aed"
-              strokeWidth="5"
+              strokeWidth="6"
               strokeDasharray="10 7"
               fill="none"
-              opacity="0.35"
+              opacity="0.3"
               strokeLinecap="round"
             />
 
-            {/* Start-point circle */}
-            {startPt && (
-              <circle cx={startPt[0]} cy={startPt[1]} r="9" fill="#7c3aed" opacity="0.75">
-                <animate attributeName="r" values="9;12;9" dur="1.2s" repeatCount="indefinite" />
-                <animate attributeName="opacity" values="0.75;0.4;0.75" dur="1.2s" repeatCount="indefinite" />
-              </circle>
-            )}
-
-            {/* Arrowhead at end point */}
-            {endPt && (
-              <polygon
-                points={`${endPt[0]},${endPt[1] + 14} ${endPt[0] - 7},${endPt[1]} ${endPt[0] + 7},${endPt[1]}`}
-                fill="#7c3aed"
-                opacity="0.5"
+            {/* Completed portion — solid */}
+            {doneSvgPath && (
+              <path
+                d={doneSvgPath}
+                stroke="#7c3aed"
+                strokeWidth="6"
+                fill="none"
+                opacity="0.7"
+                strokeLinecap="round"
               />
             )}
 
-            {/* Animated travelling dot */}
-            <circle r="8" fill="#7c3aed" className="travel-dot" />
+            {/* Animated guide dot (before drawing starts) */}
+            {guideVisible && startPt && (
+              <>
+                <circle cx={startPt[0]} cy={startPt[1]} r="10" fill="#7c3aed" opacity="0.7">
+                  <animate attributeName="r" values="10;14;10" dur="1.1s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0.7;0.35;0.7" dur="1.1s" repeatCount="indefinite" />
+                </circle>
+                <circle r="9" fill="#7c3aed" className="travel-dot" />
+              </>
+            )}
+
+            {/* Current target waypoint — pulsing ring */}
+            {!guideVisible && currentTarget && (
+              <circle cx={currentTarget[0]} cy={currentTarget[1]} r="14" fill="none" stroke="#7c3aed" strokeWidth="3" opacity="0.6">
+                <animate attributeName="r" values="14;20;14" dur="0.9s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.6;0.2;0.6" dur="0.9s" repeatCount="indefinite" />
+              </circle>
+            )}
           </svg>
         )}
       </div>
 
       <div className="w-64 h-3 bg-violet-100 rounded-full overflow-hidden">
-        <div className="h-full bg-violet-500 rounded-full transition-all duration-100" style={{ width: `${coverage}%` }} />
+        <div className="h-full bg-violet-500 rounded-full transition-all duration-150" style={{ width: `${coverage}%` }} />
       </div>
 
       <div className="flex gap-3">
