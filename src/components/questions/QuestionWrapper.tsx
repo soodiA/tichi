@@ -13,6 +13,7 @@ import Q9_Arrange from './Q9_Arrange';
 import Q11_Phoneme from './Q11_Phoneme';
 import Q13_SoundToText from './Q13_SoundToText';
 import Q14_ColorLetter from './Q14_ColorLetter';
+import Q15_PairMatch from './Q15_PairMatch';
 
 interface QuestionWrapperProps {
   question: Question;
@@ -93,6 +94,9 @@ const QuestionWrapper: React.FC<QuestionWrapperProps> = ({ question, onAnswer })
       )}
       {question.type === 'color_letter' && (
         <Q14_ColorLetter question={question} onAnswer={onAnswer} />
+      )}
+      {question.type === 'pair_match' && (
+        <Q15_PairMatch question={question} onAnswer={onAnswer} />
       )}
       {(question.type === 'similar_letters' ||
         question.type === 'middle_blank') && (
