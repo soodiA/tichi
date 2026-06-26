@@ -87,9 +87,9 @@ export const UNIT_INTROS: Record<string, UnitIntroData> = {
       { text: 'ـَـ', label: 'غیر اول', color: SEC[2] },
     ],
     examples: [
-      { emoji: '🌿', word: 'سَر', highlight: 'سَ', pos: 'اول' },
-      { emoji: '🚪', word: 'دَر', highlight: 'دَ', pos: 'اول' },
-      { emoji: '🐑', word: 'بَره', highlight: 'بَ', pos: 'اول' },
+      { emoji: '🐴', word: 'اَسب', highlight: 'اَ', pos: 'اول' },
+      { emoji: '☁️', word: 'اَبر', highlight: 'اَ', pos: 'اول' },
+      { emoji: '👎', word: 'بَد',  highlight: 'بَ', pos: 'غیر اول' },
     ],
   },
 
@@ -249,9 +249,9 @@ export const UNIT_INTROS: Record<string, UnitIntroData> = {
       { text: 'ه',   label: 'آخر تنها',    color: '#F59E0B' },
     ],
     examples: [
-      { emoji: '❤️', word: 'دِل',   highlight: 'دِ', pos: 'اول' },
-      { emoji: '📚', word: 'کِتاب', highlight: 'کِ', pos: 'اول' },
-      { emoji: '🌿', word: 'بِهار', highlight: 'بِ', pos: 'اول' },
+      { emoji: '📛', word: 'اِسم',  highlight: 'اِ', pos: 'اول' },
+      { emoji: '❤️', word: 'دِل',   highlight: 'دِ', pos: 'غیر اول' },
+      { emoji: '📚', word: 'کِتاب', highlight: 'کِ', pos: 'غیر اول' },
     ],
   },
 
@@ -297,9 +297,9 @@ export const UNIT_INTROS: Record<string, UnitIntroData> = {
       { text: 'ـُـ', label: 'غیر اول', color: SEC[3] },
     ],
     examples: [
-      { emoji: '🌸', word: 'گُل',  highlight: 'گُ', pos: 'اول' },
-      { emoji: '🌉', word: 'پُل',  highlight: 'پُ', pos: 'اول' },
-      { emoji: '🐔', word: 'مُرغ', highlight: 'مُ', pos: 'اول' },
+      { emoji: '🚪', word: 'اُتاق', highlight: 'اُ', pos: 'اول' },
+      { emoji: '🌸', word: 'گُل',   highlight: 'گُ', pos: 'غیر اول' },
+      { emoji: '🌉', word: 'پُل',   highlight: 'پُ', pos: 'غیر اول' },
     ],
   },
 
