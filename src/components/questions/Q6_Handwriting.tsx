@@ -27,7 +27,7 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
   const [done, setDone] = useState(false);
 
   const fontSize = Math.round(SIZE * 0.78);
-  const cy = SIZE / 2 + SIZE * 0.03;
+  const cy = Math.round(SIZE * 0.62);
 
   const buildMask = useCallback(() => {
     const mask = document.createElement('canvas');
