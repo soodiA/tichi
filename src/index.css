@@ -55,7 +55,11 @@ body {
   .option-card:active { transform: scale(0.95); }
 
   .option-card.selected {
-    @apply border-violet-500 bg-violet-50;
+    @apply border-violet-600 bg-violet-600 text-white shadow-lg;
+    transform: scale(1.03);
+  }
+  .option-card.selected span {
+    @apply text-white;
   }
 
   .option-card.correct {

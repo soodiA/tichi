@@ -55,7 +55,7 @@ const OptionCard: React.FC<{
         </div>
       )}
       {option.text && (
-        <span className="text-sm font-bold text-gray-700">{option.text}</span>
+        <span className={`text-sm font-bold ${selected ? 'text-white' : 'text-gray-700'}`}>{option.text}</span>
       )}
     </motion.button>
   );

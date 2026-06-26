@@ -52,13 +52,15 @@ function buildScenes(data: UnitIntroData): Scene[] {
     mascotExpression: 'happy',
   });
 
-  if (data.forms && data.forms.length > 1) {
+  if (data.forms && data.forms.length >= 1) {
+    const formCount = data.forms.length;
+    const countWord = formCount === 1 ? 'یه شکل' : `${formCount} شکل`;
     scenes.push({
       id: id++, bg: bg(2), accent: data.accent,
       forms: data.forms,
-      title: `«${data.name}» ${data.forms.length} شکل داره!`,
+      title: `«${data.name}» ${countWord} داره!`,
       subtitle: data.forms.map((f) => `${f.text}: ${f.label}`).join(' — '),
-      speak: `${data.name} ${data.forms.length} شکل داره`,
+      speak: `${data.name} ${countWord} داره`,
       mascotExpression: 'thinking',
     });
   }

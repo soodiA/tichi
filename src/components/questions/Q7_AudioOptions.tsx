@@ -43,18 +43,18 @@ const Q7_AudioOptions: React.FC<Props> = ({ question, onAnswer }) => {
             onClick={() => setSelected(opt.id)}
             className={`rounded-2xl p-3 flex flex-col items-center gap-2 cursor-pointer border-2 transition-all
               ${selected === opt.id
-                ? 'border-violet-500 bg-violet-50'
+                ? 'border-violet-600 bg-violet-600 shadow-lg scale-[1.03]'
                 : 'border-gray-200 bg-white'
               }`}
           >
             <AudioButton audioUrl={opt.audioUrl} size="md" />
             {opt.text && (
-              <span className="text-lg font-bold text-gray-700">{opt.text}</span>
+              <span className={`text-lg font-bold ${selected === opt.id ? 'text-white' : 'text-gray-700'}`}>{opt.text}</span>
             )}
             <div
               className={`w-5 h-5 rounded-full border-2 transition-all
                 ${selected === opt.id
-                  ? 'bg-violet-500 border-violet-500'
+                  ? 'bg-white border-white'
                   : 'border-gray-300 bg-white'
                 }`}
             />

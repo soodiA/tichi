@@ -13,8 +13,9 @@ const normalize = (s: string) =>
   s.trim().replace(/\s+/g, '').replace(/[ً-ٟ]/g, '');
 
 const check = (alts: string[], expected: string): boolean => {
-  // Strict: any alternative must match exactly
-  return alts.some((a) => a === expected);
+  // Only the top-confidence result (alts[0]) must match — checking all alts
+  // allowed wrong words to pass if the engine guessed the correct word as alt #2+
+  return alts[0] === expected;
 };
 
 const MicIcon = ({ color = 'white', size = 46 }: { color?: string; size?: number }) => (

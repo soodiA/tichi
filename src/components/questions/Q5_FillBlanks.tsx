@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import type { Question } from '../../types';
-import AudioButton from '../ui/AudioButton';
 
 interface Props {
   question: Question;
@@ -9,7 +8,18 @@ interface Props {
 }
 
 const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
-  const template = question.template ?? [];
+  // Extract template from question.template (set by curriculum.ts) OR fall back to
+  // the __template__ sentinel stored in options (handles stale SW cache)
+  const { template, visibleOptions } = useMemo(() => {
+    const sentinelOpt = question.options.find((o) => o.id === '__template__');
+    let tpl: (string | null)[] = question.template ?? [];
+    if (tpl.length === 0 && sentinelOpt?.text) {
+      try { tpl = JSON.parse(sentinelOpt.text); } catch {}
+    }
+    const opts = question.options.filter((o) => o.id !== '__template__');
+    return { template: tpl, visibleOptions: opts };
+  }, [question]);
+
   const blankIndices = template
     .map((cell, i) => (cell === null ? i : -1))
     .filter((i) => i !== -1);
@@ -17,16 +27,13 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
   const [filledBlanks, setFilledBlanks] = useState<(string | null)[]>(
     blankIndices.map(() => null)
   );
-  // track which option ids are used
   const [usedOptions, setUsedOptions] = useState<Set<string>>(new Set());
 
   const nextEmptyBlankPos = filledBlanks.findIndex((v) => v === null);
   const allFilled = filledBlanks.every((v) => v !== null);
 
   const handleOptionClick = (optId: string, optText: string) => {
-    if (usedOptions.has(optId)) return;
-    if (nextEmptyBlankPos === -1) return;
-
+    if (usedOptions.has(optId) || nextEmptyBlankPos === -1) return;
     const newFilled = [...filledBlanks];
     newFilled[nextEmptyBlankPos] = optText;
     setFilledBlanks(newFilled);
@@ -36,44 +43,32 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
   const handleBlankClick = (blankPos: number) => {
     const letter = filledBlanks[blankPos];
     if (!letter) return;
-
-    // Find which option matches and un-use it
-    const optEntry = question.options.find((o) => o.text === letter && usedOptions.has(o.id));
+    const optEntry = visibleOptions.find((o) => o.text === letter && usedOptions.has(o.id));
     const newFilled = [...filledBlanks];
     newFilled[blankPos] = null;
-
-    // Shift remaining filled blanks left
     const cleared = newFilled.filter((v) => v !== null);
     const rebuilt = blankIndices.map((_, i) => cleared[i] ?? null);
     setFilledBlanks(rebuilt);
-
     if (optEntry) {
-      setUsedOptions((prev) => {
-        const next = new Set(prev);
-        next.delete(optEntry.id);
-        return next;
-      });
+      setUsedOptions((prev) => { const next = new Set(prev); next.delete(optEntry.id); return next; });
     }
   };
 
   const handleConfirm = () => {
     if (!allFilled) return;
-    // Build the answer: filled blank option IDs in order
     const answeredIds: string[] = [];
     let blankPos = 0;
     for (let i = 0; i < template.length; i++) {
       if (template[i] === null) {
         const letter = filledBlanks[blankPos];
-        const opt = question.options.find((o) => o.text === letter);
+        const opt = visibleOptions.find((o) => o.text === letter);
         if (opt) answeredIds.push(opt.id);
         blankPos++;
       }
     }
-
     let correct: boolean;
     if (Array.isArray(question.correctAnswer)) {
-      correct =
-        answeredIds.length === question.correctAnswer.length &&
+      correct = answeredIds.length === question.correctAnswer.length &&
         answeredIds.every((id, i) => id === (question.correctAnswer as string[])[i]);
     } else {
       correct = answeredIds.length === 1 && answeredIds[0] === question.correctAnswer;
@@ -86,34 +81,24 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
   let blankCounter = 0;
 
   return (
-    <div className="flex flex-col items-center gap-5">
-      {/* Image + label */}
-      {question.mediaImageUrl && (
-        <div className="flex flex-col items-center gap-2">
-          <img
-            src={question.mediaImageUrl}
-            alt={question.mediaLabel ?? ''}
-            className="w-32 h-32 object-contain rounded-2xl"
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-          />
-          <div className="flex items-center gap-2">
-            {question.mediaAudioUrl && <AudioButton audioUrl={question.mediaAudioUrl} size="sm" />}
-            {question.mediaLabel && (
-              <span className="text-xl font-bold text-gray-700">{question.mediaLabel}</span>
-            )}
-          </div>
+    <div className="flex flex-col items-center gap-5 flex-1 justify-center">
+      {/* Word label */}
+      {question.mediaLabel && (
+        <div className="flex flex-col items-center gap-1">
+          <span className="text-gray-400 text-sm">کلمه:</span>
+          <span className="text-4xl font-extrabold text-violet-700">{question.mediaLabel}</span>
         </div>
       )}
 
-      {/* Letter boxes */}
-      <div className="flex gap-2 flex-wrap justify-center">
+      {/* Letter boxes — the word with blank */}
+      <div className="flex gap-3 flex-wrap justify-center items-center">
         {template.map((cell, i) => {
           if (cell !== null) {
             return (
               <div
                 key={i}
-                className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center
-                           text-2xl font-bold text-gray-700 border-2 border-gray-200"
+                className="w-14 h-14 rounded-xl bg-white flex items-center justify-center
+                           text-3xl font-bold text-gray-800 border-2 border-gray-200 shadow-sm"
               >
                 {cell}
               </div>
@@ -127,7 +112,7 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
               type="button"
               whileTap={{ scale: 0.9 }}
               onClick={() => handleBlankClick(pos)}
-              className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-bold
+              className={`w-14 h-14 rounded-xl flex items-center justify-center text-3xl font-bold
                 border-2 transition-all
                 ${filled
                   ? 'bg-violet-100 border-violet-400 text-violet-700'
@@ -142,7 +127,7 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
 
       {/* Letter option buttons */}
       <div className="flex gap-3 flex-wrap justify-center">
-        {question.options.map((opt) => (
+        {visibleOptions.map((opt) => (
           <motion.button
             key={opt.id}
             type="button"

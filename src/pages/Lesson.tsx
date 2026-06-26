@@ -6,8 +6,9 @@ import { db } from '../db/db';
 import { loadCurriculum } from '../lib/curriculum';
 import ProgressBar from '../components/ui/ProgressBar';
 import QuestionWrapper from '../components/questions/QuestionWrapper';
-import UnitIntro_AA from '../components/questions/UnitIntro_AA';
+import UnitIntroGeneric from '../components/questions/UnitIntroGeneric';
 import PageBg from '../components/ui/PageBg';
+import { UNIT_INTROS } from '../data/unitIntros';
 import type { Node } from '../types';
 
 type FeedbackState = 'idle' | 'correct' | 'wrong';
@@ -21,6 +22,7 @@ const Lesson: React.FC = () => {
   const currentUser = useStore((s) => s.currentUser);
 
   const [node, setNode] = useState<Node | null>(null);
+  const [unitLetter, setUnitLetter] = useState<string>('');
   const [loadingNode, setLoadingNode] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [, setAnswers] = useState<Record<string, boolean>>({});
@@ -32,8 +34,10 @@ const Lesson: React.FC = () => {
   useEffect(() => {
     if (!nodeId) return;
     loadCurriculum().then((units) => {
-      const found = units.flatMap((u) => u.nodes).find((n) => n.id === nodeId);
-      setNode(found ?? null);
+      for (const u of units) {
+        const found = u.nodes.find((n) => n.id === nodeId);
+        if (found) { setNode(found); setUnitLetter(u.letter); break; }
+      }
       setLoadingNode(false);
     });
   }, [nodeId]);
@@ -51,9 +55,14 @@ const Lesson: React.FC = () => {
       // For wrong answers: find readable correct answer text
       if (!correct) {
         let correctDisplay = String(question.correctAnswer);
-        if (question.type === 'audio_picture' || question.type === 'audio_options') {
+        if (question.type === 'audio_picture' || question.type === 'audio_options' || question.type === 'fill_blanks') {
           const opt = question.options?.find((o) => o.id === question.correctAnswer);
           if (opt?.text) correctDisplay = opt.text;
+        } else if (question.type === 'phoneme' && Array.isArray(question.correctAnswer)) {
+          // Map each option ID to its text, join with space
+          correctDisplay = (question.correctAnswer as string[])
+            .map((id) => question.options?.find((o) => o.id === id)?.text ?? id)
+            .join(' ');
         }
         setShownCorrectAnswer(correctDisplay);
       }
@@ -110,6 +119,7 @@ const Lesson: React.FC = () => {
   }
 
   if (node.type === 'intro') {
+    const introData = UNIT_INTROS[unitLetter];
     const completeIntro = async () => {
       if (currentUser) {
         await db.progress.put({
@@ -124,7 +134,12 @@ const Lesson: React.FC = () => {
       }
       navigate('/home');
     };
-    return <UnitIntro_AA onComplete={completeIntro} />;
+    if (!introData) {
+      // No intro data yet for this letter — just complete immediately
+      completeIntro();
+      return null;
+    }
+    return <UnitIntroGeneric data={introData} onComplete={completeIntro} />;
   }
 
   if (node.questions.length === 0) {

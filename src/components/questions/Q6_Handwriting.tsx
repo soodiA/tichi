@@ -3,7 +3,7 @@ import type { Question } from '../../types';
 
 const SIZE = 300;
 const BRUSH_R = 9;
-const COVERAGE_THRESHOLD = 82; // % of letter area that must be traced
+const COVERAGE_THRESHOLD = 94; // high enough to require dot coverage on dotted letters (ب etc.)
 const PEN_COLOR = '#4c1d95'; // violet-900
 
 interface Props {

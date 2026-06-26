@@ -15,18 +15,17 @@ interface SelectedPhoneme {
 
 const Q11_Phoneme: React.FC<Props> = ({ question, onAnswer }) => {
   const [selected, setSelected] = useState<SelectedPhoneme[]>([]);
-  const [used, setUsed] = useState<string[]>([]); // ordered list of used option ids
+
+  const usedIds = new Set(selected.map((s) => s.id));
 
   const handleChipClick = (optId: string, text: string) => {
-    // Allow multiple picks (phonemes can repeat)
-    setSelected((prev) => [...prev, { id: optId, text }]);
-    setUsed((prev) => [...prev, optId]);
-  };
-
-  const handleRemoveLast = () => {
-    if (selected.length === 0) return;
-    setSelected((prev) => prev.slice(0, -1));
-    setUsed((prev) => prev.slice(0, -1));
+    if (usedIds.has(optId)) {
+      // Remove from sequence
+      setSelected((prev) => prev.filter((s) => s.id !== optId));
+    } else {
+      // Add to end of sequence
+      setSelected((prev) => [...prev, { id: optId, text }]);
+    }
   };
 
   const handleConfirm = () => {
@@ -38,12 +37,7 @@ const Q11_Phoneme: React.FC<Props> = ({ question, onAnswer }) => {
       selectedIds.every((id, i) => id === (question.correctAnswer as string[])[i]);
     onAnswer(correct);
     setSelected([]);
-    setUsed([]);
   };
-
-  // Count how many times each option has been used
-  const usedCount: Record<string, number> = {};
-  used.forEach((id) => { usedCount[id] = (usedCount[id] ?? 0) + 1; });
 
   return (
     <div className="flex flex-col items-center gap-5">
@@ -84,6 +78,7 @@ const Q11_Phoneme: React.FC<Props> = ({ question, onAnswer }) => {
                 key={`${s.id}-${i}`}
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
                 className="px-3 py-1 bg-emerald-500 text-white font-bold rounded-xl text-lg"
               >
                 {s.text}
@@ -95,46 +90,36 @@ const Q11_Phoneme: React.FC<Props> = ({ question, onAnswer }) => {
 
       {/* Phoneme chips */}
       <div className="flex flex-wrap gap-3 justify-center">
-        {question.options.map((opt) => (
-          <motion.button
-            key={opt.id}
-            type="button"
-            whileTap={{ scale: 0.88 }}
-            onClick={() => handleChipClick(opt.id, opt.text ?? '')}
-            className="w-14 h-14 rounded-2xl bg-white border-2 border-violet-300 text-2xl font-bold
-                       text-gray-700 shadow active:scale-90 transition-all relative"
-          >
-            {opt.text}
-            {usedCount[opt.id] > 0 && (
-              <span className="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-violet-500
-                               text-white text-xs flex items-center justify-center font-bold">
-                {usedCount[opt.id]}
-              </span>
-            )}
-          </motion.button>
-        ))}
+        {question.options.map((opt) => {
+          const isUsed = usedIds.has(opt.id);
+          return (
+            <motion.button
+              key={opt.id}
+              type="button"
+              whileTap={{ scale: 0.88 }}
+              onClick={() => handleChipClick(opt.id, opt.text ?? '')}
+              className={`w-14 h-14 rounded-2xl border-2 text-2xl font-bold shadow transition-all
+                ${isUsed
+                  ? 'bg-violet-600 border-violet-600 text-white scale-105'
+                  : 'bg-white border-violet-300 text-gray-700'
+                }`}
+            >
+              {opt.text}
+            </motion.button>
+          );
+        })}
       </div>
 
-      <div className="flex gap-3 w-full">
-        <button
-          type="button"
-          onClick={handleRemoveLast}
-          disabled={selected.length === 0}
-          className="flex-1 border-2 border-gray-300 text-gray-600 font-bold py-3 rounded-2xl
-                     active:scale-95 transition-transform disabled:opacity-40"
-        >
-          حذف آخری
-        </button>
-        <button
-          onClick={handleConfirm}
-          disabled={selected.length === 0}
-          className="flex-1 btn-primary py-3"
-        >
-          تأیید
-        </button>
-      </div>
+      <button
+        onClick={handleConfirm}
+        disabled={selected.length === 0}
+        className="w-full btn-primary py-3"
+      >
+        تأیید
+      </button>
     </div>
   );
 };
 
 export default Q11_Phoneme;
+// Wed Jun 24 14:42:28 UTC 2026
