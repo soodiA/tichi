@@ -291,20 +291,6 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
               `}</style>
             )}
 
-            {/* Future strokes — very faint */}
-            {allStrokes && allStrokes.slice(currentStroke + 1).map((pts, i) => (
-              <path
-                key={i}
-                d={waypointsToSVGPath(pts)}
-                stroke="#7c3aed"
-                strokeWidth="5"
-                strokeDasharray="6 8"
-                fill="none"
-                opacity="0.15"
-                strokeLinecap="round"
-              />
-            ))}
-
             {/* Current stroke — dashed guide */}
             <path
               d={currentSvgPath}
