@@ -32,7 +32,6 @@ const Q8_SentenceComplete: React.FC<Props> = ({ question, onAnswer }) => {
         ? question.correctAnswer.includes(selectedOpt.id)
         : selectedOpt.id === question.correctAnswer;
     onAnswer(correct);
-    setSelected(null);
   };
 
   return (

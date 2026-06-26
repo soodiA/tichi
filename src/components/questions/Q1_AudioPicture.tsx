@@ -68,7 +68,6 @@ const Q1_AudioPicture: React.FC<Props> = ({ question, onAnswer }) => {
     if (!selected) return;
     const correct = selected === question.correctAnswer;
     onAnswer(correct);
-    setSelected(null);
   };
 
   return (

@@ -18,7 +18,6 @@ const Q13_SoundToText: React.FC<Props> = ({ question, onAnswer }) => {
         ? question.correctAnswer.includes(selected)
         : selected === question.correctAnswer;
     onAnswer(correct);
-    setSelected(null);
   };
 
   return (
