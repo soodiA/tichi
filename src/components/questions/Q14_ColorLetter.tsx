@@ -3,7 +3,7 @@ import type { Question } from '../../types';
 
 const SIZE = 300;
 const BRUSH_R = 22;
-const THRESHOLD = 82;
+const THRESHOLD = 94; // high enough to require dot coverage on dotted letters (ب etc.)
 const PAINT_COLOR = '#7c3aed';
 const EMPTY_COLOR = '#ede9fe';
 
@@ -27,7 +27,9 @@ const Q14_ColorLetter: React.FC<Props> = ({ question, onAnswer }) => {
   const [done, setDone] = useState(false);
 
   const fontSize = Math.round(SIZE * 0.78);
-  const cy = SIZE / 2 + SIZE * 0.03;
+  // Arabic/Persian glyphs sit high in the em box; shift down so the letter
+  // is visually centered rather than bunched at the top.
+  const cy = Math.round(SIZE * 0.62);
 
   const buildMask = useCallback(() => {
     const mask = document.createElement('canvas');
