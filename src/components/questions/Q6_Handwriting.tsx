@@ -3,16 +3,23 @@ import type { Question } from '../../types';
 
 const SIZE = 300;
 const BRUSH_R = 9;
-const HIT_RADIUS = 32;        // px in canvas space — how close counts as "on waypoint"
-const PEN_COLOR = '#4c1d95';  // violet-900
+const HIT_RADIUS = 32;
+const PEN_COLOR = '#4c1d95';
 
-// Path-following waypoints in 300×300 canvas space.
+// Multi-stroke paths: each letter maps to an array of strokes.
+// Each stroke is an ordered list of [x,y] waypoints the user must pass through.
 // Tuned for Vazirmatn bold fontSize=234, centered x=150, cy=186.
-// آ: madda arc (right → top → left) then stem downward.
-// ا: stem only, top → bottom.
-const STROKE_PATHS: Record<string, [number, number][]> = {
-  'آ': [[174, 74], [150, 52], [126, 74], [149, 155], [148, 252]],
-  'ا': [[150, 85], [149, 168], [148, 252]],
+//
+// آ: stroke 1 = vertical stem top→bottom, stroke 2 = madda arc right→top→left
+// ا: stroke 1 = vertical stem top→bottom
+const STROKE_PATHS: Record<string, [number, number][][]> = {
+  'آ': [
+    [[150, 85], [149, 168], [148, 252]],      // stem
+    [[174, 68], [150, 50], [126, 68]],         // madda (right → top → left)
+  ],
+  'ا': [
+    [[150, 85], [149, 168], [148, 252]],      // stem only
+  ],
 };
 
 function waypointsToSVGPath(pts: [number, number][]): string {
@@ -26,7 +33,7 @@ interface Props {
 
 const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
   const letter = String(question.correctAnswer);
-  const strokePts = STROKE_PATHS[letter] ?? null;
+  const allStrokes = STROKE_PATHS[letter] ?? null;
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const paintRef = useRef<HTMLCanvasElement | null>(null);
@@ -37,12 +44,19 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
   const drawingRef = useRef(false);
   const lastCheckRef = useRef(0);
 
-  const [coverage, setCoverage] = useState(0);
   const [done, setDone] = useState(false);
   const [guideVisible, setGuideVisible] = useState(true);
+
   // path-following state
+  const [currentStroke, setCurrentStroke] = useState(0);
+  const currentStrokeRef = useRef(0);
   const [nextWpt, setNextWpt] = useState(0);
   const nextWptRef = useRef(0);
+  const [strokeDone, setStrokeDone] = useState(false);
+  const strokeDoneRef = useRef(false);
+
+  // coverage fallback
+  const [coverage, setCoverage] = useState(0);
 
   const fontSize = Math.round(SIZE * 0.78);
   const cy = Math.round(SIZE * 0.62);
@@ -72,7 +86,6 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
 
     const ctx = canvas.getContext('2d')!;
     ctx.clearRect(0, 0, SIZE, SIZE);
-
     ctx.fillStyle = '#fdf4ff';
     ctx.fillRect(0, 0, SIZE, SIZE);
 
@@ -82,7 +95,6 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
     ctx.textBaseline = 'middle';
     ctx.fillText(letter, SIZE / 2, cy);
 
-    // User strokes clipped to letter area
     const tCtx = temp.getContext('2d')!;
     tCtx.clearRect(0, 0, SIZE, SIZE);
     tCtx.drawImage(paint, 0, 0);
@@ -117,8 +129,11 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
     pCtx.fill();
     render();
 
-    if (strokePts) {
-      // Path-following mode: check if user hit the next waypoint
+    if (allStrokes) {
+      // Don't process waypoints if current stroke is already complete (waiting for lift)
+      if (strokeDoneRef.current) return;
+
+      const strokePts = allStrokes[currentStrokeRef.current];
       const idx = nextWptRef.current;
       if (idx < strokePts.length) {
         const [wx, wy] = strokePts[idx];
@@ -127,12 +142,25 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
           const next = idx + 1;
           nextWptRef.current = next;
           setNextWpt(next);
-          setCoverage(Math.round((next / strokePts.length) * 100));
-          if (next >= strokePts.length) complete();
+
+          // Compute total progress across all strokes
+          const totalWpts = allStrokes.reduce((s, st) => s + st.length, 0);
+          const doneWpts = allStrokes.slice(0, currentStrokeRef.current).reduce((s, st) => s + st.length, 0) + next;
+          setCoverage(Math.round((doneWpts / totalWpts) * 100));
+
+          if (next >= strokePts.length) {
+            // Current stroke complete
+            strokeDoneRef.current = true;
+            setStrokeDone(true);
+            // If last stroke, finish; otherwise wait for finger lift
+            if (currentStrokeRef.current + 1 >= allStrokes.length) {
+              complete();
+            }
+          }
         }
       }
     } else {
-      // Coverage mode (fallback for letters without a defined path)
+      // Coverage mode fallback
       const now = Date.now();
       if (now - lastCheckRef.current < 120) return;
       lastCheckRef.current = now;
@@ -148,7 +176,24 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
       setCoverage(pct);
       if (pct >= 94) complete();
     }
-  }, [render, complete, strokePts]);
+  }, [render, complete, allStrokes]);
+
+  // On finger/mouse lift: if current stroke just finished, advance to next stroke
+  const handleDrawEnd = useCallback(() => {
+    drawingRef.current = false;
+    if (!allStrokes || doneRef.current) return;
+    if (strokeDoneRef.current) {
+      const next = currentStrokeRef.current + 1;
+      if (next < allStrokes.length) {
+        currentStrokeRef.current = next;
+        setCurrentStroke(next);
+        nextWptRef.current = 0;
+        setNextWpt(0);
+        strokeDoneRef.current = false;
+        setStrokeDone(false);
+      }
+    }
+  }, [allStrokes]);
 
   const clearCanvas = useCallback(() => {
     if (doneRef.current) return;
@@ -157,8 +202,12 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
     paint.getContext('2d')!.clearRect(0, 0, SIZE, SIZE);
     setCoverage(0);
     setGuideVisible(true);
+    currentStrokeRef.current = 0;
+    setCurrentStroke(0);
     nextWptRef.current = 0;
     setNextWpt(0);
+    strokeDoneRef.current = false;
+    setStrokeDone(false);
     render();
   }, [render]);
 
@@ -191,17 +240,22 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
     drawAt(x, y);
   }, [drawAt]);
 
-  // SVG paths
-  const fullSvgPath = strokePts ? waypointsToSVGPath(strokePts) : null;
-  const doneSvgPath = strokePts && nextWpt > 0
-    ? waypointsToSVGPath(strokePts.slice(0, nextWpt + 1))
+  // Build SVG paths for overlay
+  const currentStrokePts = allStrokes?.[currentStroke] ?? null;
+  const currentSvgPath = currentStrokePts ? waypointsToSVGPath(currentStrokePts) : null;
+  const startPt = currentStrokePts?.[0];
+  const currentTarget = currentStrokePts && nextWpt < currentStrokePts.length
+    ? currentStrokePts[nextWpt]
     : null;
-  const startPt = strokePts?.[0];
-  const currentTarget = strokePts && nextWpt < strokePts.length ? strokePts[nextWpt] : null;
+  const isLastStroke = allStrokes ? currentStroke === allStrokes.length - 1 : true;
 
   return (
     <div className="flex flex-col items-center gap-4 flex-1 justify-center">
-      <p className="text-gray-500 text-sm">حرف را روی راهنما بنویس</p>
+      <p className="text-gray-500 text-sm">
+        {allStrokes && allStrokes.length > 1
+          ? `حرف را بنویس (خط ${currentStroke + 1} از ${allStrokes.length})`
+          : 'حرف را روی راهنما بنویس'}
+      </p>
 
       <div className="relative rounded-3xl overflow-hidden shadow-lg border-2 border-violet-200" style={{ width: 280, height: 280 }}>
         <canvas
@@ -211,14 +265,14 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
           className="w-full h-full touch-none"
           onTouchStart={(e) => { e.preventDefault(); const t = e.touches[0]; const p = canvasPos(t.clientX, t.clientY); if (p) handleDrawStart(p.x, p.y); }}
           onTouchMove={(e) => { e.preventDefault(); if (!drawingRef.current) return; const t = e.touches[0]; const p = canvasPos(t.clientX, t.clientY); if (p) drawAt(p.x, p.y); }}
-          onTouchEnd={() => { drawingRef.current = false; }}
+          onTouchEnd={() => handleDrawEnd()}
           onMouseDown={(e) => { const p = canvasPos(e.clientX, e.clientY); if (p) handleDrawStart(p.x, p.y); }}
           onMouseMove={(e) => { if (!drawingRef.current) return; const p = canvasPos(e.clientX, e.clientY); if (p) drawAt(p.x, p.y); }}
-          onMouseUp={() => { drawingRef.current = false; }}
-          onMouseLeave={() => { drawingRef.current = false; }}
+          onMouseUp={() => handleDrawEnd()}
+          onMouseLeave={() => handleDrawEnd()}
         />
 
-        {fullSvgPath && !done && (
+        {currentSvgPath && !done && (
           <svg
             viewBox={`0 0 ${SIZE} ${SIZE}`}
             className="absolute inset-0 w-full h-full pointer-events-none"
@@ -231,56 +285,71 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
                   100% { offset-distance: 100%; opacity: 0; }
                 }
                 .travel-dot {
-                  offset-path: path('${fullSvgPath}');
+                  offset-path: path('${currentSvgPath}');
                   animation: travelDot 1.8s ease-in-out infinite;
                 }
               `}</style>
             )}
 
-            {/* Dashed guide — full path */}
+            {/* Future strokes — very faint */}
+            {allStrokes && allStrokes.slice(currentStroke + 1).map((pts, i) => (
+              <path
+                key={i}
+                d={waypointsToSVGPath(pts)}
+                stroke="#7c3aed"
+                strokeWidth="5"
+                strokeDasharray="6 8"
+                fill="none"
+                opacity="0.15"
+                strokeLinecap="round"
+              />
+            ))}
+
+            {/* Current stroke — dashed guide */}
             <path
-              d={fullSvgPath}
+              d={currentSvgPath}
               stroke="#7c3aed"
               strokeWidth="6"
               strokeDasharray="10 7"
               fill="none"
-              opacity="0.3"
+              opacity="0.35"
               strokeLinecap="round"
             />
 
-            {/* Completed portion — solid */}
-            {doneSvgPath && (
-              <path
-                d={doneSvgPath}
-                stroke="#7c3aed"
-                strokeWidth="6"
-                fill="none"
-                opacity="0.7"
-                strokeLinecap="round"
-              />
-            )}
-
-            {/* Animated guide dot (before drawing starts) */}
+            {/* Animated guide (before first touch) */}
             {guideVisible && startPt && (
               <>
                 <circle cx={startPt[0]} cy={startPt[1]} r="10" fill="#7c3aed" opacity="0.7">
                   <animate attributeName="r" values="10;14;10" dur="1.1s" repeatCount="indefinite" />
-                  <animate attributeName="opacity" values="0.7;0.35;0.7" dur="1.1s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0.7;0.3;0.7" dur="1.1s" repeatCount="indefinite" />
                 </circle>
                 <circle r="9" fill="#7c3aed" className="travel-dot" />
               </>
             )}
 
-            {/* Current target waypoint — pulsing ring */}
-            {!guideVisible && currentTarget && (
+            {/* Pulsing target waypoint */}
+            {!guideVisible && currentTarget && !strokeDone && (
               <circle cx={currentTarget[0]} cy={currentTarget[1]} r="14" fill="none" stroke="#7c3aed" strokeWidth="3" opacity="0.6">
                 <animate attributeName="r" values="14;20;14" dur="0.9s" repeatCount="indefinite" />
                 <animate attributeName="opacity" values="0.6;0.2;0.6" dur="0.9s" repeatCount="indefinite" />
               </circle>
             )}
+
+            {/* Stroke done — show checkmark and lift-finger hint */}
+            {strokeDone && !isLastStroke && (
+              <>
+                <circle cx={SIZE / 2} cy={SIZE / 2} r="32" fill="#7c3aed" opacity="0.85" />
+                <text x={SIZE / 2} y={SIZE / 2 + 10} textAnchor="middle" fontSize="28" fill="white">✓</text>
+              </>
+            )}
           </svg>
         )}
       </div>
+
+      {/* Lift-finger prompt between strokes */}
+      {strokeDone && !isLastStroke && !done && (
+        <p className="text-violet-600 font-bold text-sm">انگشتت را بردار و خط بعدی را بکش</p>
+      )}
 
       <div className="w-64 h-3 bg-violet-100 rounded-full overflow-hidden">
         <div className="h-full bg-violet-500 rounded-full transition-all duration-150" style={{ width: `${coverage}%` }} />
