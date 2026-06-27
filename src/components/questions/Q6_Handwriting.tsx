@@ -14,11 +14,11 @@ const PEN_COLOR = '#4c1d95';
 // ا: stroke 1 = vertical stem top→bottom
 const STROKE_PATHS: Record<string, [number, number][][]> = {
   'آ': [
-    [[150, 85], [149, 168], [148, 252]],      // stem
-    [[174, 68], [150, 50], [126, 68]],         // madda (right → top → left)
+    [[150, 85], [149, 168], [148, 252]],            // stroke 1: stem top→bottom
+    [[174, 62], [162, 72], [150, 56], [136, 68], [124, 75]], // stroke 2: madda wave (right→dip→rise→dip→left)
   ],
   'ا': [
-    [[150, 85], [149, 168], [148, 252]],      // stem only
+    [[150, 85], [149, 168], [148, 252]],            // stem only
   ],
 };
 
