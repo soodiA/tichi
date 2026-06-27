@@ -150,9 +150,15 @@ interface Props {
   onAnswer: (correct: boolean) => void;
 }
 
+// Strip Arabic tatweel (ـ U+0640) so 'بـ' and 'ب' both hit the same entry
+const TATWEEL = 'ـ';
+function normalizeLetter(l: string): string {
+  return l.replace(new RegExp(TATWEEL, 'g'), '');
+}
+
 const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
   const letter = String(question.correctAnswer);
-  const allStrokes = STROKE_PATHS[letter] ?? null;
+  const allStrokes = STROKE_PATHS[normalizeLetter(letter)] ?? null;
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const paintRef = useRef<HTMLCanvasElement | null>(null);
