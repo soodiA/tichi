@@ -74,8 +74,6 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
       correct = answeredIds.length === 1 && answeredIds[0] === question.correctAnswer;
     }
     onAnswer(correct);
-    setFilledBlanks(blankIndices.map(() => null));
-    setUsedOptions(new Set());
   };
 
   let blankCounter = 0;
