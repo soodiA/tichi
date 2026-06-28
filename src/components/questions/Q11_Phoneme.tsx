@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Question } from '../../types';
 import AudioButton from '../ui/AudioButton';
+import { shuffleArray } from '../../lib/shuffle';
 
 interface Props {
   question: Question;
@@ -15,6 +16,7 @@ interface SelectedPhoneme {
 
 const Q11_Phoneme: React.FC<Props> = ({ question, onAnswer }) => {
   const [selected, setSelected] = useState<SelectedPhoneme[]>([]);
+  const shuffledOptions = useMemo(() => shuffleArray(question.options), [question.id]);
 
   const usedIds = new Set(selected.map((s) => s.id));
 
@@ -90,7 +92,7 @@ const Q11_Phoneme: React.FC<Props> = ({ question, onAnswer }) => {
 
       {/* Phoneme chips */}
       <div className="flex flex-wrap gap-3 justify-center">
-        {question.options.map((opt) => {
+        {shuffledOptions.map((opt) => {
           const isUsed = usedIds.has(opt.id);
           return (
             <motion.button
