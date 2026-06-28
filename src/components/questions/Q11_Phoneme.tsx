@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Question } from '../../types';
 import AudioButton from '../ui/AudioButton';
@@ -16,7 +16,7 @@ interface SelectedPhoneme {
 
 const Q11_Phoneme: React.FC<Props> = ({ question, onAnswer }) => {
   const [selected, setSelected] = useState<SelectedPhoneme[]>([]);
-  const shuffledOptions = useMemo(() => shuffleArray(question.options), [question.id]);
+  const [shuffledOptions] = useState(() => shuffleArray(question.options));
 
   const usedIds = new Set(selected.map((s) => s.id));
 

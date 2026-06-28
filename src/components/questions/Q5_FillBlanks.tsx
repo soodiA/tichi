@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { shuffleArray } from '../../lib/shuffle';
 import { motion } from 'framer-motion';
 import type { Question } from '../../types';
@@ -11,7 +11,7 @@ interface Props {
 const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
   // Extract template from question.template (set by curriculum.ts) OR fall back to
   // the __template__ sentinel stored in options (handles stale SW cache)
-  const { template, visibleOptions } = useMemo(() => {
+  const [{ template, visibleOptions }] = useState(() => {
     const sentinelOpt = question.options.find((o) => o.id === '__template__');
     let tpl: (string | null)[] = question.template ?? [];
     if (tpl.length === 0 && sentinelOpt?.text) {
@@ -19,7 +19,7 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
     }
     const opts = question.options.filter((o) => o.id !== '__template__');
     return { template: tpl, visibleOptions: shuffleArray(opts) };
-  }, [question.id]);
+  });
 
   const blankIndices = template
     .map((cell, i) => (cell === null ? i : -1))

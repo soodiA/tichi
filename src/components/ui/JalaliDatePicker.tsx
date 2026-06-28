@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import jalaali from 'jalaali-js';
+import * as jalaali from 'jalaali-js';
 
 const MONTHS = [
   'فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور',

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Tichi Letter Calibration</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@700&display=swap" rel="stylesheet">
+<style>
+body { font-family: sans-serif; background: #1e1e2e; color: #cdd6f4; padding: 20px; }
+canvas { border: 1px solid #7c3aed; margin: 4px; }
+.letter-block { display: inline-block; text-align: center; margin: 8px; }
+.letter-name { font-size: 12px; color: #a6e3a1; }
+pre { background: #313244; padding: 16px; border-radius: 8px; font-size: 11px; overflow-x: auto; }
+button { background: #7c3aed; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin: 8px; }
+</style>
+</head>
+<body>
+<h2>Letter Calibration Tool</h2>
+<p>Measures actual bounding box of each letter in Vazirmatn Bold 234px (300×300 canvas)</p>
+<button onclick="calibrate()">Calibrate All Letters</button>
+<button onclick="copyOutput()">Copy Output</button>
+<div id="canvases"></div>
+<pre id="output">Click Calibrate...</pre>
+
+<script>
+const SIZE = 300;
+const FONT_SIZE = Math.round(SIZE * 0.78); // 234
+const CY = Math.round(SIZE * 0.62); // 186
+const CX = SIZE / 2; // 150
+
+const LETTERS = [
+  'آ', 'ا', 'ب', 'پ', 'ت', 'ث',
+  'ج', 'چ', 'ح', 'خ',
+  'د', 'ذ',
+  'ر', 'ز', 'ژ',
+  'س', 'ش',
+  'ص', 'ض',
+  'ط', 'ظ',
+  'ع', 'غ',
+  'ف', 'ق',
+  'ک', 'گ',
+  'ل',
+  'م',
+  'ن',
+  'و',
+  'ه',
+  'ی',
+];
+
+function measureLetter(letter) {
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, SIZE, SIZE);
+  ctx.fillStyle = '#000';
+  ctx.font = `bold ${FONT_SIZE}px Vazirmatn, serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(letter, CX, CY);
+
+  const data = ctx.getImageData(0, 0, SIZE, SIZE).data;
+  let minX = SIZE, maxX = 0, minY = SIZE, maxY = 0;
+  let hasPixels = false;
+
+  for (let y = 0; y < SIZE; y++) {
+    for (let x = 0; x < SIZE; x++) {
+      const alpha = data[(y * SIZE + x) * 4 + 3];
+      if (alpha > 30) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+        hasPixels = true;
+      }
+    }
+  }
+
+  if (!hasPixels) return null;
+  return { minX, maxX, minY, maxY, w: maxX - minX, h: maxY - minY, cx: Math.round((minX+maxX)/2), cy: Math.round((minY+maxY)/2) };
+}
+
+function renderWithBounds(letter, bounds) {
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  canvas.style.width = '100px';
+  canvas.style.height = '100px';
+  const ctx = canvas.getContext('2d');
+
+  // Background
+  ctx.fillStyle = '#fdf4ff';
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  // Letter ghost
+  ctx.fillStyle = '#ede9fe';
+  ctx.font = `bold ${FONT_SIZE}px Vazirmatn, serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(letter, CX, CY);
+
+  // Outline
+  ctx.strokeStyle = '#7c3aed';
+  ctx.lineWidth = 1;
+  ctx.strokeText(letter, CX, CY);
+
+  if (bounds) {
+    // Bounding box
+    ctx.strokeStyle = '#f38ba8';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeRect(bounds.minX, bounds.minY, bounds.w, bounds.h);
+
+    // Center cross
+    ctx.strokeStyle = '#a6e3a1';
+    ctx.setLineDash([]);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(bounds.cx - 6, bounds.cy);
+    ctx.lineTo(bounds.cx + 6, bounds.cy);
+    ctx.moveTo(bounds.cx, bounds.cy - 6);
+    ctx.lineTo(bounds.cx, bounds.cy + 6);
+    ctx.stroke();
+
+    // Canvas center (150, 186)
+    ctx.strokeStyle = '#fab387';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(CX, CY, 4, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  return canvas;
+}
+
+let outputText = '';
+
+function calibrate() {
+  document.fonts.ready.then(() => {
+    const container = document.getElementById('canvases');
+    container.innerHTML = '';
+    const lines = [];
+    lines.push('// Bounding boxes for Vazirmatn Bold 234px, 300×300 canvas, center (150, 186)');
+    lines.push('// Format: letter → { minX, maxX, minY, maxY, w, h, cx, cy }');
+    lines.push('');
+    lines.push('const LETTER_BOUNDS = {');
+
+    LETTERS.forEach(letter => {
+      const bounds = measureLetter(letter);
+      const canvas = renderWithBounds(letter, bounds);
+
+      const block = document.createElement('div');
+      block.className = 'letter-block';
+      block.appendChild(canvas);
+      const label = document.createElement('div');
+      label.className = 'letter-name';
+      if (bounds) {
+        label.textContent = `${letter} [${bounds.minX},${bounds.minY}]-[${bounds.maxX},${bounds.maxY}] ${bounds.w}×${bounds.h}`;
+      } else {
+        label.textContent = `${letter} (no pixels)`;
+      }
+      block.appendChild(label);
+      container.appendChild(block);
+
+      if (bounds) {
+        lines.push(`  '${letter}': { minX:${bounds.minX}, maxX:${bounds.maxX}, minY:${bounds.minY}, maxY:${bounds.maxY}, w:${bounds.w}, h:${bounds.h}, cx:${bounds.cx}, cy:${bounds.cy} },`);
+      }
+    });
+
+    lines.push('};');
+
+    // Also output suggested waypoints based on bounds
+    lines.push('');
+    lines.push('// Suggested center-line waypoints (top → bottom of each letter):');
+    LETTERS.forEach(letter => {
+      const b = measureLetter(letter);
+      if (!b) return;
+      const topY = Math.round(b.minY + b.h * 0.1);
+      const midY = b.cy;
+      const botY = Math.round(b.maxY - b.h * 0.1);
+      lines.push(`  // ${letter}: cx=${b.cx}, y: ${topY}→${midY}→${botY}  bounds:[${b.minX},${b.minY}]→[${b.maxX},${b.maxY}]`);
+    });
+
+    outputText = lines.join('\n');
+    document.getElementById('output').textContent = outputText;
+  });
+}
+
+function copyOutput() {
+  navigator.clipboard.writeText(outputText).then(() => alert('Copied!'));
+}
+</script>
+</body>
+</html>

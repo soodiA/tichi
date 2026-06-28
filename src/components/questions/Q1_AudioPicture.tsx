@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import type { Question, Option } from '../../types';
 import { shuffleArray } from '../../lib/shuffle';
@@ -64,7 +64,7 @@ const OptionCard: React.FC<{
 
 const Q1_AudioPicture: React.FC<Props> = ({ question, onAnswer }) => {
   const [selected, setSelected] = useState<string | null>(null);
-  const shuffledOptions = useMemo(() => shuffleArray(question.options), [question.id]);
+  const [shuffledOptions] = useState(() => shuffleArray(question.options));
 
   const handleConfirm = () => {
     if (!selected) return;

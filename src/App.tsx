@@ -9,6 +9,7 @@ import Lesson from './pages/Lesson';
 import LessonComplete from './pages/LessonComplete';
 import Profile from './pages/Profile';
 import Friends from './pages/Friends';
+import PathEditor from './pages/PathEditor';
 
 const NAV_ROUTES = ['/home', '/profile', '/friends'];
 
@@ -104,6 +105,7 @@ const App: React.FC = () => {
           <Route path="/lesson-complete" element={<LessonComplete />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/friends" element={<Friends />} />
+          <Route path="/path-editor" element={<PathEditor />} />
         </Routes>
       </AnimatePresence>
       <BottomNav />

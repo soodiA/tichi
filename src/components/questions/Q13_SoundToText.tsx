@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import type { Question } from '../../types';
 import AudioButton from '../ui/AudioButton';
@@ -11,7 +11,7 @@ interface Props {
 
 const Q13_SoundToText: React.FC<Props> = ({ question, onAnswer }) => {
   const [selected, setSelected] = useState<string | null>(null);
-  const shuffledOptions = useMemo(() => shuffleArray(question.options), [question.id]);
+  const [shuffledOptions] = useState(() => shuffleArray(question.options));
 
   const handleConfirm = () => {
     if (!selected) return;
