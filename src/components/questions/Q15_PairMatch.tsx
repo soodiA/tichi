@@ -74,13 +74,17 @@ const Q15_PairMatch: React.FC<Props> = ({ question, onAnswer }) => {
               key={opt.id}
               onClick={() => handleTap(opt.id)}
               disabled={isMatched || allDone}
-              animate={isWrong ? { x: [0, -10, 10, -8, 8, -4, 4, 0] } : { scale: isMatched ? 0.96 : 1 }}
-              transition={{ duration: isWrong ? 0.45 : 0.2 }}
+              animate={
+                isWrong   ? { x: [0, -10, 10, -8, 8, -4, 4, 0] } :
+                isMatched ? { opacity: 0.25, scale: 0.9 } :
+                            { opacity: 1, scale: 1 }
+              }
+              transition={{ duration: isWrong ? 0.45 : 0.3 }}
               className={[
                 'flex flex-col items-center gap-2 p-4 rounded-2xl border-2 shadow-sm',
                 'transition-colors duration-150 active:scale-95 select-none',
                 isMatched
-                  ? 'bg-emerald-50 border-emerald-400 cursor-default'
+                  ? 'bg-gray-50 border-gray-200 cursor-default'
                   : isWrong
                   ? 'bg-red-50 border-red-400'
                   : isSelected
@@ -92,22 +96,13 @@ const Q15_PairMatch: React.FC<Props> = ({ question, onAnswer }) => {
               <span
                 className={[
                   'text-sm font-extrabold text-center',
-                  isMatched ? 'text-emerald-700' :
+                  isMatched ? 'text-gray-400'   :
                   isWrong   ? 'text-red-600'     :
                   isSelected? 'text-violet-700'  : 'text-gray-700',
                 ].join(' ')}
               >
                 {opt.text}
               </span>
-              {isMatched && (
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="text-emerald-500 text-base font-black"
-                >
-                  ✓
-                </motion.span>
-              )}
             </motion.button>
           );
         })}
