@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import type { Question } from '../../types';
 import AudioButton from '../ui/AudioButton';
+import { shuffleArray } from '../../lib/shuffle';
 
 interface Props {
   question: Question;
@@ -10,6 +11,7 @@ interface Props {
 
 const Q13_SoundToText: React.FC<Props> = ({ question, onAnswer }) => {
   const [selected, setSelected] = useState<string | null>(null);
+  const shuffledOptions = useMemo(() => shuffleArray(question.options), [question.id]);
 
   const handleConfirm = () => {
     if (!selected) return;
@@ -30,7 +32,7 @@ const Q13_SoundToText: React.FC<Props> = ({ question, onAnswer }) => {
 
       {/* 2x2 text options */}
       <div className="grid grid-cols-2 gap-3 w-full">
-        {question.options.map((opt) => (
+        {shuffledOptions.map((opt) => (
           <motion.button
             key={opt.id}
             type="button"

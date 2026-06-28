@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import type { Question } from '../../types';
 import AudioButton from '../ui/AudioButton';
+import { shuffleArray } from '../../lib/shuffle';
 
 interface Props {
   question: Question;
@@ -10,6 +11,7 @@ interface Props {
 
 const Q7_AudioOptions: React.FC<Props> = ({ question, onAnswer }) => {
   const [selected, setSelected] = useState<string | null>(null);
+  const shuffledOptions = useMemo(() => shuffleArray(question.options), [question.id]);
 
   // The "shown" syllable/letter is in questionText or mediaLabel
   const shownText = question.mediaLabel ?? question.questionText;
@@ -35,7 +37,7 @@ const Q7_AudioOptions: React.FC<Props> = ({ question, onAnswer }) => {
 
       {/* 2x2 audio options */}
       <div className="grid grid-cols-2 gap-3 w-full">
-        {question.options.map((opt) => (
+        {shuffledOptions.map((opt) => (
           <motion.div
             key={opt.id}
             whileTap={{ scale: 0.94 }}

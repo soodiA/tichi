@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import type { Question, Option } from '../../types';
+import { shuffleArray } from '../../lib/shuffle';
 
 interface Props {
   question: Question;
@@ -63,6 +64,7 @@ const OptionCard: React.FC<{
 
 const Q1_AudioPicture: React.FC<Props> = ({ question, onAnswer }) => {
   const [selected, setSelected] = useState<string | null>(null);
+  const shuffledOptions = useMemo(() => shuffleArray(question.options), [question.id]);
 
   const handleConfirm = () => {
     if (!selected) return;
@@ -73,7 +75,7 @@ const Q1_AudioPicture: React.FC<Props> = ({ question, onAnswer }) => {
   return (
     <div className="flex flex-col gap-5">
       <div className="grid grid-cols-2 gap-3">
-        {question.options.map((opt) => (
+        {shuffledOptions.map((opt) => (
           <OptionCard
             key={opt.id}
             option={opt}

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { shuffleArray } from '../../lib/shuffle';
 import { motion } from 'framer-motion';
 import type { Question } from '../../types';
 
@@ -17,8 +18,8 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
       try { tpl = JSON.parse(sentinelOpt.text); } catch {}
     }
     const opts = question.options.filter((o) => o.id !== '__template__');
-    return { template: tpl, visibleOptions: opts };
-  }, [question]);
+    return { template: tpl, visibleOptions: shuffleArray(opts) };
+  }, [question.id]);
 
   const blankIndices = template
     .map((cell, i) => (cell === null ? i : -1))
@@ -80,14 +81,6 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
 
   return (
     <div className="flex flex-col items-center gap-5 flex-1 justify-center">
-      {/* Word label */}
-      {question.mediaLabel && (
-        <div className="flex flex-col items-center gap-1">
-          <span className="text-gray-400 text-sm">کلمه:</span>
-          <span className="text-4xl font-extrabold text-violet-700">{question.mediaLabel}</span>
-        </div>
-      )}
-
       {/* Letter boxes — the word with blank */}
       <div className="flex gap-3 flex-wrap justify-center items-center">
         {template.map((cell, i) => {
