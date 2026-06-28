@@ -22,11 +22,19 @@ const Q13_SoundToText: React.FC<Props> = ({ question, onAnswer }) => {
     onAnswer(correct);
   };
 
+  const audioUrl = question.questionAudioUrl ?? question.mediaAudioUrl;
+
   return (
     <div className="flex flex-col items-center gap-6">
+      {/* Sentence context or audio prompt */}
+      {question.questionText && question.questionText !== 'کدام گزینه درست است؟' ? (
+        <div className="w-full bg-gray-50 rounded-2xl px-5 py-4 text-center border border-gray-200">
+          <p className="text-2xl font-bold text-gray-800">{question.questionText}</p>
+        </div>
+      ) : null}
       {/* Large play button */}
       <div className="flex flex-col items-center gap-3">
-        <AudioButton audioUrl={question.mediaAudioUrl} size="lg" />
+        <AudioButton audioUrl={audioUrl} size="lg" />
         <p className="text-gray-500 text-sm">صدا را گوش بده</p>
       </div>
 
