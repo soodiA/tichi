@@ -20,7 +20,8 @@ const Home: React.FC = () => {
   const [introUnit, setIntroUnit] = useState<Unit | null>(null);
 
   useEffect(() => {
-    loadCurriculum().then((u) => { setUnits(u); setLoading(false); });
+    const timer = setTimeout(() => setLoading(false), 15000); // safety fallback
+    loadCurriculum().then((u) => { setUnits(u); setLoading(false); }).finally(() => clearTimeout(timer));
   }, []);
 
   useEffect(() => {
@@ -36,12 +37,17 @@ const Home: React.FC = () => {
       });
   }, [currentUser]);
 
-  if (!currentUser || loading) {
+  if (loading) {
     return (
       <div dir="rtl" className="h-full flex items-center justify-center">
         <p className="text-gray-500">در حال بارگذاری...</p>
       </div>
     );
+  }
+
+  if (!currentUser) {
+    navigate('/');
+    return null;
   }
 
   // Exclude intro nodes from the path — intro is shown via UnitDivider book button
