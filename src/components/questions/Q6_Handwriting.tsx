@@ -2,9 +2,9 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import type { Question } from '../../types';
 
 const SIZE = 300;
-const BRUSH_R = 9;
+const PEN_WIDTH = 5;      // thin pen line, not a fat brush
 const HIT_RADIUS = 32;
-const PEN_COLOR = '#4c1d95';
+const PEN_COLOR = '#1e1b4b';
 
 // Multi-stroke paths: each letter → array of strokes → array of [x,y] waypoints.
 // Calibrated for Vazirmatn bold fontSize=234, canvas 300×300, center x=150.
@@ -245,6 +245,7 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
   const doneRef = useRef(false);
   const drawingRef = useRef(false);
   const lastCheckRef = useRef(0);
+  const lastPosRef = useRef<{ x: number; y: number } | null>(null);
 
   const [done, setDone] = useState(false);
   const [guideVisible, setGuideVisible] = useState(true);
@@ -304,7 +305,7 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
     ctx.fillRect(0, 0, SIZE, SIZE);
 
     // Faded letter guide — user traces over it
-    ctx.fillStyle = '#ddd6fe';
+    ctx.fillStyle = '#ede9fe';
     ctx.font = `bold ${fontSize}px Vazirmatn, serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -329,10 +330,21 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
     if (!paint || !mask) return;
 
     const pCtx = paint.getContext('2d')!;
-    pCtx.fillStyle = PEN_COLOR;
+    pCtx.strokeStyle = PEN_COLOR;
+    pCtx.lineWidth = PEN_WIDTH;
+    pCtx.lineCap = 'round';
+    pCtx.lineJoin = 'round';
     pCtx.beginPath();
-    pCtx.arc(x, y, BRUSH_R, 0, Math.PI * 2);
-    pCtx.fill();
+    const last = lastPosRef.current;
+    if (last) {
+      pCtx.moveTo(last.x, last.y);
+      pCtx.lineTo(x, y);
+    } else {
+      pCtx.moveTo(x, y);
+      pCtx.lineTo(x, y);
+    }
+    pCtx.stroke();
+    lastPosRef.current = { x, y };
     render();
 
     if (allStrokes) {
@@ -387,6 +399,7 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
   // On finger/mouse lift: if current stroke just finished, advance to next stroke
   const handleDrawEnd = useCallback(() => {
     drawingRef.current = false;
+    lastPosRef.current = null;
     if (!allStrokes || doneRef.current) return;
     if (strokeDoneRef.current) {
       const next = currentStrokeRef.current + 1;
@@ -443,6 +456,7 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
   const handleDrawStart = useCallback((x: number, y: number) => {
     setGuideVisible(false);
     drawingRef.current = true;
+    lastPosRef.current = null;
     drawAt(x, y);
   }, [drawAt]);
 
