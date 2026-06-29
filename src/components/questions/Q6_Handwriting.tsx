@@ -244,7 +244,6 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
   const totalRef = useRef(0);
   const doneRef = useRef(false);
   const drawingRef = useRef(false);
-  const lastCheckRef = useRef(0);
   const lastPosRef = useRef<{ x: number; y: number } | null>(null);
 
   const [done, setDone] = useState(false);
@@ -378,21 +377,8 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
         }
       }
     } else {
-      // Coverage mode fallback
-      const now = Date.now();
-      if (now - lastCheckRef.current < 120) return;
-      lastCheckRef.current = now;
-      if (totalRef.current === 0) return;
-      const mCtx = mask.getContext('2d')!;
-      const pData = pCtx.getImageData(0, 0, SIZE, SIZE).data;
-      const mData = mCtx.getImageData(0, 0, SIZE, SIZE).data;
-      let painted = 0;
-      for (let i = 3; i < mData.length; i += 4) {
-        if (mData[i] > 128 && pData[i] > 128) painted++;
-      }
-      const pct = Math.round((painted / totalRef.current) * 100);
-      setCoverage(pct);
-      if (pct >= 94) complete();
+      // Coverage mode — just track that user has drawn something (no auto-complete)
+      setCoverage((prev) => Math.min(prev + 5, 99));
     }
   }, [render, complete, allStrokes]);
 
@@ -472,9 +458,11 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
   return (
     <div className="flex flex-col items-center gap-4 flex-1 justify-center">
       <p className="text-gray-500 text-sm">
-        {allStrokes && allStrokes.length > 1
-          ? `حرف را بنویس (خط ${currentStroke + 1} از ${allStrokes.length})`
-          : 'حرف را روی راهنما بنویس'}
+        {allStrokes
+          ? (allStrokes.length > 1
+              ? `حرف را بنویس (خط ${currentStroke + 1} از ${allStrokes.length})`
+              : 'حرف را روی راهنما بنویس')
+          : 'بنویس، بعد «نوشتم» بزن'}
       </p>
 
       <div className="relative rounded-3xl overflow-hidden shadow-lg border-2 border-violet-200" style={{ width: 280, height: 280 }}>
@@ -557,14 +545,22 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
         <p className="text-violet-600 font-bold text-sm">انگشتت را بردار و خط بعدی را بکش</p>
       )}
 
-      <div className="w-64 h-3 bg-violet-100 rounded-full overflow-hidden">
-        <div className="h-full bg-violet-500 rounded-full transition-all duration-150" style={{ width: `${coverage}%` }} />
-      </div>
+      {allStrokes && (
+        <div className="w-64 h-3 bg-violet-100 rounded-full overflow-hidden">
+          <div className="h-full bg-violet-500 rounded-full transition-all duration-150" style={{ width: `${coverage}%` }} />
+        </div>
+      )}
 
       <div className="flex gap-3">
         {!done && (
           <button onClick={clearCanvas} className="border-2 border-gray-300 text-gray-600 font-bold py-3 px-6 rounded-2xl active:scale-95 transition-transform">
             پاک کن
+          </button>
+        )}
+        {/* For coverage-mode letters: show "نوشتم" once user has drawn something */}
+        {!allStrokes && !done && coverage > 0 && (
+          <button onClick={complete} className="bg-violet-500 text-white font-bold py-3 px-6 rounded-2xl active:scale-95 transition-transform">
+            نوشتم ✓
           </button>
         )}
         {done && <p className="text-violet-600 font-extrabold text-2xl">آفرین! ✍️</p>}
