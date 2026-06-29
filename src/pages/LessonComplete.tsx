@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
@@ -6,6 +6,37 @@ import { db } from '../db/db';
 import { syncProfileToCloud, syncProgressToCloud } from '../lib/sync';
 import Mascot from '../components/ui/Mascot';
 import SceneBg from '../components/ui/SceneBg';
+
+const PARTICLES = ['⭐', '✨', '🌟', '💫', '🎉', '🎊'];
+
+const Confetti: React.FC<{ count?: number }> = ({ count = 35 }) => {
+  const items = useMemo(() =>
+    Array.from({ length: count }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      delay: Math.random() * 1.8,
+      duration: 1.6 + Math.random() * 1.8,
+      size: 16 + Math.floor(Math.random() * 18),
+      rotate: Math.random() * 360,
+      emoji: PARTICLES[Math.floor(Math.random() * PARTICLES.length)],
+    })), [count]);
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
+      {items.map((p) => (
+        <motion.span
+          key={p.id}
+          initial={{ y: -60, opacity: 1, rotate: 0 }}
+          animate={{ y: '105vh', opacity: [1, 1, 1, 0], rotate: p.rotate }}
+          transition={{ duration: p.duration, delay: p.delay, ease: 'easeIn' }}
+          style={{ position: 'absolute', left: `${p.left}%`, fontSize: p.size }}
+        >
+          {p.emoji}
+        </motion.span>
+      ))}
+    </div>
+  );
+};
 
 interface LocationState {
   accuracy?: number;
@@ -60,6 +91,9 @@ const LessonComplete: React.FC = () => {
     <div dir="rtl" className="min-h-full relative flex flex-col items-center justify-between overflow-hidden">
       {/* Scenic background */}
       <SceneBg />
+
+      {/* Celebration particles */}
+      <Confetti count={starCount === 3 ? 45 : starCount === 2 ? 30 : 18} />
 
       {/* Content layer */}
       <div className="relative z-10 flex flex-col items-center w-full px-5 pt-12 pb-8 gap-5">
