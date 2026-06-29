@@ -10,7 +10,7 @@ interface LocationState { accuracy?: number; nodeId?: string; }
 
 // ── Performance config ────────────────────────────────────────────────────────
 function getPerf(acc: number) {
-  if (acc === 100) return { title: 'عالیه! تو ستاره‌ای!', emoji: '🌟', bg: 'from-yellow-400 via-orange-400 to-pink-500', ring: '#F59E0B', n: 65 };
+  if (acc === 100) return { title: 'عالیه! تو ستاره‌ای!', emoji: '🌟', bg: 'from-violet-500 via-fuchsia-500 to-pink-400', ring: '#A855F7', n: 65 };
   if (acc >= 80)  return { title: 'آفرین! خیلی خوب بود!', emoji: '🎉', bg: 'from-violet-500 via-purple-500 to-indigo-500', ring: '#7C3AED', n: 45 };
   if (acc >= 60)  return { title: 'خوب بود! ادامه بده!',  emoji: '😊', bg: 'from-emerald-400 via-teal-400 to-cyan-500', ring: '#10B981', n: 28 };
   return           { title: 'تلاش کردی! دفعه بهتر!',    emoji: '💪', bg: 'from-blue-400 via-sky-400 to-cyan-400',    ring: '#3B82F6', n: 15 };
