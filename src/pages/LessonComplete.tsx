@@ -216,7 +216,7 @@ const LessonComplete: React.FC = () => {
           transition={{ opacity: { delay: 0.88 }, y: { delay: 0.88 }, boxShadow: { duration: 2, repeat: Infinity, delay: 1.2 } }}
           whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.96 }}
-          onClick={() => navigate('/home')}
+          onClick={() => navigate('/home', { state: { scrollToNode: nodeId } })}
           className="w-full max-w-sm py-4 rounded-3xl bg-white font-extrabold text-xl shadow-2xl transition-transform"
           style={{ color: '#7C3AED' }}
         >

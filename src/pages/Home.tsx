@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { db } from '../db/db';
 import { loadCurriculum } from '../lib/curriculum';
@@ -13,11 +13,14 @@ import type { Unit, NodeProgress } from '../types';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const scrollToNode = (location.state as { scrollToNode?: string } | null)?.scrollToNode;
   const currentUser = useStore((s) => s.currentUser);
   const [progressMap, setProgressMap] = useState<Record<string, NodeProgress>>({});
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
   const [introUnit, setIntroUnit] = useState<Unit | null>(null);
+  const didScrollRef = useRef(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 15000); // safety fallback
@@ -36,6 +39,16 @@ const Home: React.FC = () => {
         setProgressMap(map);
       });
   }, [currentUser]);
+
+  // Scroll to the node the user just came from
+  useEffect(() => {
+    if (!scrollToNode || didScrollRef.current || loading) return;
+    const el = document.querySelector(`[data-node-id="${scrollToNode}"]`);
+    if (el) {
+      didScrollRef.current = true;
+      setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+    }
+  }, [scrollToNode, loading, units]);
 
   if (loading) {
     return (
@@ -123,17 +136,18 @@ const Home: React.FC = () => {
                   const isCurrent = node.id === firstIncompleteNodeId && unlocked;
 
                   return (
-                    <PathNode
-                      key={node.id}
-                      node={node}
-                      isUnlocked={unlocked}
-                      isCurrent={isCurrent}
-                      isCompleted={completed}
-                      unitColor={unit.color}
-                      onClick={() => {
-                        if (unlocked || completed) navigate(`/lesson/${node.id}`);
-                      }}
-                    />
+                    <div key={node.id} data-node-id={node.id}>
+                      <PathNode
+                        node={node}
+                        isUnlocked={unlocked}
+                        isCurrent={isCurrent}
+                        isCompleted={completed}
+                        unitColor={unit.color}
+                        onClick={() => {
+                          if (unlocked || completed) navigate(`/lesson/${node.id}`);
+                        }}
+                      />
+                    </div>
                   );
                 })}
 
