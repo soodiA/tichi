@@ -216,6 +216,22 @@ const STROKE_PATHS: Record<string, [number, number][][]> = {
     [[148, 61], [148, 221]],
     [[159, 211], [123, 201], [111, 163], [132, 134], [159, 131], [183, 149], [191, 178], [191, 217], [176, 248], [157, 264], [117, 285]],
   ],
+
+  // ── اعراب (standalone diacritics) ───────────────────────────────────────
+  'َ': [ [[185, 135], [115, 115]] ],
+  'ُ': [ [[150, 130], [165, 112], [175, 125], [165, 148]] ],
+  'ِ': [ [[185, 165], [115, 145]] ],
+  'ً': [ [[185, 115], [115, 95]], [[185, 145], [115, 125]] ],
+  'ٌ': [ [[150, 110], [165, 92], [175, 105], [165, 128]], [[150, 135], [165, 117], [175, 130], [165, 153]] ],
+  'ٍ': [ [[185, 155], [115, 135]], [[185, 180], [115, 160]] ],
+  'ّ': [ [[128, 152], [105, 132], [105, 108], [128, 98], [152, 108], [152, 132], [128, 152]], [[150, 85]] ],
+
+  // ── اعراب روی تطویل ─────────────────────────────────────────────────────
+  'ـَ': [ [[215, 175], [85, 175]], [[185, 140], [115, 120]] ],
+  'ـُ': [ [[215, 175], [85, 175]], [[150, 145], [165, 128], [175, 140], [165, 163]] ],
+  'ـِ': [ [[215, 175], [85, 175]], [[185, 205], [115, 185]] ],
+  'ـّ': [ [[215, 175], [85, 175]], [[128, 147], [105, 127], [105, 103], [128, 93], [152, 103], [152, 127], [128, 147]] ],
+  'ـً': [ [[215, 175], [85, 175]], [[185, 110], [115, 90]], [[185, 140], [115, 120]] ],
 };
 
 function waypointsToSVGPath(pts: [number, number][]): string {
@@ -227,15 +243,15 @@ interface Props {
   onAnswer: (correct: boolean) => void;
 }
 
-// Strip only Arabic harakat/diacritics (U+064B–U+065F), preserve tatweel (U+0640)
-// so 'اُ'→'اُ' hits diacritic-specific path, 'بـ'→'بـ' hits غیر-آخر path
+// Fallback normalization: strip Arabic harakat (U+064B–U+065F), keep tatweel (U+0640).
+// Lookup always tries the raw letter first, so 'اَ' and 'َ' hit their own paths before falling back.
 function normalizeLetter(l: string): string {
   return l.replace(/[ً-ٟ]/g, '');
 }
 
 const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
   const letter = String(question.correctAnswer);
-  const allStrokes = STROKE_PATHS[normalizeLetter(letter)] ?? null;
+  const allStrokes = STROKE_PATHS[letter] ?? STROKE_PATHS[normalizeLetter(letter)] ?? null;
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const paintRef = useRef<HTMLCanvasElement | null>(null);
