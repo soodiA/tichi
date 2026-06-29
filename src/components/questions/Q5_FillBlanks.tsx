@@ -82,7 +82,7 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
   return (
     <div className="flex flex-col items-center gap-5 flex-1 justify-center">
       {/* Letter boxes — the word with blank */}
-      <div className="flex gap-3 flex-wrap justify-center items-center">
+      <div className="flex gap-3 flex-wrap justify-center items-center" dir="rtl">
         {template.map((cell, i) => {
           if (cell !== null) {
             return (
