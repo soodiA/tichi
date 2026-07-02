@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store/useStore';
@@ -8,8 +8,38 @@ import ProgressBar from '../components/ui/ProgressBar';
 import QuestionWrapper from '../components/questions/QuestionWrapper';
 import UnitIntroGeneric from '../components/questions/UnitIntroGeneric';
 import PageBg from '../components/ui/PageBg';
+import Mascot from '../components/ui/Mascot';
 import { UNIT_INTROS } from '../data/unitIntros';
 import type { Node } from '../types';
+
+// Star burst on correct answer
+const STAR_EMOJIS = ['⭐', '✨', '🌟', '💫', '🎉'];
+const StarBurst: React.FC = () => {
+  const stars = useMemo(() =>
+    Array.from({ length: 10 }, (_, i) => ({
+      id: i,
+      emoji: STAR_EMOJIS[i % STAR_EMOJIS.length],
+      x: 20 + Math.random() * 60,
+      delay: Math.random() * 0.25,
+      size: 18 + Math.floor(Math.random() * 18),
+    })), []);
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
+      {stars.map((s) => (
+        <motion.span
+          key={s.id}
+          initial={{ y: '60%', x: `${s.x}%`, opacity: 1, scale: 0 }}
+          animate={{ y: '-20%', opacity: [1, 1, 0], scale: [0, 1.3, 1] }}
+          transition={{ duration: 1.1, delay: s.delay, ease: 'easeOut' }}
+          style={{ position: 'absolute', fontSize: s.size }}
+        >
+          {s.emoji}
+        </motion.span>
+      ))}
+    </div>
+  );
+};
 
 type FeedbackState = 'idle' | 'correct' | 'wrong';
 
@@ -195,7 +225,12 @@ const Lesson: React.FC = () => {
         </AnimatePresence>
       </div>
 
-      {/* Duolingo-style feedback panel */}
+      {/* Star burst overlay */}
+      <AnimatePresence>
+        {feedback === 'correct' && <StarBurst key="starburst" />}
+      </AnimatePresence>
+
+      {/* Feedback panel */}
       <AnimatePresence>
         {feedback !== 'idle' && (
           <motion.div
@@ -204,43 +239,62 @@ const Lesson: React.FC = () => {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 px-5 pt-5 pb-8 rounded-t-3xl shadow-2xl
+            className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 px-5 pt-4 pb-8 rounded-t-3xl shadow-2xl
               ${feedback === 'correct'
                 ? 'bg-emerald-50 border-t-2 border-emerald-200'
                 : 'bg-red-50 border-t-2 border-red-200'}`}
           >
-            <div className="flex items-center gap-4 mb-4">
-              <div className={`w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0
-                ${feedback === 'correct' ? 'bg-emerald-500' : 'bg-red-500'}`}>
+            <div className="flex items-end gap-3 mb-4">
+              {/* Mascot */}
+              <motion.div
+                initial={{ scale: 0, rotate: feedback === 'correct' ? -20 : 20 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 15, delay: 0.1 }}
+                className="flex-shrink-0"
+              >
+                <Mascot
+                  size={72}
+                  expression={feedback === 'correct' ? 'celebrating' : 'sad'}
+                  animate={false}
+                />
+              </motion.div>
+
+              {/* Speech bubble */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.7, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ delay: 0.25, type: 'spring', stiffness: 260 }}
+                className={`relative rounded-2xl rounded-br-sm px-4 py-3 flex-1 shadow-md
+                  ${feedback === 'correct' ? 'bg-emerald-500' : 'bg-red-100 border border-red-200'}`}
+              >
                 {feedback === 'correct' ? (
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
-                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                  </svg>
-                ) : (
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
-                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-                  </svg>
-                )}
-              </div>
-              <div>
-                {feedback === 'correct' ? (
-                  <p className="text-emerald-700 font-extrabold text-xl">{praiseText}</p>
+                  <p className="text-white font-extrabold text-lg leading-snug">{praiseText}</p>
                 ) : (
                   <>
-                    <p className="text-red-600 font-extrabold text-base">جواب درست:</p>
-                    <p className="text-red-800 font-bold text-2xl">{shownCorrectAnswer}</p>
+                    <p className="text-red-500 font-bold text-sm mb-0.5">جواب درست:</p>
+                    <p className="text-red-800 font-extrabold text-2xl">{shownCorrectAnswer}</p>
                   </>
                 )}
-              </div>
+                {/* Bubble tail */}
+                <div className={`absolute bottom-2 -right-2 w-0 h-0
+                  border-t-[8px] border-t-transparent
+                  border-l-[10px]
+                  border-b-[8px] border-b-transparent
+                  ${feedback === 'correct' ? 'border-l-emerald-500' : 'border-l-red-100'}`}
+                />
+              </motion.div>
             </div>
 
-            <button
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
               onClick={handleContinue}
-              className={`w-full py-4 rounded-2xl font-extrabold text-lg text-white active:scale-95 transition-transform
+              className={`w-full py-4 rounded-2xl font-extrabold text-lg text-white active:scale-95 transition-transform shadow-lg
                 ${feedback === 'correct' ? 'bg-emerald-500' : 'bg-red-500'}`}
             >
               ادامه →
-            </button>
+            </motion.button>
           </motion.div>
         )}
       </AnimatePresence>

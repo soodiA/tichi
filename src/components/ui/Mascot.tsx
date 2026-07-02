@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 
 interface MascotProps {
   size?: number;
-  expression?: 'happy' | 'excited' | 'thinking' | 'celebrating';
+  expression?: 'happy' | 'excited' | 'thinking' | 'celebrating' | 'sad';
   animate?: boolean;
   className?: string;
 }
@@ -16,6 +16,7 @@ const Mascot: React.FC<MascotProps> = ({
 }) => {
   const isExcited = expression === 'excited' || expression === 'celebrating';
   const isThinking = expression === 'thinking';
+  const isSad = expression === 'sad';
 
   return (
     <motion.div
@@ -70,7 +71,20 @@ const Mascot: React.FC<MascotProps> = ({
         <ellipse cx="130" cy="94" rx="21" ry="22" fill="white" />
 
         {/* Pupils + expressions */}
-        {isThinking ? (
+        {isSad ? (
+          <>
+            {/* Sad half-closed eyes */}
+            <ellipse cx="70"  cy="98" rx="14" ry="9" fill="#1A1A1A" />
+            <ellipse cx="130" cy="98" rx="14" ry="9" fill="#1A1A1A" />
+            <circle cx="75"  cy="92" r="4" fill="white" />
+            <circle cx="135" cy="92" r="4" fill="white" />
+            {/* Sad brows: inner corners raised */}
+            <path d="M52 78 Q68 72 84 80"  stroke="#1A1A1A" strokeWidth="3.5" strokeLinecap="round" fill="none" />
+            <path d="M116 80 Q132 72 148 78" stroke="#1A1A1A" strokeWidth="3.5" strokeLinecap="round" fill="none" />
+            {/* Small tear */}
+            <ellipse cx="58" cy="112" rx="4" ry="5" fill="#ADD8E6" opacity="0.85" />
+          </>
+        ) : isThinking ? (
           <>
             {/* Half-closed thinking eyes */}
             <ellipse cx="70"  cy="96" rx="14" ry="10" fill="#1A1A1A" />
@@ -108,7 +122,9 @@ const Mascot: React.FC<MascotProps> = ({
         <ellipse cx="100" cy="116" rx="7" ry="5" fill="#1A1A1A" />
 
         {/* Mouth */}
-        {isExcited ? (
+        {isSad ? (
+          <path d="M83 132 Q100 120 117 132" stroke="#1A1A1A" strokeWidth="3" strokeLinecap="round" fill="none" />
+        ) : isExcited ? (
           <>
             <path d="M82 124 Q100 142 118 124" stroke="#1A1A1A" strokeWidth="3" strokeLinecap="round" fill="none" />
             {/* Tongue */}
