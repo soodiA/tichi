@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- simple wooden table, flat style with thick outline matching almond.png -->
+  <g stroke="#8A5A2B" stroke-width="26" stroke-linejoin="round" stroke-linecap="round">
+    <!-- tabletop -->
+    <rect x="130" y="330" width="764" height="120" rx="18" fill="#D8994F"/>
+    <!-- tabletop plank lines -->
+    <g stroke="#B4762F" stroke-width="12">
+      <line x1="130" y1="390" x2="894" y2="390"/>
+    </g>
+    <!-- legs -->
+    <path d="M230 450 L190 800" fill="none"/>
+    <path d="M320 450 L300 800" fill="none"/>
+    <path d="M704 450 L724 800" fill="none"/>
+    <path d="M794 450 L834 800" fill="none"/>
+  </g>
+</svg>

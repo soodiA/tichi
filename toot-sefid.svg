@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- stem + leaf -->
+  <path d="M512 60 C 512 140, 480 170, 460 220" fill="none" stroke="#4E7A3B" stroke-width="26" stroke-linecap="round"/>
+  <path d="M460 150 C 400 130, 340 160, 330 220 C 400 230, 445 200, 460 150 Z" fill="#6FAE4E" stroke="#4E7A3B" stroke-width="18" stroke-linejoin="round"/>
+
+  <!-- mulberry cluster: overlapping cream/white drupelets, thick brown outline like the almond style -->
+  <g stroke="#B08D57" stroke-width="16" stroke-linejoin="round">
+    <ellipse cx="512" cy="330" rx="95" ry="90" fill="#FBF6E9"/>
+    <ellipse cx="430" cy="410" rx="88" ry="84" fill="#FBF6E9"/>
+    <ellipse cx="594" cy="410" rx="88" ry="84" fill="#FBF6E9"/>
+    <ellipse cx="472" cy="500" rx="88" ry="84" fill="#FBF6E9"/>
+    <ellipse cx="552" cy="500" rx="88" ry="84" fill="#FBF6E9"/>
+    <ellipse cx="512" cy="595" rx="90" ry="86" fill="#FBF6E9"/>
+    <ellipse cx="512" cy="690" rx="80" ry="76" fill="#FBF6E9"/>
+  </g>
+
+  <!-- small texture dots on the drupelets -->
+  <g fill="#D8C79B">
+    <circle cx="495" cy="310" r="10"/>
+    <circle cx="535" cy="345" r="9"/>
+    <circle cx="420" cy="395" r="9"/>
+    <circle cx="450" cy="430" r="9"/>
+    <circle cx="600" cy="400" r="9"/>
+    <circle cx="580" cy="435" r="9"/>
+    <circle cx="465" cy="490" r="9"/>
+    <circle cx="500" cy="520" r="9"/>
+    <circle cx="560" cy="495" r="9"/>
+    <circle cx="500" cy="590" r="9"/>
+    <circle cx="530" cy="615" r="9"/>
+    <circle cx="505" cy="685" r="9"/>
+  </g>
+</svg>
