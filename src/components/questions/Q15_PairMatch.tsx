@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import type { Question } from '../../types';
+import { isImagePath, resolveImageSrc } from '../../lib/media';
 
 interface Props {
   question: Question;
@@ -92,7 +93,15 @@ const Q15_PairMatch: React.FC<Props> = ({ question, onAnswer }) => {
                   : 'bg-white border-gray-200',
               ].join(' ')}
             >
-              <span className="text-5xl leading-none select-none">{opt.imageUrl}</span>
+              {opt.imageUrl && isImagePath(opt.imageUrl) ? (
+                <img
+                  src={resolveImageSrc(opt.imageUrl)}
+                  alt={opt.text ?? ''}
+                  className="w-12 h-12 object-contain"
+                />
+              ) : (
+                <span className="text-5xl leading-none select-none">{opt.imageUrl}</span>
+              )}
               <span
                 className={[
                   'text-sm font-extrabold text-center',

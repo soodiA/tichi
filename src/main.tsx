@@ -7,7 +7,8 @@ import App from './App';
 // build: 2026-06-23
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter basename="/tichi">
+    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+
       <App />
     </BrowserRouter>
   </StrictMode>

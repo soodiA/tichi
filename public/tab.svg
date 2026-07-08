@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- A-frame swing set, flat style with thick outline -->
+  <g stroke="#8A5A2B" stroke-width="34" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- left A-frame -->
+    <path d="M170 780 L360 200 L440 780" fill="#C88A46"/>
+    <!-- right A-frame -->
+    <path d="M584 780 L664 200 L854 780" fill="#C88A46"/>
+    <!-- top bar -->
+    <path d="M300 210 L724 210" stroke-width="30"/>
+  </g>
+
+  <!-- chains -->
+  <g stroke="#6B7280" stroke-width="12" stroke-linecap="round" fill="none">
+    <path d="M430 220 L390 560"/>
+    <path d="M594 220 L634 560"/>
+  </g>
+
+  <!-- seat -->
+  <path d="M370 560 L654 560 L634 630 L390 630 Z" fill="#F4B93C" stroke="#B4822A" stroke-width="16" stroke-linejoin="round"/>
+</svg>

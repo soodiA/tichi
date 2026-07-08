@@ -59,7 +59,20 @@ function toQuestion(r: RawQuestion): Question & { nodeId: string } {
   };
 }
 
+const DEMO_MAX_UNIT_ORD = import.meta.env.VITE_DEMO_MAX_UNIT_ORD
+  ? Number(import.meta.env.VITE_DEMO_MAX_UNIT_ORD)
+  : undefined;
+
+function applyDemoLimit(units: Unit[]): Unit[] {
+  if (!DEMO_MAX_UNIT_ORD) return units;
+  return units.filter((u) => u.order <= DEMO_MAX_UNIT_ORD);
+}
+
 export async function loadCurriculum(): Promise<Unit[]> {
+  return applyDemoLimit(await loadCurriculumUnfiltered());
+}
+
+async function loadCurriculumUnfiltered(): Promise<Unit[]> {
   if (navigator.onLine) {
     try {
       const [{ data: rawUnits }, { data: rawNodes }, { data: rawQuestions }] =

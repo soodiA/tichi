@@ -77,6 +77,13 @@ const Home: React.FC = () => {
 
   const firstIncompleteNodeId = allNodes.find((n) => !isNodeCompleted(n.id))?.id ?? null;
 
+  // Winding path: offset each node left/right in a repeating wave, like a Duolingo-style trail
+  const ZIGZAG_OFFSETS = [0, 56, 84, 56, 0, -56, -84, -56];
+  const nodeOffset = (nodeId: string) => {
+    const idx = allNodes.findIndex((n) => n.id === nodeId);
+    return ZIGZAG_OFFSETS[idx % ZIGZAG_OFFSETS.length];
+  };
+
   const greetHour = new Date().getHours();
   const greetText = greetHour < 12 ? 'صبح بخیر' : greetHour < 17 ? 'روز بخیر' : 'شب بخیر';
 
@@ -84,7 +91,7 @@ const Home: React.FC = () => {
 
   return (
     <div dir="rtl" className="min-h-full relative pb-24 overflow-hidden">
-      <PageBg variant="blue" />
+      <PageBg variant="green" />
 
       {/* Unit intro overlay — shown for any unit */}
       {introUnit && introData && (
@@ -136,7 +143,11 @@ const Home: React.FC = () => {
                   const isCurrent = node.id === firstIncompleteNodeId && unlocked;
 
                   return (
-                    <div key={node.id} data-node-id={node.id}>
+                    <div
+                      key={node.id}
+                      data-node-id={node.id}
+                      style={{ transform: `translateX(${nodeOffset(node.id)}px)` }}
+                    >
                       <PathNode
                         node={node}
                         isUnlocked={unlocked}

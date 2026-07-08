@@ -2,8 +2,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const BASE_PATH = (globalThis as any).process?.env?.VITE_BASE_PATH || '/tichi/';
+
 export default defineConfig({
-  base: '/tichi/',
+  base: BASE_PATH,
   plugins: [
     react(),
     VitePWA({
@@ -16,7 +18,7 @@ export default defineConfig({
         theme_color: '#7C3AED',
         background_color: '#FFF8F0',
         display: 'standalone',
-        start_url: '/tichi/',
+        start_url: BASE_PATH,
         lang: 'fa',
         dir: 'rtl',
         icons: [

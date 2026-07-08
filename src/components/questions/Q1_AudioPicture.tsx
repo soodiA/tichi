@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import type { Question, Option } from '../../types';
 import { shuffleArray } from '../../lib/shuffle';
+import { isImagePath, resolveImageSrc } from '../../lib/media';
 
 interface Props {
   question: Question;
   onAnswer: (correct: boolean) => void;
 }
 
-const isUrl = (s: string) => s.startsWith('http') || s.startsWith('/') || s.startsWith('data:');
+const isUrl = isImagePath;
 
 const speakWord = (text: string) => {
   if (!window.speechSynthesis || !text) return;
@@ -44,7 +45,7 @@ const OptionCard: React.FC<{
     >
       {img && isUrl(img) ? (
         <img
-          src={img}
+          src={resolveImageSrc(img)}
           alt={option.text ?? ''}
           className="w-14 h-14 object-contain"
         />
