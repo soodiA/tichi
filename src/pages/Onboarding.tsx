@@ -70,7 +70,7 @@ const Onboarding: React.FC = () => {
       };
       await db.profiles.add(profile);
       setCurrentUser(profile);
-      syncProfileToCloud(profile).catch(() => {});
+      syncProfileToCloud(profile).catch((e) => console.error('[sync] onboarding sync failed', e));
       navigate('/home');
     } catch {
       setLoading(false);

@@ -54,7 +54,7 @@ const Profile: React.FC = () => {
       const url = ev.target?.result as string;
       updateAvatar(url);
       setShowAvatarPicker(false);
-      if (currentUser) syncProfileToCloud({ ...currentUser, avatarUrl: url }).catch(() => {});
+      if (currentUser) syncProfileToCloud({ ...currentUser, avatarUrl: url }).catch((e) => console.error('[sync] profile sync failed', e));
     };
     reader.readAsDataURL(file);
   };
@@ -62,7 +62,7 @@ const Profile: React.FC = () => {
   const handleEmojiSelect = (emoji: string) => {
     updateAvatar(emoji);
     setShowAvatarPicker(false);
-    if (currentUser) syncProfileToCloud({ ...currentUser, avatarUrl: emoji }).catch(() => {});
+    if (currentUser) syncProfileToCloud({ ...currentUser, avatarUrl: emoji }).catch((e) => console.error('[sync] profile sync failed', e));
   };
 
   const isPhotoUrl = currentUser.avatarUrl?.startsWith('data:') || currentUser.avatarUrl?.startsWith('http');
