@@ -111,8 +111,8 @@ const LessonComplete: React.FC = () => {
     savedRef.current = true;
     addDiamonds(coinsEarned);
     const progress = { nodeId, userId: currentUser.id, completed: true, stars: starCount, accuracy, completedAt: new Date().toISOString(), attempts: 1 };
-    db.progress.put(progress).then(() => { syncProgressToCloud(progress).catch(() => {}); });
-    syncProfileToCloud({ ...currentUser, diamonds: currentUser.diamonds + coinsEarned, totalScore: currentUser.totalScore + coinsEarned }).catch(() => {});
+    db.progress.put(progress).then(() => { syncProgressToCloud(progress).catch((e) => console.error('[sync] progress sync failed', e)); });
+    syncProfileToCloud({ ...currentUser, diamonds: currentUser.diamonds + coinsEarned, totalScore: currentUser.totalScore + coinsEarned }).catch((e) => console.error('[sync] lesson-complete profile sync failed', e));
   }, []);
 
   return (

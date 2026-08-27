@@ -11,6 +11,9 @@ import Profile from './pages/Profile';
 import Friends from './pages/Friends';
 import PathEditor from './pages/PathEditor';
 import RecordCombos from './pages/RecordCombos';
+import RecordQuestionAudio from './pages/RecordQuestionAudio';
+import { db } from './db/db';
+import { syncProfileToCloud } from './lib/sync';
 
 const NAV_ROUTES = ['/home', '/profile', '/friends'];
 
@@ -95,6 +98,12 @@ const BottomNav: React.FC = () => {
 const App: React.FC = () => {
   const location = useLocation();
 
+  React.useEffect(() => {
+    db.profiles.toCollection().first().then((profile) => {
+      if (profile) syncProfileToCloud(profile).catch((e) => console.error('[sync] startup sync failed', e));
+    });
+  }, []);
+
   return (
     <div className="flex flex-col min-h-full max-w-md mx-auto relative">
       <AnimatePresence mode="wait">
@@ -108,6 +117,7 @@ const App: React.FC = () => {
           <Route path="/friends" element={<Friends />} />
           <Route path="/path-editor" element={<PathEditor />} />
           <Route path="/record-combos" element={<RecordCombos />} />
+          <Route path="/record-audio" element={<RecordQuestionAudio />} />
         </Routes>
       </AnimatePresence>
       <BottomNav />

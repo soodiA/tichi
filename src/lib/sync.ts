@@ -10,10 +10,13 @@ export async function ensureAnonSession() {
 
 export async function syncProfileToCloud(profile: UserProfile): Promise<void> {
   await ensureAnonSession();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (!user) {
+    console.error('[sync] syncProfileToCloud: no auth user', userError);
+    return;
+  }
 
-  await supabase.from('profiles').upsert({
+  const { error } = await supabase.from('profiles').upsert({
     id: user.id,
     local_id: profile.id,
     name: profile.name,
@@ -26,14 +29,18 @@ export async function syncProfileToCloud(profile: UserProfile): Promise<void> {
     total_score: profile.totalScore,
     joined_at: profile.joinedAt,
   }, { onConflict: 'id' });
+  if (error) console.error('[sync] syncProfileToCloud upsert failed', error);
 }
 
 export async function syncProgressToCloud(progress: NodeProgress): Promise<void> {
   await ensureAnonSession();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (!user) {
+    console.error('[sync] syncProgressToCloud: no auth user', userError);
+    return;
+  }
 
-  await supabase.from('node_progress').upsert({
+  const { error } = await supabase.from('node_progress').upsert({
     user_id: user.id,
     node_id: progress.nodeId,
     stars: progress.stars,
@@ -42,6 +49,7 @@ export async function syncProgressToCloud(progress: NodeProgress): Promise<void>
     attempts: progress.attempts,
     last_played_at: progress.completedAt ?? null,
   }, { onConflict: 'user_id,node_id' });
+  if (error) console.error('[sync] syncProgressToCloud upsert failed', error);
 }
 
 export async function recordQuestionResult(
