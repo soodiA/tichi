@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { QuestionType, Option } from '../types';
-import { TYPE_LABELS, ALL_TYPES, UNSUPPORTED_TYPES } from '../lib/questionTypes';
+import { TYPE_LABELS, ALL_TYPES, UNSUPPORTED_TYPES, QUESTION_TYPE_DEFAULT_TEXT } from '../lib/questionTypes';
 import { QUESTION_TYPE_PROMPT } from '../lib/questionTypeAudio';
 import { Field, TextInput, AudioField } from './question-editor/shared';
 import { emptyDraft, type QuestionDraft, type FormProps } from './question-editor/types';
@@ -135,7 +135,7 @@ const QuestionEditor: React.FC = () => {
   const startNew = (type: QuestionType) => {
     setEditingId('new');
     setEditingType(type);
-    setDraft({ ...emptyDraft(), questionText: '' });
+    setDraft({ ...emptyDraft(), questionText: QUESTION_TYPE_DEFAULT_TEXT[type] ?? '' });
   };
 
   const startEdit = (row: QuestionRow) => {
