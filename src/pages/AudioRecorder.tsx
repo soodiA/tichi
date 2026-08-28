@@ -34,55 +34,80 @@ const AudioRecorder: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeType, setActiveType] = useState<QuestionType>(ALL_TYPES[0]);
   const [recording, setRecording] = useState(false);
-  const [clips, setClips] = useState<Partial<Record<QuestionType, { url: string; blob: Blob }>>>({});
+  const [uploading, setUploading] = useState(false);
+  const [clips, setClips] = useState<Partial<Record<QuestionType, { url: string; count: number }>>>({});
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     (async () => {
       const found: Partial<Record<QuestionType, ExampleRow>> = {};
+      const clipsFound: Partial<Record<QuestionType, { url: string; count: number }>> = {};
       for (const t of ALL_TYPES) {
         const { data } = await supabase
           .from('questions')
-          .select('type, question_text, node_id')
+          .select('type, question_text, node_id, question_audio_url')
           .eq('type', t)
           .order('id', { ascending: true })
           .limit(1);
-        if (data && data.length > 0) found[t] = data[0] as ExampleRow;
+        if (data && data.length > 0) {
+          found[t] = data[0] as ExampleRow;
+          const url = (data[0] as { question_audio_url?: string }).question_audio_url;
+          if (url) clipsFound[t] = { url, count: 0 };
+        }
       }
       setExamples(found);
+      setClips(clipsFound);
       setLoading(false);
     })();
   }, []);
 
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const mr = new MediaRecorder(stream);
+    streamRef.current = stream;
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+    const mr = new MediaRecorder(stream, { mimeType });
     chunksRef.current = [];
     mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-    mr.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-      const url = URL.createObjectURL(blob);
-      setClips(prev => ({ ...prev, [activeType]: { url, blob } }));
-      stream.getTracks().forEach(tr => tr.stop());
-    };
     mr.start();
     mediaRecorderRef.current = mr;
     setRecording(true);
   };
 
-  const stopRecording = () => {
-    mediaRecorderRef.current?.stop();
+  const stopRecording = async () => {
+    const mr = mediaRecorderRef.current;
+    if (!mr) return;
+    const t = activeType;
     setRecording(false);
-  };
+    await new Promise<void>((resolve) => { mr.onstop = () => resolve(); mr.stop(); });
+    streamRef.current?.getTracks().forEach(tr => tr.stop());
 
-  const download = (t: QuestionType) => {
-    const clip = clips[t];
-    if (!clip) return;
-    const a = document.createElement('a');
-    a.href = clip.url;
-    a.download = `${t}.webm`;
-    a.click();
+    const blob = new Blob(chunksRef.current, { type: mr.mimeType });
+    const ext = blob.type.includes('webm') ? 'webm' : 'ogg';
+    const path = `types/${t}.${ext}`;
+
+    setUploading(true);
+    const { error: upErr } = await supabase.storage.from('audio').upload(path, blob, { upsert: true });
+    if (upErr) {
+      alert(`خطا در آپلود: ${upErr.message}`);
+      setUploading(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from('audio').getPublicUrl(path);
+    const url = urlData.publicUrl;
+
+    // Every question of this type shares the same recorded prompt.
+    const { error: updErr } = await supabase
+      .from('questions')
+      .update({ question_audio_url: url })
+      .eq('type', t);
+    setUploading(false);
+    if (updErr) {
+      alert(`فایل آپلود شد ولی وصل کردنش به سوال‌ها خطا داد: ${updErr.message}`);
+      return;
+    }
+    setClips(prev => ({ ...prev, [t]: { url, count: 0 } }));
   };
 
   const activeExample = examples[activeType];
@@ -138,12 +163,12 @@ const AudioRecorder: React.FC = () => {
           )}
         </div>
 
-        {clips[activeType] && (
+        {uploading && <p className="text-sm text-violet-500">در حال آپلود و وصل کردن به سوال‌ها...</p>}
+
+        {clips[activeType] && !uploading && (
           <div className="flex flex-col gap-2 items-center">
             <audio src={clips[activeType]!.url} controls className="w-full" />
-            <button onClick={() => download(activeType)} className="bg-violet-600 text-white font-bold py-2 px-4 rounded-xl text-sm active:scale-95">
-              ⬇ دانلود فایل ({activeType}.webm)
-            </button>
+            <p className="text-xs text-green-600">✓ ذخیره شد و به همه‌ی سوال‌های این نوع وصل شد</p>
           </div>
         )}
       </div>
@@ -151,8 +176,6 @@ const AudioRecorder: React.FC = () => {
       {recordedTypes.length > 0 && (
         <p className="text-xs text-gray-500 text-center max-w-sm">
           ضبط‌شده‌ها ({recordedTypes.length} از {ALL_TYPES.length}): {recordedTypes.map(t => TYPE_LABELS[t]).join('، ')}
-          <br />
-          هر فایل رو دانلود کن و همینجا تو تلگرام برام بفرست تا وصلش کنم به برنامه.
         </p>
       )}
     </div>
