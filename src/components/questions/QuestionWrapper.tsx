@@ -1,7 +1,7 @@
 import React from 'react';
 import AudioButton from '../ui/AudioButton';
 import type { Question } from '../../types';
-import { QUESTION_TYPE_PROMPT, QUESTION_TYPE_AUDIO, resolveTypeAudioSrc } from '../../lib/questionTypeAudio';
+import { QUESTION_TYPE_PROMPT } from '../../lib/questionTypeAudio';
 import Q1_AudioPicture from './Q1_AudioPicture';
 import Q2_SyllableCount from './Q2_SyllableCount';
 import Q3_FlowerCount from './Q3_FlowerCount';
@@ -40,12 +40,11 @@ const speakText = (text: string) => {
 };
 
 const QuestionWrapper: React.FC<QuestionWrapperProps> = ({ question, onAnswer }) => {
-  // Shared per-type prompt (if set) replaces the per-question text/audio so the
-  // same recording/TTS phrase is reused across every question of that type.
+  // Shared per-type prompt (if set) replaces the per-question display text; the audio
+  // itself is already shared via question.questionAudioUrl (see questionTypeAudio.ts).
   const typePrompt = QUESTION_TYPE_PROMPT[question.type];
-  const typeAudioPath = QUESTION_TYPE_AUDIO[question.type];
   const displayText = typePrompt ?? question.questionText;
-  const audioUrl = typeAudioPath ? resolveTypeAudioSrc(typeAudioPath) : question.questionAudioUrl;
+  const audioUrl = question.questionAudioUrl;
 
   return (
     <div className="flex flex-col gap-4 h-full">
