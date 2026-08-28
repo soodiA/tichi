@@ -2,13 +2,36 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 const SIZE = 300;
 const LETTERS = ['آ','ا','ب','پ','ت','ث','ج','چ','ح','خ','د','ذ','ر','ز','ژ','س','ش','ص','ض','ط','ظ','ع','غ','ف','ق','ک','گ','ل','م','ن','و','ه','ی'];
+// Letters that don't connect to the following letter — only isolated + final shapes exist.
+const NON_CONNECTORS = new Set(['آ','ا','د','ذ','ر','ز','ژ','و']);
 const FONT_SIZE = Math.round(SIZE * 0.78);
 const CY = Math.round(SIZE * 0.62);
-const LS_KEY = 'tichi-path-editor-saved';
+const LS_KEY = 'tichi-path-editor-saved-v2';
+
+type Form = 'isolated' | 'initial' | 'medial' | 'final';
+const FORM_LABELS: Record<Form, string> = { isolated: 'جدا', initial: 'اول', medial: 'وسط', final: 'آخر' };
+const ALL_FORMS: Form[] = ['isolated', 'initial', 'medial', 'final'];
+
+function formsForLetter(l: string): Form[] {
+  return NON_CONNECTORS.has(l) ? ['isolated', 'final'] : ALL_FORMS;
+}
+
+const ZWNJ = '‌';
+const TATWEEL = 'ـ';
+function displayFor(letter: string, form: Form): string {
+  switch (form) {
+    case 'isolated': return ZWNJ + letter + ZWNJ;
+    case 'initial': return letter + TATWEEL;
+    case 'medial': return TATWEEL + letter + TATWEEL;
+    case 'final': return TATWEEL + letter;
+  }
+}
 
 type Point = [number, number];
 type Stroke = Point[];
+// key: `${letter}|${form}`
 type SavedPaths = Record<string, Stroke[]>;
+const key = (l: string, f: Form) => `${l}|${f}`;
 
 function loadSaved(): SavedPaths {
   try { return JSON.parse(localStorage.getItem(LS_KEY) ?? '{}'); } catch { return {}; }
@@ -20,6 +43,7 @@ function persistSaved(data: SavedPaths) {
 const PathEditor: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [letter, setLetter] = useState('ب');
+  const [form, setForm] = useState<Form>('isolated');
   const [strokes, setStrokes] = useState<Stroke[]>([[]]);
   const [currentStroke, setCurrentStroke] = useState(0);
   const [fontsReady, setFontsReady] = useState(false);
@@ -30,7 +54,7 @@ const PathEditor: React.FC = () => {
   const [saveMsg, setSaveMsg] = useState('');
   const [showAllCode, setShowAllCode] = useState(false);
 
-  const displayLetter = '‌' + letter + '‌';
+  const displayLetter = displayFor(letter, form);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -138,13 +162,11 @@ const PathEditor: React.FC = () => {
     setCurrentStroke(Math.max(0, si - 1));
   };
 
-  const changeLetter = (l: string) => {
-    setLetter(l);
-    // Load saved path for this letter if exists
-    const savedForLetter = saved[l];
-    if (savedForLetter && savedForLetter.length > 0) {
-      setStrokes([...savedForLetter.map(s => [...s] as Stroke), []]);
-      setCurrentStroke(savedForLetter.length);
+  const loadFor = (l: string, f: Form) => {
+    const savedForForm = saved[key(l, f)];
+    if (savedForForm && savedForForm.length > 0) {
+      setStrokes([...savedForForm.map(s => [...s] as Stroke), []]);
+      setCurrentStroke(savedForForm.length);
     } else {
       setStrokes([[]]);
       setCurrentStroke(0);
@@ -152,37 +174,60 @@ const PathEditor: React.FC = () => {
     setShowPreview(false);
   };
 
+  const changeLetter = (l: string) => {
+    setLetter(l);
+    const validForms = formsForLetter(l);
+    const nextForm = validForms.includes(form) ? form : validForms[0];
+    setForm(nextForm);
+    loadFor(l, nextForm);
+  };
+
+  const changeForm = (f: Form) => {
+    setForm(f);
+    loadFor(letter, f);
+  };
+
   const saveLetter = () => {
     const valid = strokes.filter(s => s.length > 0);
     if (valid.length === 0) { setSaveMsg('هیچ نقطه‌ای وجود نداره!'); setTimeout(() => setSaveMsg(''), 2000); return; }
-    const newSaved = { ...saved, [letter]: valid };
+    const newSaved = { ...saved, [key(letter, form)]: valid };
     setSaved(newSaved);
     persistSaved(newSaved);
-    setSaveMsg(`✓ حرف «${letter}» ذخیره شد`);
+    setSaveMsg(`✓ «${letter}» (${FORM_LABELS[form]}) ذخیره شد`);
     setTimeout(() => setSaveMsg(''), 2000);
   };
 
-  const deleteSaved = (l: string) => {
+  const deleteSaved = (k: string) => {
     const ns = { ...saved };
-    delete ns[l];
+    delete ns[k];
     setSaved(ns);
     persistSaved(ns);
   };
 
-  const genLetterCode = (l: string, sts: Stroke[]) => {
-    const inner = sts.map(s => `    [${s.map(([x, y]) => `[${x}, ${y}]`).join(', ')}]`).join(',\n');
-    return `  '${l}': [\n${inner},\n  ],`;
-  };
-
   const genAllCode = () => {
-    const entries = Object.entries(saved);
-    if (entries.length === 0) return '// هنوز چیزی ذخیره نشده';
-    return `const STROKE_PATHS: Record<string, [number,number][][]> = {\n${entries.map(([l, sts]) => genLetterCode(l, sts)).join('\n')}\n};`;
+    const byLetter = new Map<string, Partial<Record<Form, Stroke[]>>>();
+    for (const [k, sts] of Object.entries(saved)) {
+      const [l, f] = k.split('|') as [string, Form];
+      if (!byLetter.has(l)) byLetter.set(l, {});
+      byLetter.get(l)![f] = sts;
+    }
+    if (byLetter.size === 0) return '// هنوز چیزی ذخیره نشده';
+    const letterBlocks = [...byLetter.entries()].map(([l, forms]) => {
+      const formBlocks = ALL_FORMS.filter(f => forms[f]).map(f => {
+        const sts = forms[f]!;
+        const inner = sts.map(s => `      [${s.map(([x, y]) => `[${x}, ${y}]`).join(', ')}]`).join(',\n');
+        return `    ${f}: [\n${inner},\n    ],`;
+      }).join('\n');
+      return `  '${l}': {\n${formBlocks}\n  },`;
+    }).join('\n');
+    return `const STROKE_PATHS: Record<string, Partial<Record<'isolated'|'initial'|'medial'|'final', [number,number][][]>>> = {\n${letterBlocks}\n};`;
   };
 
   const currentPts = strokes[currentStroke] ?? [];
   const validStrokes = strokes.filter(s => s.length > 0);
-  const isSaved = !!saved[letter];
+  const isSaved = !!saved[key(letter, form)];
+  const validForms = formsForLetter(letter);
+  const savedFormsForLetter = validForms.filter(f => !!saved[key(letter, f)]);
 
   useEffect(() => {
     if (!showPreview) return;
@@ -203,7 +248,7 @@ const PathEditor: React.FC = () => {
       {/* Letter selector */}
       <div className="flex flex-wrap gap-2 justify-center max-w-sm">
         {LETTERS.map(l => {
-          const hasSaved = !!saved[l];
+          const hasSaved = formsForLetter(l).some(f => !!saved[key(l, f)]);
           return (
             <button key={l} onClick={() => changeLetter(l)}
               className={`w-10 h-10 rounded-xl text-lg font-bold border-2 transition-all relative
@@ -218,7 +263,27 @@ const PathEditor: React.FC = () => {
           );
         })}
       </div>
-      <p className="text-xs text-gray-500">حروف سبز = ذخیره شده</p>
+      <p className="text-xs text-gray-500">حروف سبز = حداقل یک شکل ذخیره شده</p>
+
+      {/* Form selector */}
+      <div className="flex gap-2 justify-center">
+        {validForms.map(f => {
+          const hasSaved = !!saved[key(letter, f)];
+          return (
+            <button key={f} onClick={() => changeForm(f)}
+              className={`py-2 px-4 rounded-xl text-sm font-bold border-2 transition-all
+                ${f === form ? 'bg-fuchsia-600 text-white border-fuchsia-600'
+                  : hasSaved ? 'bg-green-100 text-green-800 border-green-400'
+                  : 'bg-white text-gray-700 border-fuchsia-200'}`}>
+              {FORM_LABELS[f]}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-xs text-gray-500">
+        شکل‌های حرف «{letter}»: {validForms.length} تا
+        {savedFormsForLetter.length > 0 && ` (ذخیره شده: ${savedFormsForLetter.map(f => FORM_LABELS[f]).join('، ')})`}
+      </p>
 
       {/* Canvas */}
       <div className="relative rounded-3xl overflow-hidden shadow-lg border-2 border-violet-300"
@@ -253,7 +318,7 @@ const PathEditor: React.FC = () => {
       <button onClick={saveLetter}
         className={`w-full max-w-sm font-bold py-3 rounded-2xl text-lg active:scale-95 transition-all
           ${isSaved ? 'bg-green-500 text-white' : 'bg-violet-700 text-white'}`}>
-        {isSaved ? `✓ بروز‌رسانی «${letter}»` : `💾 ذخیره حرف «${letter}»`}
+        {isSaved ? `✓ بروز‌رسانی «${letter}» (${FORM_LABELS[form]})` : `💾 ذخیره «${letter}» (${FORM_LABELS[form]})`}
       </button>
       {saveMsg && <p className="text-green-600 font-bold text-sm">{saveMsg}</p>}
 
@@ -275,15 +340,18 @@ const PathEditor: React.FC = () => {
       {/* Saved letters summary */}
       {Object.keys(saved).length > 0 && (
         <div className="w-full max-w-sm">
-          <p className="text-sm font-bold text-violet-700 mb-2">حروف ذخیره شده ({Object.keys(saved).length}):</p>
+          <p className="text-sm font-bold text-violet-700 mb-2">شکل‌های ذخیره شده ({Object.keys(saved).length}):</p>
           <div className="flex flex-wrap gap-2">
-            {Object.entries(saved).map(([l, sts]) => (
-              <div key={l} className="flex items-center gap-1 bg-green-100 border border-green-400 rounded-xl px-2 py-1">
-                <span className="font-bold text-green-800">{l}</span>
-                <span className="text-xs text-green-600">({sts.length} S)</span>
-                <button onClick={() => deleteSaved(l)} className="text-red-400 text-xs font-bold">✕</button>
-              </div>
-            ))}
+            {Object.entries(saved).map(([k, sts]) => {
+              const [l, f] = k.split('|') as [string, Form];
+              return (
+                <div key={k} className="flex items-center gap-1 bg-green-100 border border-green-400 rounded-xl px-2 py-1">
+                  <span className="font-bold text-green-800">{l} ({FORM_LABELS[f]})</span>
+                  <span className="text-xs text-green-600">({sts.length} S)</span>
+                  <button onClick={() => deleteSaved(k)} className="text-red-400 text-xs font-bold">✕</button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
