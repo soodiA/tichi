@@ -1,6 +1,7 @@
 import React from 'react';
 import AudioButton from '../ui/AudioButton';
 import type { Question } from '../../types';
+import { QUESTION_TYPE_PROMPT, QUESTION_TYPE_AUDIO, resolveTypeAudioSrc } from '../../lib/questionTypeAudio';
 import Q1_AudioPicture from './Q1_AudioPicture';
 import Q2_SyllableCount from './Q2_SyllableCount';
 import Q3_FlowerCount from './Q3_FlowerCount';
@@ -39,16 +40,23 @@ const speakText = (text: string) => {
 };
 
 const QuestionWrapper: React.FC<QuestionWrapperProps> = ({ question, onAnswer }) => {
+  // Shared per-type prompt (if set) replaces the per-question text/audio so the
+  // same recording/TTS phrase is reused across every question of that type.
+  const typePrompt = QUESTION_TYPE_PROMPT[question.type];
+  const typeAudioPath = QUESTION_TYPE_AUDIO[question.type];
+  const displayText = typePrompt ?? question.questionText;
+  const audioUrl = typeAudioPath ? resolveTypeAudioSrc(typeAudioPath) : question.questionAudioUrl;
+
   return (
     <div className="flex flex-col gap-4 h-full">
       {/* Question text + audio */}
       <div className="flex items-center gap-3 bg-white/80 rounded-2xl px-4 py-3 shadow-sm">
-        {question.questionAudioUrl && (
-          <AudioButton audioUrl={question.questionAudioUrl} size="md" />
+        {audioUrl && (
+          <AudioButton audioUrl={audioUrl} size="md" />
         )}
-        <p className="text-xl font-bold text-gray-800 flex-1">{question.questionText}</p>
+        <p className="text-xl font-bold text-gray-800 flex-1">{displayText}</p>
         <button
-          onClick={() => speakText(question.questionText)}
+          onClick={() => speakText(displayText)}
           className="w-8 h-8 flex items-center justify-center rounded-full bg-violet-100 text-violet-600 flex-shrink-0 active:scale-90 transition-transform"
           aria-label="خواندن سوال"
         >
