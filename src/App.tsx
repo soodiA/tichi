@@ -11,6 +11,7 @@ import Profile from './pages/Profile';
 import Friends from './pages/Friends';
 import PathEditor from './pages/PathEditor';
 import AudioRecorder from './pages/AudioRecorder';
+import QuestionEditor from './pages/QuestionEditor';
 import RecordCombos from './pages/RecordCombos';
 
 const NAV_ROUTES = ['/home', '/profile', '/friends'];
@@ -109,6 +110,7 @@ const App: React.FC = () => {
           <Route path="/friends" element={<Friends />} />
           <Route path="/path-editor" element={<PathEditor />} />
           <Route path="/audio-recorder" element={<AudioRecorder />} />
+          <Route path="/question-editor" element={<QuestionEditor />} />
           <Route path="/record-combos" element={<RecordCombos />} />
         </Routes>
       </AnimatePresence>
