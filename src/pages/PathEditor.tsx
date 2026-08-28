@@ -23,7 +23,12 @@ const four = (initial: string, medial: string, finalAttached: string, finalAlone
 // Shapes and naming dictated directly by Soodeh (2026-08-28) — do not re-derive generically.
 const ENTRIES: LetterEntry[] = [
   { id: 'fatha', label: 'اَ', forms: [{ name: 'اول', glyph: 'اَ' }, { name: 'غیراول', glyph: 'ـَ' }] },
-  { id: 'kasra', label: 'اِ', forms: [{ name: 'اول', glyph: 'اِ' }, { name: 'غیراول', glyph: 'ـِ' }] },
+  { id: 'kasra', label: 'اِ', forms: [
+    { name: 'اول', glyph: 'اِ' },
+    { name: 'غیراول', glyph: 'ـِ' },
+    { name: 'آخر چسبان', glyph: 'ـه' },
+    { name: 'آخر تنها', glyph: 'ه' },
+  ] },
   { id: 'damma', label: 'اُ', forms: [{ name: 'اول', glyph: 'اُ' }, { name: 'غیراول', glyph: 'ـُ' }] },
   { id: 'alef', label: 'ا', forms: [{ name: 'اول', glyph: 'آ' }, { name: 'غیراول', glyph: 'ا' }] },
   { id: 'oo', label: 'او', forms: [{ name: 'اول', glyph: 'او' }, { name: 'غیراول', glyph: 'و' }] },
