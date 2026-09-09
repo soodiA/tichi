@@ -42,6 +42,7 @@ interface NodeRow {
   type: string;
   unit_id: string;
   unit_letter: string;
+  unit_ord: number;
 }
 
 interface QuestionRow {
@@ -121,7 +122,15 @@ const QuestionEditor: React.FC = () => {
       const { data: nodesData } = await supabase.from('nodes').select('id, unit_id, ord, type').order('ord');
       if (!unitsData || !nodesData) return;
       const letterByUnit = new Map(unitsData.map(u => [u.id, u.letter]));
-      setNodes(nodesData.map(n => ({ ...n, unit_letter: letterByUnit.get(n.unit_id) ?? '?' })));
+      const ordByUnit = new Map(unitsData.map(u => [u.id, u.ord]));
+      const withUnitOrd = nodesData.map(n => ({
+        ...n,
+        unit_letter: letterByUnit.get(n.unit_id) ?? '?',
+        unit_ord: ordByUnit.get(n.unit_id) ?? 999,
+      }));
+      // node.ord resets to 0 per unit, so sort by (unit position in the app, then node ord within it).
+      withUnitOrd.sort((a, b) => a.unit_ord - b.unit_ord || a.ord - b.ord);
+      setNodes(withUnitOrd);
     })();
   }, []);
 
@@ -208,6 +217,15 @@ const QuestionEditor: React.FC = () => {
     ? nodes.filter(n => n.unit_letter.includes(nodeFilter) || n.id.includes(nodeFilter))
     : nodes;
 
+  // filteredNodes is already sorted by (unit_ord, ord) — group consecutive
+  // runs by unit so the picker reads as one row per unit, in app order.
+  const nodeGroups: { unitLetter: string; unitId: string; nodes: NodeRow[] }[] = [];
+  for (const n of filteredNodes) {
+    const last = nodeGroups[nodeGroups.length - 1];
+    if (last && last.unitId === n.unit_id) last.nodes.push(n);
+    else nodeGroups.push({ unitLetter: n.unit_letter, unitId: n.unit_id, nodes: [n] });
+  }
+
   const filteredFlat = flatFilter.trim()
     ? flatQuestions.filter(q =>
         q.question_text.includes(flatFilter) ||
@@ -218,62 +236,73 @@ const QuestionEditor: React.FC = () => {
   const FormComponent = editingType ? FORM_BY_TYPE[editingType] : null;
 
   return (
-    <div dir="rtl" className="min-h-screen bg-violet-50 flex flex-col items-center p-4 gap-4 pb-16">
-      <h1 className="text-xl font-bold text-violet-800">ورود و ویرایش سوال‌ها</h1>
+    <div dir="rtl" className="min-h-screen bg-violet-50 flex flex-col items-center p-4 md:p-8 gap-4 pb-16">
+      <div className="w-full max-w-6xl flex items-center justify-between">
+        <h1 className="text-xl md:text-2xl font-bold text-violet-800">ورود و ویرایش سوال‌ها</h1>
 
-      {/* Mode toggle */}
-      <div className="w-full max-w-md flex gap-2">
-        <button onClick={() => setViewMode('tree')}
-          className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 ${viewMode === 'tree' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}>
-          بر اساس واحد و بخش
-        </button>
-        <button onClick={() => setViewMode('flat')}
-          className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 ${viewMode === 'flat' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}>
-          همه‌ی سوال‌ها
-        </button>
+        {/* Mode toggle */}
+        <div className="flex gap-2">
+          <button onClick={() => setViewMode('tree')}
+            className={`py-2 px-4 rounded-xl text-sm md:text-base font-bold border-2 ${viewMode === 'tree' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}>
+            بر اساس واحد و بخش
+          </button>
+          <button onClick={() => setViewMode('flat')}
+            className={`py-2 px-4 rounded-xl text-sm md:text-base font-bold border-2 ${viewMode === 'flat' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}>
+            همه‌ی سوال‌ها
+          </button>
+        </div>
       </div>
 
       {viewMode === 'tree' && (
-        <>
-          {/* Node picker */}
-          <div className="w-full max-w-md">
+        <div className="w-full max-w-6xl flex flex-col md:flex-row gap-4 items-start">
+          {/* Node picker — grouped by unit, in app order */}
+          <div className="w-full md:w-80 md:shrink-0">
             <input type="text" value={nodeFilter} onChange={(e) => setNodeFilter(e.target.value)}
               placeholder="فیلتر بر اساس حرف یا شناسه‌ی مرحله..."
-              className="w-full px-4 py-2 rounded-xl border-2 border-violet-200 mb-2" />
-            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
-              {filteredNodes.map(n => (
-                <button key={n.id} onClick={() => selectNode(n.id)}
-                  className={`py-1.5 px-3 rounded-lg text-xs font-bold border-2 ${selectedNodeId === n.id ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}>
-                  {n.unit_letter} · {n.type} #{n.ord}
-                </button>
+              className="w-full px-4 py-3 text-base rounded-xl border-2 border-violet-200 mb-3" />
+            <div className="flex flex-col gap-3 md:max-h-[75vh] md:overflow-y-auto pr-1">
+              {nodeGroups.map(g => (
+                <div key={g.unitId} className="bg-white/60 rounded-xl border border-violet-100 p-2">
+                  <p className="text-sm font-extrabold text-violet-700 mb-1.5 px-1">واحد {g.unitLetter}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {g.nodes.map(n => (
+                      <button key={n.id} onClick={() => selectNode(n.id)}
+                        className={`py-2.5 px-4 rounded-lg text-sm font-bold border-2 ${selectedNodeId === n.id ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}>
+                        {n.type} #{n.ord}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
 
           {selectedNodeId && (
-            <div className="w-full max-w-md flex flex-col gap-3">
+            <div className="flex-1 min-w-0 flex flex-col gap-3">
               {loadingQuestions ? (
                 <p className="text-sm text-gray-400">در حال بارگذاری...</p>
               ) : (
-                questions.map(q => (
-                  <div key={q.id} className="bg-white rounded-xl border-2 border-gray-200 p-3 flex items-center justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-violet-500 font-bold">{TYPE_LABELS[q.type]}</p>
-                      <p className="text-sm text-gray-700 truncate">{q.question_text}</p>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  {questions.map(q => (
+                    <div key={q.id} className="bg-white rounded-xl border-2 border-gray-200 p-3 flex items-center justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-violet-500 font-bold">{TYPE_LABELS[q.type]}</p>
+                        <p className="text-sm text-gray-700 truncate">{q.question_text}</p>
+                      </div>
+                      <button onClick={() => startEdit(q)} className="text-sm font-bold text-violet-600 py-1.5 px-3 shrink-0">ویرایش</button>
+                      <button onClick={() => remove(q.id)} className="text-sm font-bold text-red-400 py-1.5 px-3 shrink-0">حذف</button>
                     </div>
-                    <button onClick={() => startEdit(q)} className="text-xs font-bold text-violet-600 py-1 px-2">ویرایش</button>
-                    <button onClick={() => remove(q.id)} className="text-xs font-bold text-red-400 py-1 px-2">حذف</button>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
 
               {editingId === null && (
                 <div className="flex flex-col gap-2">
-                  <p className="text-xs font-bold text-gray-500">افزودن سوال جدید — نوع رو انتخاب کن:</p>
+                  <p className="text-sm font-bold text-gray-500">افزودن سوال جدید — نوع رو انتخاب کن:</p>
                   <div className="flex flex-wrap gap-2">
                     {ALL_TYPES.filter(t => !UNSUPPORTED_TYPES.includes(t)).map(t => (
                       <button key={t} onClick={() => startNew(t)}
-                        className="py-1.5 px-3 rounded-lg text-xs font-bold border-2 bg-white text-gray-600 border-violet-200">
+                        className="py-2 px-4 rounded-lg text-sm font-bold border-2 bg-white text-gray-600 border-violet-200">
                         + {TYPE_LABELS[t]}
                       </button>
                     ))}
@@ -282,21 +311,21 @@ const QuestionEditor: React.FC = () => {
               )}
             </div>
           )}
-        </>
+        </div>
       )}
 
       {viewMode === 'flat' && (
-        <div className="w-full max-w-md flex flex-col gap-3">
+        <div className="w-full max-w-6xl flex flex-col gap-3">
           <input type="text" value={flatFilter} onChange={(e) => setFlatFilter(e.target.value)}
             placeholder="جستجو در متن، واحد یا برچسب سوال..."
-            className="w-full px-4 py-2 rounded-xl border-2 border-violet-200" />
+            className="w-full max-w-md px-4 py-3 text-base rounded-xl border-2 border-violet-200" />
 
           {loadingFlat ? (
             <p className="text-sm text-gray-400">در حال بارگذاری همه‌ی سوال‌ها...</p>
           ) : (
             <>
-              <p className="text-xs text-gray-400">{filteredFlat.length} سوال</p>
-              <div className="flex flex-col gap-2 max-h-[70vh] overflow-y-auto">
+              <p className="text-sm text-gray-400">{filteredFlat.length} سوال</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[75vh] overflow-y-auto">
                 {filteredFlat.map(q => (
                   <div key={q.id} className="bg-white rounded-xl border-2 border-gray-200 p-3 flex items-center justify-between gap-2">
                     <div className="flex-1 min-w-0">
@@ -304,8 +333,8 @@ const QuestionEditor: React.FC = () => {
                       <p className="text-xs text-violet-500 font-bold">{TYPE_LABELS[q.type]}</p>
                       <p className="text-sm text-gray-700 truncate">{q.question_text}</p>
                     </div>
-                    <button onClick={() => startEdit(q)} className="text-xs font-bold text-violet-600 py-1 px-2 shrink-0">ویرایش</button>
-                    <button onClick={() => remove(q.id)} className="text-xs font-bold text-red-400 py-1 px-2 shrink-0">حذف</button>
+                    <button onClick={() => startEdit(q)} className="text-sm font-bold text-violet-600 py-1.5 px-3 shrink-0">ویرایش</button>
+                    <button onClick={() => remove(q.id)} className="text-sm font-bold text-red-400 py-1.5 px-3 shrink-0">حذف</button>
                   </div>
                 ))}
               </div>
@@ -315,7 +344,7 @@ const QuestionEditor: React.FC = () => {
       )}
 
       {editingId !== null && editingType && FormComponent && (
-        <div className="w-full max-w-md bg-white rounded-2xl border-2 border-violet-300 shadow-lg p-4 flex flex-col gap-4">
+        <div className="w-full max-w-2xl bg-white rounded-2xl border-2 border-violet-300 shadow-lg p-4 md:p-6 flex flex-col gap-4">
           <p className="font-bold text-violet-700">{editingId === 'new' ? 'سوال جدید' : 'ویرایش سوال'} — {TYPE_LABELS[editingType]}</p>
 
           <Field label="متن سوال">

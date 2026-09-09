@@ -143,13 +143,13 @@ const WordAudioRecorder: React.FC = () => {
             status.state === 'done' ? 'border-emerald-400 bg-emerald-50' :
             'border-gray-200 bg-white'}`}
       >
-        <span className="text-2xl font-extrabold text-gray-800">{text}</span>
+        <span className="text-2xl md:text-3xl font-extrabold text-gray-800">{text}</span>
         {sub && <span className="text-xs text-gray-400">{sub}</span>}
         <div className="flex gap-2">
           <button
             onClick={() => (isRecording ? stopRecording() : startRecording(key))}
             disabled={(!!activeKey && !isRecording) || isUploading}
-            className={`w-10 h-10 rounded-full flex items-center justify-center text-lg transition-all
+            className={`w-12 h-12 rounded-full flex items-center justify-center text-xl transition-all
               ${isRecording ? 'bg-red-500 text-white animate-pulse'
                 : activeKey || isUploading ? 'bg-gray-200 text-gray-400'
                 : 'bg-violet-500 text-white active:scale-95'}`}
@@ -158,7 +158,7 @@ const WordAudioRecorder: React.FC = () => {
           </button>
           {status.audioUrl && (
             <button onClick={() => playAudio(status.audioUrl!)}
-              className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center active:scale-95">
+              className="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center active:scale-95">
               ▶
             </button>
           )}
@@ -169,20 +169,20 @@ const WordAudioRecorder: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4" dir="rtl">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-extrabold text-gray-800 mb-2">ضبط صدای کلمات و حروف</h1>
-        <p className="text-gray-500 text-sm mb-4">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8" dir="rtl">
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 mb-2">ضبط صدای کلمات و حروف</h1>
+        <p className="text-gray-500 text-sm md:text-base mb-4">
           روی میکروفن بزنید تا ضبط شروع شود، دوباره بزنید تا متوقف و ذخیره شود.
         </p>
 
-        <div className="flex gap-2 mb-4">
+        <div className="flex gap-2 mb-4 max-w-md">
           <button onClick={() => setSection('words')}
-            className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 ${section === 'words' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}>
+            className={`flex-1 py-3 rounded-xl text-base font-bold border-2 ${section === 'words' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}>
             کلمات ({recordedWordCount}/{words.length})
           </button>
           <button onClick={() => setSection('letters')}
-            className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 ${section === 'letters' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}>
+            className={`flex-1 py-3 rounded-xl text-base font-bold border-2 ${section === 'letters' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}>
             ۳۲ حرف الفبا ({recordedLetterCount}/{LETTERS.length})
           </button>
         </div>
@@ -194,12 +194,12 @@ const WordAudioRecorder: React.FC = () => {
               placeholder="فیلتر کلمات..."
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="w-full mb-4 px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-lg"
+              className="w-full max-w-md mb-4 px-4 py-3 rounded-xl border border-gray-300 text-gray-700 text-lg"
             />
             {loadingWords ? (
               <p className="text-sm text-gray-400">در حال بارگذاری کلمات...</p>
             ) : (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3">
                 {filteredWords.map((w) => renderCard('words', w))}
               </div>
             )}
@@ -207,7 +207,7 @@ const WordAudioRecorder: React.FC = () => {
         )}
 
         {section === 'letters' && (
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
             {LETTERS.map((l) => renderCard('letters', l))}
           </div>
         )}
