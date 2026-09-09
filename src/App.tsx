@@ -13,6 +13,7 @@ import PathEditor from './pages/PathEditor';
 import AudioRecorder from './pages/AudioRecorder';
 import QuestionEditor from './pages/QuestionEditor';
 import RecordCombos from './pages/RecordCombos';
+import WordAudioRecorder from './pages/WordAudioRecorder';
 
 const NAV_ROUTES = ['/home', '/profile', '/friends'];
 
@@ -112,6 +113,7 @@ const App: React.FC = () => {
           <Route path="/audio-recorder" element={<AudioRecorder />} />
           <Route path="/question-editor" element={<QuestionEditor />} />
           <Route path="/record-combos" element={<RecordCombos />} />
+          <Route path="/word-audio-recorder" element={<WordAudioRecorder />} />
         </Routes>
       </AnimatePresence>
       <BottomNav />

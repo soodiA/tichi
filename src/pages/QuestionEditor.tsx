@@ -97,12 +97,18 @@ function draftToRow(draft: QuestionDraft, type: QuestionType) {
   };
 }
 
+type ViewMode = 'tree' | 'flat';
+
 const QuestionEditor: React.FC = () => {
+  const [viewMode, setViewMode] = useState<ViewMode>('tree');
   const [nodes, setNodes] = useState<NodeRow[]>([]);
   const [nodeFilter, setNodeFilter] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<QuestionRow[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [flatQuestions, setFlatQuestions] = useState<QuestionRow[]>([]);
+  const [loadingFlat, setLoadingFlat] = useState(false);
+  const [flatFilter, setFlatFilter] = useState('');
 
   const [editingId, setEditingId] = useState<string | 'new' | null>(null);
   const [editingType, setEditingType] = useState<QuestionType | null>(null);
@@ -124,6 +130,25 @@ const QuestionEditor: React.FC = () => {
     const { data } = await supabase.from('questions').select('*').eq('node_id', nodeId).order('ord');
     setQuestions((data ?? []) as QuestionRow[]);
     setLoadingQuestions(false);
+  };
+
+  const loadFlatQuestions = async () => {
+    setLoadingFlat(true);
+    const { data } = await supabase.from('questions').select('*').order('node_id').order('ord');
+    setFlatQuestions((data ?? []) as QuestionRow[]);
+    setLoadingFlat(false);
+  };
+
+  useEffect(() => {
+    if (viewMode === 'flat' && flatQuestions.length === 0 && !loadingFlat) {
+      loadFlatQuestions();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode]);
+
+  const nodeLabel = (nodeId: string) => {
+    const n = nodes.find(x => x.id === nodeId);
+    return n ? `${n.unit_letter} · ${n.type} #${n.ord}` : nodeId;
   };
 
   const selectNode = (nodeId: string) => {
@@ -168,6 +193,7 @@ const QuestionEditor: React.FC = () => {
     setEditingId(null);
     setEditingType(null);
     if (selectedNodeId) loadQuestions(selectedNodeId);
+    if (viewMode === 'flat') loadFlatQuestions();
   };
 
   const remove = async (id: string) => {
@@ -175,11 +201,19 @@ const QuestionEditor: React.FC = () => {
     const { error } = await supabase.from('questions').delete().eq('id', id);
     if (error) { alert(`خطا در حذف: ${error.message}`); return; }
     if (selectedNodeId) loadQuestions(selectedNodeId);
+    if (viewMode === 'flat') loadFlatQuestions();
   };
 
   const filteredNodes = nodeFilter.trim()
     ? nodes.filter(n => n.unit_letter.includes(nodeFilter) || n.id.includes(nodeFilter))
     : nodes;
+
+  const filteredFlat = flatFilter.trim()
+    ? flatQuestions.filter(q =>
+        q.question_text.includes(flatFilter) ||
+        (q.media_label ?? '').includes(flatFilter) ||
+        nodeLabel(q.node_id).includes(flatFilter))
+    : flatQuestions;
 
   const FormComponent = editingType ? FORM_BY_TYPE[editingType] : null;
 
@@ -187,50 +221,95 @@ const QuestionEditor: React.FC = () => {
     <div dir="rtl" className="min-h-screen bg-violet-50 flex flex-col items-center p-4 gap-4 pb-16">
       <h1 className="text-xl font-bold text-violet-800">ورود و ویرایش سوال‌ها</h1>
 
-      {/* Node picker */}
-      <div className="w-full max-w-md">
-        <input type="text" value={nodeFilter} onChange={(e) => setNodeFilter(e.target.value)}
-          placeholder="فیلتر بر اساس حرف یا شناسه‌ی مرحله..."
-          className="w-full px-4 py-2 rounded-xl border-2 border-violet-200 mb-2" />
-        <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
-          {filteredNodes.map(n => (
-            <button key={n.id} onClick={() => selectNode(n.id)}
-              className={`py-1.5 px-3 rounded-lg text-xs font-bold border-2 ${selectedNodeId === n.id ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}>
-              {n.unit_letter} · {n.type} #{n.ord}
-            </button>
-          ))}
-        </div>
+      {/* Mode toggle */}
+      <div className="w-full max-w-md flex gap-2">
+        <button onClick={() => setViewMode('tree')}
+          className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 ${viewMode === 'tree' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}>
+          بر اساس واحد و بخش
+        </button>
+        <button onClick={() => setViewMode('flat')}
+          className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 ${viewMode === 'flat' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}>
+          همه‌ی سوال‌ها
+        </button>
       </div>
 
-      {selectedNodeId && (
-        <div className="w-full max-w-md flex flex-col gap-3">
-          {loadingQuestions ? (
-            <p className="text-sm text-gray-400">در حال بارگذاری...</p>
-          ) : (
-            questions.map(q => (
-              <div key={q.id} className="bg-white rounded-xl border-2 border-gray-200 p-3 flex items-center justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-violet-500 font-bold">{TYPE_LABELS[q.type]}</p>
-                  <p className="text-sm text-gray-700 truncate">{q.question_text}</p>
-                </div>
-                <button onClick={() => startEdit(q)} className="text-xs font-bold text-violet-600 py-1 px-2">ویرایش</button>
-                <button onClick={() => remove(q.id)} className="text-xs font-bold text-red-400 py-1 px-2">حذف</button>
-              </div>
-            ))
-          )}
+      {viewMode === 'tree' && (
+        <>
+          {/* Node picker */}
+          <div className="w-full max-w-md">
+            <input type="text" value={nodeFilter} onChange={(e) => setNodeFilter(e.target.value)}
+              placeholder="فیلتر بر اساس حرف یا شناسه‌ی مرحله..."
+              className="w-full px-4 py-2 rounded-xl border-2 border-violet-200 mb-2" />
+            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+              {filteredNodes.map(n => (
+                <button key={n.id} onClick={() => selectNode(n.id)}
+                  className={`py-1.5 px-3 rounded-lg text-xs font-bold border-2 ${selectedNodeId === n.id ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}>
+                  {n.unit_letter} · {n.type} #{n.ord}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          {editingId === null && (
-            <div className="flex flex-col gap-2">
-              <p className="text-xs font-bold text-gray-500">افزودن سوال جدید — نوع رو انتخاب کن:</p>
-              <div className="flex flex-wrap gap-2">
-                {ALL_TYPES.filter(t => !UNSUPPORTED_TYPES.includes(t)).map(t => (
-                  <button key={t} onClick={() => startNew(t)}
-                    className="py-1.5 px-3 rounded-lg text-xs font-bold border-2 bg-white text-gray-600 border-violet-200">
-                    + {TYPE_LABELS[t]}
-                  </button>
+          {selectedNodeId && (
+            <div className="w-full max-w-md flex flex-col gap-3">
+              {loadingQuestions ? (
+                <p className="text-sm text-gray-400">در حال بارگذاری...</p>
+              ) : (
+                questions.map(q => (
+                  <div key={q.id} className="bg-white rounded-xl border-2 border-gray-200 p-3 flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-violet-500 font-bold">{TYPE_LABELS[q.type]}</p>
+                      <p className="text-sm text-gray-700 truncate">{q.question_text}</p>
+                    </div>
+                    <button onClick={() => startEdit(q)} className="text-xs font-bold text-violet-600 py-1 px-2">ویرایش</button>
+                    <button onClick={() => remove(q.id)} className="text-xs font-bold text-red-400 py-1 px-2">حذف</button>
+                  </div>
+                ))
+              )}
+
+              {editingId === null && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-bold text-gray-500">افزودن سوال جدید — نوع رو انتخاب کن:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {ALL_TYPES.filter(t => !UNSUPPORTED_TYPES.includes(t)).map(t => (
+                      <button key={t} onClick={() => startNew(t)}
+                        className="py-1.5 px-3 rounded-lg text-xs font-bold border-2 bg-white text-gray-600 border-violet-200">
+                        + {TYPE_LABELS[t]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {viewMode === 'flat' && (
+        <div className="w-full max-w-md flex flex-col gap-3">
+          <input type="text" value={flatFilter} onChange={(e) => setFlatFilter(e.target.value)}
+            placeholder="جستجو در متن، واحد یا برچسب سوال..."
+            className="w-full px-4 py-2 rounded-xl border-2 border-violet-200" />
+
+          {loadingFlat ? (
+            <p className="text-sm text-gray-400">در حال بارگذاری همه‌ی سوال‌ها...</p>
+          ) : (
+            <>
+              <p className="text-xs text-gray-400">{filteredFlat.length} سوال</p>
+              <div className="flex flex-col gap-2 max-h-[70vh] overflow-y-auto">
+                {filteredFlat.map(q => (
+                  <div key={q.id} className="bg-white rounded-xl border-2 border-gray-200 p-3 flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-gray-400">{nodeLabel(q.node_id)}</p>
+                      <p className="text-xs text-violet-500 font-bold">{TYPE_LABELS[q.type]}</p>
+                      <p className="text-sm text-gray-700 truncate">{q.question_text}</p>
+                    </div>
+                    <button onClick={() => startEdit(q)} className="text-xs font-bold text-violet-600 py-1 px-2 shrink-0">ویرایش</button>
+                    <button onClick={() => remove(q.id)} className="text-xs font-bold text-red-400 py-1 px-2 shrink-0">حذف</button>
+                  </div>
                 ))}
               </div>
-            </div>
+            </>
           )}
         </div>
       )}
