@@ -95,11 +95,14 @@ const BottomNav: React.FC = () => {
   );
 };
 
+const ADMIN_ROUTES = ['/path-editor', '/audio-recorder', '/question-editor', '/record-combos', '/word-audio-recorder'];
+
 const App: React.FC = () => {
   const location = useLocation();
+  const isAdminRoute = ADMIN_ROUTES.some((r) => location.pathname === r);
 
   return (
-    <div className="flex flex-col min-h-full max-w-md mx-auto relative">
+    <div className={`flex flex-col min-h-full relative ${isAdminRoute ? '' : 'max-w-md mx-auto'}`}>
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<Splash />} />

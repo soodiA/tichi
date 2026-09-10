@@ -237,7 +237,7 @@ const QuestionEditor: React.FC = () => {
 
   return (
     <div dir="rtl" className="min-h-screen bg-violet-50 flex flex-col items-center p-4 md:p-8 gap-4 pb-16">
-      <div className="w-full max-w-6xl flex items-center justify-between">
+      <div className="w-full flex items-center justify-between">
         <h1 className="text-xl md:text-2xl font-bold text-violet-800">ورود و ویرایش سوال‌ها</h1>
 
         {/* Mode toggle */}
@@ -254,7 +254,7 @@ const QuestionEditor: React.FC = () => {
       </div>
 
       {viewMode === 'tree' && (
-        <div className="w-full max-w-6xl flex flex-col md:flex-row gap-4 items-start">
+        <div className="w-full flex flex-col md:flex-row gap-4 items-start">
           {/* Node picker — grouped by unit, in app order */}
           <div className="w-full md:w-80 md:shrink-0">
             <input type="text" value={nodeFilter} onChange={(e) => setNodeFilter(e.target.value)}
@@ -315,7 +315,7 @@ const QuestionEditor: React.FC = () => {
       )}
 
       {viewMode === 'flat' && (
-        <div className="w-full max-w-6xl flex flex-col gap-3">
+        <div className="w-full flex flex-col gap-3">
           <input type="text" value={flatFilter} onChange={(e) => setFlatFilter(e.target.value)}
             placeholder="جستجو در متن، واحد یا برچسب سوال..."
             className="w-full max-w-md px-4 py-3 text-base rounded-xl border-2 border-violet-200" />

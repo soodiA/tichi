@@ -152,7 +152,7 @@ export default function RecordCombos() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8" dir="rtl">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-none w-full">
         <h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 mb-2">ضبط صدای ترکیب‌ها</h1>
         <p className="text-gray-500 text-sm md:text-base mb-4">
           روی میکروفن بزنید تا ضبط شروع شود، دوباره بزنید تا متوقف و ذخیره شود.
