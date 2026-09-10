@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { latestByKey } from './versionedUpload';
 
 // Looks up recordings made in /word-audio-recorder (storage paths
 // "words/<encodeURIComponent(word)>.<ext>" and "letters/<letter>.<ext>").
@@ -14,12 +15,10 @@ async function loadFolder(folder: Folder): Promise<Record<string, string>> {
   if (!folderPromise[folder]) {
     folderPromise[folder] = (async () => {
       const { data } = await supabase.storage.from('audio').list(folder);
+      const getPublicUrl = (path: string) => supabase.storage.from('audio').getPublicUrl(path).data.publicUrl;
+      const latest = latestByKey(data ?? [], getPublicUrl, folder);
       const map: Record<string, string> = {};
-      (data ?? []).forEach((f) => {
-        const name = decodeURIComponent(f.name.replace(/\.(webm|ogg|mp3|wav)$/, ''));
-        const { data: urlData } = supabase.storage.from('audio').getPublicUrl(`${folder}/${f.name}`);
-        map[name] = urlData.publicUrl;
-      });
+      latest.forEach((v, key) => { map[key] = v.url; });
       folderCache[folder] = map;
       return map;
     })();

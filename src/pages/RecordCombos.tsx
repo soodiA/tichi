@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { uploadVersioned, latestByKey } from '../lib/versionedUpload';
 
 // All consonants with their curriculum ordinal
 const CONSONANTS = [
@@ -73,11 +74,10 @@ export default function RecordCombos() {
     (async () => {
       const { data } = await supabase.storage.from('audio').list('combos');
       if (!data) return;
+      const getPublicUrl = (path: string) => supabase.storage.from('audio').getPublicUrl(path).data.publicUrl;
       const map: Record<string, ComboStatus> = {};
-      data.forEach((f) => {
-        const key = f.name.replace(/\.(webm|ogg|mp3|wav)$/, '');
-        const { data: urlData } = supabase.storage.from('audio').getPublicUrl(`combos/${f.name}`);
-        map[key] = { audioUrl: urlData.publicUrl, state: 'done' };
+      latestByKey(data, getPublicUrl, 'combos').forEach((v, key) => {
+        map[key] = { audioUrl: v.url, state: 'done' };
       });
       setStatuses(map);
     })();
@@ -112,19 +112,14 @@ export default function RecordCombos() {
     streamRef.current?.getTracks().forEach((t) => t.stop());
 
     const blob = new Blob(chunks.current, { type: mediaRecorder.current.mimeType });
-    const ext = blob.type.includes('webm') ? 'webm' : 'ogg';
-    const path = `combos/${key}.${ext}`;
 
     setStatuses((prev) => ({ ...prev, [key]: { state: 'idle' } }));
 
-    const { error } = await supabase.storage.from('audio').upload(path, blob, { upsert: true });
-    if (error) {
-      alert(`خطا در آپلود: ${error.message}`);
+    const { url: audioUrl, error } = await uploadVersioned('combos', key, blob);
+    if (error || !audioUrl) {
+      alert(`خطا در آپلود: ${error}`);
       return;
     }
-
-    const { data: urlData } = supabase.storage.from('audio').getPublicUrl(path);
-    const audioUrl = urlData.publicUrl;
 
     // Update all questions where media_label matches the combo text
     // Key format: "{uid}-{vowelKey}" e.g. "mim-aa"

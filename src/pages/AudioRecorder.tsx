@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { uploadVersioned } from '../lib/versionedUpload';
 import { QUESTION_TYPE_PROMPT } from '../lib/questionTypeAudio';
 import { TYPE_LABELS, ALL_TYPES } from '../lib/questionTypes';
 import type { QuestionType } from '../types';
@@ -65,18 +66,14 @@ const AudioRecorder: React.FC = () => {
     streamRef.current?.getTracks().forEach(tr => tr.stop());
 
     const blob = new Blob(chunksRef.current, { type: mr.mimeType });
-    const ext = blob.type.includes('webm') ? 'webm' : 'ogg';
-    const path = `types/${t}.${ext}`;
 
     setUploading(true);
-    const { error: upErr } = await supabase.storage.from('audio').upload(path, blob, { upsert: true });
-    if (upErr) {
-      alert(`خطا در آپلود: ${upErr.message}`);
+    const { url, error: upErr } = await uploadVersioned('types', t, blob);
+    if (upErr || !url) {
+      alert(`خطا در آپلود: ${upErr}`);
       setUploading(false);
       return;
     }
-    const { data: urlData } = supabase.storage.from('audio').getPublicUrl(path);
-    const url = urlData.publicUrl;
 
     // Every question of this type shares the same recorded prompt.
     const { error: updErr } = await supabase
