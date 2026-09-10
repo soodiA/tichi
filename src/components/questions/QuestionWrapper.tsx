@@ -1,7 +1,9 @@
 import React from 'react';
 import AudioButton from '../ui/AudioButton';
+import ClipButton from '../ui/ClipButton';
 import type { Question } from '../../types';
 import { QUESTION_TYPE_PROMPT } from '../../lib/questionTypeAudio';
+import { parseAudioPictureTarget, AUDIO_PICTURE_GENERIC_TEXT } from '../../lib/clipAudio';
 import Q1_AudioPicture from './Q1_AudioPicture';
 import Q2_SyllableCount from './Q2_SyllableCount';
 import Q3_FlowerCount from './Q3_FlowerCount';
@@ -40,10 +42,19 @@ const speakText = (text: string) => {
 };
 
 const QuestionWrapper: React.FC<QuestionWrapperProps> = ({ question, onAnswer }) => {
+  // audio_picture embeds its target letter in question_text ("کدام یکی با X شروع
+  // میشه؟" / "...آخرش X داره؟") — show one generic sentence per direction instead,
+  // plus a tappable letter button below the question so the letter's own sound
+  // (not the wording) carries the answer.
+  const audioPictureTarget = question.type === 'audio_picture'
+    ? parseAudioPictureTarget(question.questionText)
+    : null;
+
   // Shared per-type prompt (if set) replaces the per-question display text; the audio
   // itself is already shared via question.questionAudioUrl (see questionTypeAudio.ts).
   const typePrompt = QUESTION_TYPE_PROMPT[question.type];
-  const displayText = typePrompt ?? question.questionText;
+  const displayText = typePrompt
+    ?? (audioPictureTarget ? AUDIO_PICTURE_GENERIC_TEXT[audioPictureTarget.position] : question.questionText);
   const audioUrl = question.questionAudioUrl;
 
   return (
@@ -64,6 +75,12 @@ const QuestionWrapper: React.FC<QuestionWrapperProps> = ({ question, onAnswer })
           </svg>
         </button>
       </div>
+
+      {audioPictureTarget && (
+        <div className="flex justify-center">
+          <ClipButton folder="letters" text={audioPictureTarget.letter} />
+        </div>
+      )}
 
       {/* Route to appropriate question component */}
       {question.type === 'audio_picture' && (

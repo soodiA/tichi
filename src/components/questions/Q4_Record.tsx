@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import type { Question } from '../../types';
+import ClipButton from '../ui/ClipButton';
 
 interface Props {
   question: Question;
@@ -154,9 +155,9 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
 
   return (
     <div className="flex flex-col items-center gap-6 py-4 flex-1 justify-center">
-      <div className="text-center">
-        <p className="text-gray-500 text-sm mb-2">این کلمه را بلند بگو:</p>
-        <p className="text-6xl font-extrabold text-violet-700">{String(question.correctAnswer)}</p>
+      <div className="flex flex-col items-center gap-2">
+        <p className="text-gray-500 text-sm">این کلمه را بلند بگو:</p>
+        <ClipButton folder="words" text={String(question.correctAnswer)} />
       </div>
 
       {/* Permission: auto-check on mount via getUserMedia */}

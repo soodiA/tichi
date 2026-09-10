@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import type { Question } from '../../types';
-import AudioButton from '../ui/AudioButton';
+import ClipButton from '../ui/ClipButton';
 
 interface Props {
   question: Question;
@@ -31,22 +31,9 @@ const Q3_FlowerCount: React.FC<Props> = ({ question, onAnswer }) => {
 
   return (
     <div className="flex flex-col items-center gap-6">
-      {/* Image + label */}
-      {question.mediaImageUrl && (
-        <div className="flex flex-col items-center gap-2">
-          <img
-            src={question.mediaImageUrl}
-            alt={question.mediaLabel ?? ''}
-            className="w-36 h-36 object-contain rounded-2xl"
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-          />
-          <div className="flex items-center gap-2">
-            {question.mediaAudioUrl && <AudioButton audioUrl={question.mediaAudioUrl} size="sm" />}
-            {question.mediaLabel && (
-              <span className="text-2xl font-bold text-gray-700">{question.mediaLabel}</span>
-            )}
-          </div>
-        </div>
+      {/* Target word */}
+      {question.mediaLabel && (
+        <ClipButton folder="words" text={question.mediaLabel} />
       )}
 
       {/* Flower row */}
