@@ -1,6 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Option } from '../../types';
+import { getClipUrl } from '../../lib/clipAudio';
+import { uploadVersioned } from '../../lib/versionedUpload';
 
 export async function uploadToStorage(prefix: string, file: Blob, ext: string): Promise<string> {
   const path = `${prefix}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
@@ -126,6 +128,72 @@ export const AudioField: React.FC<{ value?: string; onChange: (url: string) => v
       {!value && <span className="flex-1 text-xs text-gray-400">صدایی انتخاب نشده</span>}
       <input ref={fileRef} type="file" accept="audio/*" className="hidden"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f, f.name.split('.').pop() || 'mp3'); }} />
+      <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || recording}
+        className="w-9 h-9 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center text-lg active:scale-95 disabled:opacity-40">
+        ⬆
+      </button>
+      <button type="button" onClick={recording ? stopRecording : startRecording} disabled={busy}
+        className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg active:scale-95 disabled:opacity-40 ${recording ? 'bg-red-500 text-white animate-pulse' : 'bg-violet-100 text-violet-600'}`}>
+        {recording ? '⏹' : '🎤'}
+      </button>
+    </div>
+  );
+};
+
+// Record-or-upload widget bound to a word/letter's shared clip in Storage
+// (the same "audio/<folder>/<key>--<timestamp>" clips used by ClipButton and
+// /word-audio-recorder) — lets creating a question also (optionally) record
+// the word/letter's sound right there instead of a separate trip to that tool.
+export const ClipField: React.FC<{ folder: 'words' | 'letters'; textKey: string }> = ({ folder, textKey }) => {
+  const [url, setUrl] = useState<string | undefined>(undefined);
+  const [busy, setBusy] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const mrRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setUrl(undefined);
+    if (textKey.trim()) getClipUrl(folder, textKey).then((u) => { if (!cancelled) setUrl(u); });
+    return () => { cancelled = true; };
+  }, [folder, textKey]);
+
+  const upload = async (blob: Blob) => {
+    setBusy(true);
+    try {
+      const { url: newUrl, error } = await uploadVersioned(folder, textKey, blob);
+      if (error) alert(`خطا در آپلود صدا: ${error}`);
+      else setUrl(newUrl);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const startRecording = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+    const mr = new MediaRecorder(stream, { mimeType });
+    chunksRef.current = [];
+    mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+    mr.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      upload(new Blob(chunksRef.current, { type: mr.mimeType }));
+    };
+    mr.start();
+    mrRef.current = mr;
+    setRecording(true);
+  };
+
+  const stopRecording = () => { mrRef.current?.stop(); setRecording(false); };
+
+  if (!textKey.trim()) return null;
+
+  return (
+    <div className="flex items-center gap-2">
+      {url ? <audio src={url} controls className="h-9 flex-1" /> : <span className="flex-1 text-xs text-gray-400">صدایی ضبط نشده</span>}
+      <input ref={fileRef} type="file" accept="audio/*" className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); }} />
       <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || recording}
         className="w-9 h-9 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center text-lg active:scale-95 disabled:opacity-40">
         ⬆

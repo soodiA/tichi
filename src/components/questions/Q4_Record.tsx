@@ -156,6 +156,13 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
   return (
     <div className="flex flex-col items-center gap-6 py-4 flex-1 justify-center">
       <div className="flex flex-col items-center gap-2">
+        {question.options?.find((o) => o.id === '__image__')?.imageUrl && (
+          <img
+            src={question.options.find((o) => o.id === '__image__')!.imageUrl}
+            alt=""
+            className="w-28 h-28 object-contain rounded-2xl mb-1"
+          />
+        )}
         <p className="text-gray-500 text-sm">این کلمه را بلند بگو:</p>
         <ClipButton folder="words" text={String(question.correctAnswer)} />
       </div>
