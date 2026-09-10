@@ -110,6 +110,8 @@ const QuestionEditor: React.FC = () => {
   const [flatQuestions, setFlatQuestions] = useState<QuestionRow[]>([]);
   const [loadingFlat, setLoadingFlat] = useState(false);
   const [flatFilter, setFlatFilter] = useState('');
+  const [flatUnitId, setFlatUnitId] = useState('');
+  const [flatNodeId, setFlatNodeId] = useState('');
 
   const [editingId, setEditingId] = useState<string | 'new' | null>(null);
   const [editingType, setEditingType] = useState<QuestionType | null>(null);
@@ -226,12 +228,21 @@ const QuestionEditor: React.FC = () => {
     else nodeGroups.push({ unitLetter: n.unit_letter, unitId: n.unit_id, nodes: [n] });
   }
 
-  const filteredFlat = flatFilter.trim()
-    ? flatQuestions.filter(q =>
-        q.question_text.includes(flatFilter) ||
-        (q.media_label ?? '').includes(flatFilter) ||
-        nodeLabel(q.node_id).includes(flatFilter))
-    : flatQuestions;
+  // Distinct units, in app order (derived from `nodes`, already sorted by unit_ord).
+  const unitOptions: { id: string; letter: string }[] = [];
+  for (const n of nodes) {
+    if (!unitOptions.some(u => u.id === n.unit_id)) unitOptions.push({ id: n.unit_id, letter: n.unit_letter });
+  }
+  const nodesInFlatUnit = flatUnitId ? nodes.filter(n => n.unit_id === flatUnitId) : [];
+
+  const filteredFlat = flatQuestions.filter(q => {
+    if (flatUnitId && !nodesInFlatUnit.some(n => n.id === q.node_id)) return false;
+    if (flatNodeId && q.node_id !== flatNodeId) return false;
+    if (!flatFilter.trim()) return true;
+    return q.question_text.includes(flatFilter) ||
+      (q.media_label ?? '').includes(flatFilter) ||
+      nodeLabel(q.node_id).includes(flatFilter);
+  });
 
   const FormComponent = editingType ? FORM_BY_TYPE[editingType] : null;
 
@@ -316,9 +327,23 @@ const QuestionEditor: React.FC = () => {
 
       {viewMode === 'flat' && (
         <div className="w-full flex flex-col gap-3">
-          <input type="text" value={flatFilter} onChange={(e) => setFlatFilter(e.target.value)}
-            placeholder="جستجو در متن، واحد یا برچسب سوال..."
-            className="w-full max-w-md px-4 py-3 text-base rounded-xl border-2 border-violet-200" />
+          <div className="flex flex-wrap gap-2 items-center">
+            <select value={flatUnitId} onChange={(e) => { setFlatUnitId(e.target.value); setFlatNodeId(''); }}
+              className="px-4 py-3 text-base rounded-xl border-2 border-violet-200 bg-white text-gray-700">
+              <option value="">همه‌ی واحدها</option>
+              {unitOptions.map(u => <option key={u.id} value={u.id}>واحد {u.letter}</option>)}
+            </select>
+
+            <select value={flatNodeId} onChange={(e) => setFlatNodeId(e.target.value)} disabled={!flatUnitId}
+              className="px-4 py-3 text-base rounded-xl border-2 border-violet-200 bg-white text-gray-700 disabled:opacity-50">
+              <option value="">همه‌ی بخش‌های این واحد</option>
+              {nodesInFlatUnit.map(n => <option key={n.id} value={n.id}>{n.type} #{n.ord}</option>)}
+            </select>
+
+            <input type="text" value={flatFilter} onChange={(e) => setFlatFilter(e.target.value)}
+              placeholder="جستجو در متن یا برچسب سوال..."
+              className="flex-1 min-w-[200px] max-w-md px-4 py-3 text-base rounded-xl border-2 border-violet-200" />
+          </div>
 
           {loadingFlat ? (
             <p className="text-sm text-gray-400">در حال بارگذاری همه‌ی سوال‌ها...</p>
