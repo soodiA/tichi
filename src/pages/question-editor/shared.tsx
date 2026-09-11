@@ -40,9 +40,74 @@ export const NumberInput: React.FC<{ value: number | ''; onChange: (v: number | 
   />
 );
 
+// Lists existing files under a Storage prefix (same pattern WordAudioRecorder
+// uses to list recorded clips) so the editor can reuse a file already
+// uploaded for this field instead of uploading a duplicate.
+interface StorageFile { name: string; url: string }
+
+async function listStorageFiles(bucket: string, prefix: string): Promise<StorageFile[]> {
+  const { data } = await supabase.storage.from(bucket).list(prefix, { limit: 200 });
+  if (!data) return [];
+  return data
+    .filter((f) => f.id) // skip sub-folder placeholder entries
+    .map((f) => ({
+      name: f.name,
+      url: supabase.storage.from(bucket).getPublicUrl(`${prefix}/${f.name}`).data.publicUrl,
+    }));
+}
+
+// Modal listing existing files already uploaded under a storage prefix, so the
+// user can reuse one instead of uploading a duplicate.
+const BrowseExistingModal: React.FC<{
+  kind: 'image' | 'audio';
+  storagePrefix: string;
+  onSelect: (url: string) => void;
+  onClose: () => void;
+}> = ({ kind, storagePrefix, onSelect, onClose }) => {
+  const [files, setFiles] = useState<StorageFile[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    listStorageFiles('audio', storagePrefix).then((f) => { if (!cancelled) setFiles(f); });
+    return () => { cancelled = true; };
+  }, [storagePrefix]);
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl p-4 max-w-lg w-full max-h-[80vh] overflow-y-auto" dir="rtl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-extrabold text-gray-800">انتخاب از فایل‌های موجود</h3>
+          <button type="button" onClick={onClose} className="text-gray-400 text-xl leading-none">×</button>
+        </div>
+        {files === null && <p className="text-sm text-gray-400">در حال بارگذاری...</p>}
+        {files !== null && files.length === 0 && <p className="text-sm text-gray-400">فایلی یافت نشد</p>}
+        {files !== null && files.length > 0 && (
+          <div className={kind === 'image' ? 'grid grid-cols-4 gap-2' : 'flex flex-col gap-2'}>
+            {files.map((f) => (
+              kind === 'image' ? (
+                <button key={f.name} type="button" onClick={() => { onSelect(f.url); onClose(); }}
+                  className="border-2 border-gray-200 rounded-lg overflow-hidden hover:border-violet-400">
+                  <img src={f.url} alt={f.name} className="w-full h-16 object-contain bg-white" />
+                </button>
+              ) : (
+                <div key={f.name} className="flex items-center gap-2 p-2 rounded-lg border-2 border-gray-200">
+                  <audio src={f.url} controls className="h-8 flex-1" />
+                  <button type="button" onClick={() => { onSelect(f.url); onClose(); }}
+                    className="px-3 py-1 rounded-lg bg-violet-100 text-violet-600 text-xs font-bold">انتخاب</button>
+                </div>
+              )
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Upload-or-paste-URL widget for a single image, shared across all option/media image fields.
 export const ImageField: React.FC<{ value?: string; onChange: (url: string) => void; storagePrefix: string }> = ({ value, onChange, storagePrefix }) => {
   const [busy, setBusy] = useState(false);
+  const [browsing, setBrowsing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFile = async (file: File) => {
@@ -73,10 +138,17 @@ export const ImageField: React.FC<{ value?: string; onChange: (url: string) => v
       />
       <input ref={fileRef} type="file" accept="image/*" className="hidden"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+      <button type="button" onClick={() => setBrowsing(true)}
+        className="w-9 h-9 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center text-lg active:scale-95">
+        🗂
+      </button>
       <button type="button" onClick={() => fileRef.current?.click()} disabled={busy}
         className="w-9 h-9 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center text-lg active:scale-95 disabled:opacity-40">
         {busy ? '…' : '📷'}
       </button>
+      {browsing && (
+        <BrowseExistingModal kind="image" storagePrefix={storagePrefix} onSelect={onChange} onClose={() => setBrowsing(false)} />
+      )}
     </div>
   );
 };
@@ -85,6 +157,7 @@ export const ImageField: React.FC<{ value?: string; onChange: (url: string) => v
 export const AudioField: React.FC<{ value?: string; onChange: (url: string) => void; storagePrefix: string }> = ({ value, onChange, storagePrefix }) => {
   const [busy, setBusy] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [browsing, setBrowsing] = useState(false);
   const mrRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -136,6 +209,13 @@ export const AudioField: React.FC<{ value?: string; onChange: (url: string) => v
         className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg active:scale-95 disabled:opacity-40 ${recording ? 'bg-red-500 text-white animate-pulse' : 'bg-violet-100 text-violet-600'}`}>
         {recording ? '⏹' : '🎤'}
       </button>
+      <button type="button" onClick={() => setBrowsing(true)} disabled={busy || recording}
+        className="w-9 h-9 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center text-lg active:scale-95 disabled:opacity-40">
+        🗂
+      </button>
+      {browsing && (
+        <BrowseExistingModal kind="audio" storagePrefix={storagePrefix} onSelect={onChange} onClose={() => setBrowsing(false)} />
+      )}
     </div>
   );
 };
