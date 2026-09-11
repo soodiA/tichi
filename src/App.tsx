@@ -10,8 +10,11 @@ import LessonComplete from './pages/LessonComplete';
 import Profile from './pages/Profile';
 import Friends from './pages/Friends';
 import PathEditor from './pages/PathEditor';
+import AudioRecorder from './pages/AudioRecorder';
+import QuestionEditor from './pages/QuestionEditor';
 import RecordCombos from './pages/RecordCombos';
 import RecordQuestionAudio from './pages/RecordQuestionAudio';
+import WordAudioRecorder from './pages/WordAudioRecorder';
 import { db } from './db/db';
 import { syncProfileToCloud } from './lib/sync';
 
@@ -95,8 +98,11 @@ const BottomNav: React.FC = () => {
   );
 };
 
+const ADMIN_ROUTES = ['/path-editor', '/audio-recorder', '/question-editor', '/record-combos', '/word-audio-recorder'];
+
 const App: React.FC = () => {
   const location = useLocation();
+  const isAdminRoute = ADMIN_ROUTES.some((r) => location.pathname === r);
 
   React.useEffect(() => {
     db.profiles.toCollection().first().then((profile) => {
@@ -105,7 +111,7 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex flex-col min-h-full max-w-md mx-auto relative">
+    <div className={`flex flex-col min-h-full relative ${isAdminRoute ? '' : 'max-w-md mx-auto'}`}>
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<Splash />} />
@@ -116,8 +122,11 @@ const App: React.FC = () => {
           <Route path="/profile" element={<Profile />} />
           <Route path="/friends" element={<Friends />} />
           <Route path="/path-editor" element={<PathEditor />} />
+          <Route path="/audio-recorder" element={<AudioRecorder />} />
+          <Route path="/question-editor" element={<QuestionEditor />} />
           <Route path="/record-combos" element={<RecordCombos />} />
           <Route path="/record-audio" element={<RecordQuestionAudio />} />
+          <Route path="/word-audio-recorder" element={<WordAudioRecorder />} />
         </Routes>
       </AnimatePresence>
       <BottomNav />

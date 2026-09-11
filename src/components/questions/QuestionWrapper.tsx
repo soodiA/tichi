@@ -1,6 +1,9 @@
 import React from 'react';
 import AudioButton from '../ui/AudioButton';
+import ClipButton from '../ui/ClipButton';
 import type { Question } from '../../types';
+import { QUESTION_TYPE_PROMPT } from '../../lib/questionTypeAudio';
+import { parseAudioPictureTarget, AUDIO_PICTURE_GENERIC_TEXT } from '../../lib/clipAudio';
 import Q1_AudioPicture from './Q1_AudioPicture';
 import Q2_SyllableCount from './Q2_SyllableCount';
 import Q3_FlowerCount from './Q3_FlowerCount';
@@ -40,16 +43,31 @@ const speakText = (text: string) => {
 };
 
 const QuestionWrapper: React.FC<QuestionWrapperProps> = ({ question, onAnswer, disabled }) => {
+  // audio_picture embeds its target letter in question_text ("کدام یکی با X شروع
+  // میشه؟" / "...آخرش X داره؟") — show one generic sentence per direction instead,
+  // plus a tappable letter button below the question so the letter's own sound
+  // (not the wording) carries the answer.
+  const audioPictureTarget = question.type === 'audio_picture'
+    ? parseAudioPictureTarget(question.questionText)
+    : null;
+
+  // Shared per-type prompt (if set) replaces the per-question display text; the audio
+  // itself is already shared via question.questionAudioUrl (see questionTypeAudio.ts).
+  const typePrompt = QUESTION_TYPE_PROMPT[question.type];
+  const displayText = typePrompt
+    ?? (audioPictureTarget ? AUDIO_PICTURE_GENERIC_TEXT[audioPictureTarget.position] : question.questionText);
+  const audioUrl = question.questionAudioUrl;
+
   return (
     <div className="flex flex-col gap-4 h-full">
       {/* Question text + audio */}
       <div className="flex items-center gap-3 bg-white/80 rounded-2xl px-4 py-3 shadow-sm">
-        {question.questionAudioUrl && (
-          <AudioButton audioUrl={question.questionAudioUrl} size="md" />
+        {audioUrl && (
+          <AudioButton audioUrl={audioUrl} size="md" />
         )}
-        <p className="text-xl font-bold text-gray-800 flex-1">{question.questionText}</p>
+        <p className="text-xl font-bold text-gray-800 flex-1">{displayText}</p>
         <button
-          onClick={() => speakText(question.questionText)}
+          onClick={() => speakText(displayText)}
           className="w-8 h-8 flex items-center justify-center rounded-full bg-violet-100 text-violet-600 flex-shrink-0 active:scale-90 transition-transform"
           aria-label="خواندن سوال"
         >
@@ -58,6 +76,12 @@ const QuestionWrapper: React.FC<QuestionWrapperProps> = ({ question, onAnswer, d
           </svg>
         </button>
       </div>
+
+      {audioPictureTarget && (
+        <div className="flex justify-center">
+          <ClipButton folder="letters" text={audioPictureTarget.letter} />
+        </div>
+      )}
 
       {/* Route to appropriate question component */}
       {question.type === 'audio_picture' && (

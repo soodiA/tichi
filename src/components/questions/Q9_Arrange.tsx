@@ -43,8 +43,8 @@ const Q9_Arrange: React.FC<Props> = ({ question, onAnswer, disabled }) => {
       placed.length === question.correctAnswer.length &&
       placed.every((p, i) => p.id === (question.correctAnswer as string[])[i]);
     onAnswer(correct);
-    setPlaced([]);
-    setUsed(new Set());
+    // Leave the arranged tiles on screen — Soodeh wants them visible after
+    // confirming; the component unmounts naturally on the next question.
   };
 
   return (
