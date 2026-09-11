@@ -9,8 +9,26 @@ import { supabase } from './supabase';
 // instead of overwriting the old one; old clips are just left behind
 // (harmless — a few KB each) and the newest one wins when reading back.
 
+// Supabase Storage rejects object keys containing "%" (so percent-encoding
+// non-ASCII text like Persian words fails with "Invalid key"). Base64url-encode
+// the UTF-8 bytes instead — it only produces [A-Za-z0-9_-], which Storage accepts.
+function encodeKey(key: string): string {
+  const bytes = new TextEncoder().encode(key);
+  let binary = '';
+  bytes.forEach((b) => { binary += String.fromCharCode(b); });
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function decodeKey(encoded: string): string {
+  let b64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
+  while (b64.length % 4) b64 += '=';
+  const binary = atob(b64);
+  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
 export function versionedPath(folder: string, key: string, ext: string): string {
-  return `${folder}/${encodeURIComponent(key)}--${Date.now()}.${ext}`;
+  return `${folder}/${encodeKey(key)}--${Date.now()}.${ext}`;
 }
 
 export async function uploadVersioned(
@@ -32,7 +50,7 @@ export function latestByKey(files: { name: string }[], getPublicUrl: (path: stri
   const latest = new Map<string, { name: string; ts: number; url: string }>();
   for (const f of files) {
     const m = f.name.match(/^(.*)--(\d+)\.[a-z0-9]+$/);
-    const key = m ? decodeURIComponent(m[1]) : decodeURIComponent(f.name.replace(/\.[a-z0-9]+$/, ''));
+    const key = m ? decodeKey(m[1]) : decodeKey(f.name.replace(/\.[a-z0-9]+$/, ''));
     const ts = m ? parseInt(m[2], 10) : 0;
     const existing = latest.get(key);
     if (!existing || ts > existing.ts) {

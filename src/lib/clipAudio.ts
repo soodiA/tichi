@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 import { latestByKey } from './versionedUpload';
 
 // Looks up recordings made in /word-audio-recorder (storage paths
-// "words/<encodeURIComponent(word)>.<ext>" and "letters/<letter>.<ext>").
+// "words/<base64url(word)>--<ts>.<ext>" and "letters/<base64url(letter)>--<ts>.<ext>").
 // Results are cached per folder for the lifetime of the page.
 
 type Folder = 'words' | 'letters';
