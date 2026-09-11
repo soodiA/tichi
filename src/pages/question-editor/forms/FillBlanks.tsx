@@ -8,16 +8,29 @@ function deriveFromDraft(draft: FormProps['draft']) {
   if (draft.template.length > 0) {
     const word = draft.template.map((c) => c ?? '_').join('');
     const blanks = new Set(draft.template.map((c, i) => (c === null ? i : -1)).filter(i => i !== -1));
-    return { word, blanks };
+
+    // Distractor options are every option that isn't the template sentinel and
+    // isn't one of the correct-answer tiles — reconstruct the comma field from those
+    // so re-opening an existing question doesn't show it empty.
+    const correctIds = new Set(
+      Array.isArray(draft.correctAnswer) ? draft.correctAnswer : [draft.correctAnswer]
+    );
+    const distractors = draft.options
+      .filter((o) => o.id !== '__template__' && !correctIds.has(o.id))
+      .map((o) => o.text ?? '')
+      .filter(Boolean)
+      .join(', ');
+
+    return { word, blanks, distractors };
   }
-  return { word: '', blanks: new Set<number>() };
+  return { word: '', blanks: new Set<number>(), distractors: '' };
 }
 
 const FillBlanksForm: React.FC<FormProps> = ({ draft, patch }) => {
   const init = deriveFromDraft(draft);
   const [word, setWord] = useState(init.word);
   const [blanks, setBlanks] = useState<Set<number>>(init.blanks);
-  const [distractors, setDistractors] = useState('');
+  const [distractors, setDistractors] = useState(init.distractors);
 
   const chars = [...word];
 

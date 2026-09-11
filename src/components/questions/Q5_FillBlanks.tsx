@@ -17,7 +17,20 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
     if (tpl.length === 0 && sentinelOpt?.text) {
       try { tpl = JSON.parse(sentinelOpt.text); } catch {}
     }
-    const opts = question.options.filter((o) => o.id !== '__template__');
+    const rawOpts = question.options.filter((o) => o.id !== '__template__');
+    // Defensive: some stored questions have a wrong-letters option saved as a single
+    // comma-separated string ("الف,ب,ج") instead of one option per letter — split
+    // any such option into individual selectable tiles.
+    const opts = rawOpts.flatMap((o) => {
+      if (o.text && o.text.includes(',')) {
+        return o.text
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .map((text, i) => ({ ...o, id: i === 0 ? o.id : `${o.id}-${i}`, text }));
+      }
+      return [o];
+    });
     return { template: tpl, visibleOptions: shuffleArray(opts) };
   });
 
