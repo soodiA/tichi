@@ -7,14 +7,15 @@ import { shuffleArray } from '../../lib/shuffle';
 interface Props {
   question: Question;
   onAnswer: (correct: boolean) => void;
+  disabled?: boolean;
 }
 
-const Q13_SoundToText: React.FC<Props> = ({ question, onAnswer }) => {
+const Q13_SoundToText: React.FC<Props> = ({ question, onAnswer, disabled }) => {
   const [selected, setSelected] = useState<string | null>(null);
   const [shuffledOptions] = useState(() => shuffleArray(question.options));
 
   const handleConfirm = () => {
-    if (!selected) return;
+    if (!selected || disabled) return;
     const correct =
       Array.isArray(question.correctAnswer)
         ? question.correctAnswer.includes(selected)
@@ -46,11 +47,13 @@ const Q13_SoundToText: React.FC<Props> = ({ question, onAnswer }) => {
             type="button"
             whileTap={{ scale: 0.94 }}
             onClick={() => {
+              if (disabled) return;
               setSelected(opt.id);
               if (opt.audioUrl) {
                 new Audio(opt.audioUrl).play().catch(() => {/* silent */});
               }
             }}
+            disabled={disabled}
             className={`option-card text-3xl font-bold py-5 ${
               selected === opt.id ? 'selected' : ''
             }`}
@@ -62,7 +65,7 @@ const Q13_SoundToText: React.FC<Props> = ({ question, onAnswer }) => {
 
       <button
         onClick={handleConfirm}
-        disabled={!selected}
+        disabled={!selected || disabled}
         className="btn-primary w-full"
       >
         تأیید

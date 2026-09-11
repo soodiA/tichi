@@ -7,6 +7,7 @@ import { isImagePath, resolveImageSrc } from '../../lib/media';
 interface Props {
   question: Question;
   onAnswer: (correct: boolean) => void;
+  disabled?: boolean;
 }
 
 const isUrl = isImagePath;
@@ -24,8 +25,10 @@ const OptionCard: React.FC<{
   option: Option;
   selected: boolean;
   onClick: () => void;
-}> = ({ option, selected, onClick }) => {
+  disabled?: boolean;
+}> = ({ option, selected, onClick, disabled }) => {
   const handleClick = () => {
+    if (disabled) return;
     if (option.audioUrl) {
       new Audio(option.audioUrl).play().catch(() => {});
     } else if (option.text) {
@@ -41,6 +44,7 @@ const OptionCard: React.FC<{
       type="button"
       whileTap={{ scale: 0.94 }}
       onClick={handleClick}
+      disabled={disabled}
       className={`option-card flex flex-col items-center gap-2 w-full h-full min-h-[110px] ${selected ? 'selected' : ''}`}
     >
       {img && isUrl(img) ? (
@@ -63,12 +67,12 @@ const OptionCard: React.FC<{
   );
 };
 
-const Q1_AudioPicture: React.FC<Props> = ({ question, onAnswer }) => {
+const Q1_AudioPicture: React.FC<Props> = ({ question, onAnswer, disabled }) => {
   const [selected, setSelected] = useState<string | null>(null);
   const [shuffledOptions] = useState(() => shuffleArray(question.options));
 
   const handleConfirm = () => {
-    if (!selected) return;
+    if (!selected || disabled) return;
     const correct = selected === question.correctAnswer;
     onAnswer(correct);
   };
@@ -82,13 +86,14 @@ const Q1_AudioPicture: React.FC<Props> = ({ question, onAnswer }) => {
             option={opt}
             selected={selected === opt.id}
             onClick={() => setSelected(opt.id)}
+            disabled={disabled}
           />
         ))}
       </div>
 
       <button
         onClick={handleConfirm}
-        disabled={!selected}
+        disabled={!selected || disabled}
         className="btn-primary w-full"
       >
         تأیید

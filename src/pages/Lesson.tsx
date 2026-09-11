@@ -220,6 +220,7 @@ const Lesson: React.FC = () => {
             <QuestionWrapper
               question={currentQuestion}
               onAnswer={handleAnswer}
+              disabled={feedback !== 'idle'}
             />
           </motion.div>
         </AnimatePresence>

@@ -5,13 +5,14 @@ import AudioButton from '../ui/AudioButton';
 interface Props {
   question: Question;
   onAnswer: (correct: boolean) => void;
+  disabled?: boolean;
 }
 
-const Q2_SyllableCount: React.FC<Props> = ({ question, onAnswer }) => {
+const Q2_SyllableCount: React.FC<Props> = ({ question, onAnswer, disabled }) => {
   const [value, setValue] = useState('');
 
   const handleConfirm = () => {
-    if (!value.trim()) return;
+    if (!value.trim() || disabled) return;
     const correct =
       parseInt(value, 10) === (question.syllableCount ?? parseInt(String(question.correctAnswer), 10));
     onAnswer(correct);
@@ -42,15 +43,17 @@ const Q2_SyllableCount: React.FC<Props> = ({ question, onAnswer }) => {
         </div>
       )}
 
-      {/* Number input */}
+      {/* Number input — text+numeric pattern so there's no scroll/spinner increment */}
       <input
-        type="number"
-        min="1"
-        max="9"
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => setValue(e.target.value.replace(/[^0-9]/g, '').slice(0, 1))}
+        onWheel={(e) => (e.target as HTMLInputElement).blur()}
+        disabled={disabled}
         placeholder="؟"
-        className="w-28 h-20 text-5xl font-extrabold text-center border-4 border-amber-400
+        className="no-spinner w-28 h-20 text-5xl font-extrabold text-center border-4 border-amber-400
                    rounded-3xl bg-amber-50 focus:outline-none focus:border-amber-500
                    text-gray-800"
         dir="ltr"
@@ -58,7 +61,7 @@ const Q2_SyllableCount: React.FC<Props> = ({ question, onAnswer }) => {
 
       <button
         onClick={handleConfirm}
-        disabled={!value.trim()}
+        disabled={!value.trim() || disabled}
         className="btn-primary w-full"
       >
         تأیید

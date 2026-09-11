@@ -4,6 +4,7 @@ import type { Question } from '../../types';
 interface Props {
   question: Question;
   onAnswer: (correct: boolean) => void;
+  disabled?: boolean;
 }
 
 type PermState = 'checking' | 'need_permission' | 'requesting' | 'granted' | 'denied';
@@ -24,7 +25,7 @@ const MicIcon = ({ color = 'white', size = 46 }: { color?: string; size?: number
   </svg>
 );
 
-const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
+const Q4_Record: React.FC<Props> = ({ question, onAnswer, disabled }) => {
   const [permState, setPermState] = useState<PermState>('checking');
   const [status, setStatus] = useState<Status>('idle');
   const [transcript, setTranscript] = useState('');
@@ -62,7 +63,7 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
   }, []);
 
   const startListening = useCallback(() => {
-    if (status !== 'idle' || !SR) return;
+    if (status !== 'idle' || !SR || disabled) return;
     setDebugMsg('');
     setTranscript('');
     setCorrect(null);
@@ -122,9 +123,10 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
 
   // On press: start recording
   const handlePressStart = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    if (disabled) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     startListening();
-  }, [startListening]);
+  }, [startListening, disabled]);
 
   // On release: switch visual to "processing" — do NOT call rec.stop()
   // Chrome auto-detects silence and fires onresult itself
@@ -205,7 +207,7 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer }) => {
             onPointerDown={handlePressStart}
             onPointerUp={handlePressEnd}
             onPointerCancel={handlePressEnd}
-            disabled={status === 'processing'}
+            disabled={status === 'processing' || disabled}
             className={`w-28 h-28 rounded-full flex items-center justify-center shadow-xl transition-all select-none
               ${status === 'listening'
                 ? 'bg-red-500 scale-110 animate-pulse'

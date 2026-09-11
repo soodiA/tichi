@@ -7,9 +7,10 @@ import { shuffleArray } from '../../lib/shuffle';
 interface Props {
   question: Question;
   onAnswer: (correct: boolean) => void;
+  disabled?: boolean;
 }
 
-const Q7_AudioOptions: React.FC<Props> = ({ question, onAnswer }) => {
+const Q7_AudioOptions: React.FC<Props> = ({ question, onAnswer, disabled }) => {
   const [selected, setSelected] = useState<string | null>(null);
   const [shuffledOptions] = useState(() => shuffleArray(question.options));
 
@@ -17,7 +18,7 @@ const Q7_AudioOptions: React.FC<Props> = ({ question, onAnswer }) => {
   const shownText = question.mediaLabel ?? question.questionText;
 
   const handleConfirm = () => {
-    if (!selected) return;
+    if (!selected || disabled) return;
     const correct =
       Array.isArray(question.correctAnswer)
         ? question.correctAnswer.includes(selected)
@@ -41,8 +42,8 @@ const Q7_AudioOptions: React.FC<Props> = ({ question, onAnswer }) => {
           <motion.div
             key={opt.id}
             whileTap={{ scale: 0.94 }}
-            onClick={() => setSelected(opt.id)}
-            className={`rounded-2xl p-3 flex flex-col items-center gap-2 cursor-pointer border-2 transition-all
+            onClick={() => { if (!disabled) setSelected(opt.id); }}
+            className={`rounded-2xl p-3 flex flex-col items-center gap-2 border-2 transition-all ${disabled ? 'pointer-events-none opacity-70' : 'cursor-pointer'}
               ${selected === opt.id
                 ? 'border-violet-600 bg-violet-600 shadow-lg scale-[1.03]'
                 : 'border-gray-200 bg-white'
@@ -65,7 +66,7 @@ const Q7_AudioOptions: React.FC<Props> = ({ question, onAnswer }) => {
 
       <button
         onClick={handleConfirm}
-        disabled={!selected}
+        disabled={!selected || disabled}
         className="btn-primary w-full"
       >
         تأیید

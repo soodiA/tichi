@@ -44,7 +44,7 @@ export default function RecordQuestionAudio() {
       .order('ord', { ascending: true })
       .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
     if (search.trim()) query = query.ilike('question_text', `%${search.trim()}%`);
-    if (onlyMissing) query = query.eq('question_audio_url', '');
+    if (onlyMissing) query = query.or('question_audio_url.is.null,question_audio_url.eq.');
     const { data, count } = await query;
     setRows((data as QuestionRow[]) ?? []);
     setTotal(count ?? null);

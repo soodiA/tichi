@@ -18,6 +18,7 @@ import Q15_PairMatch from './Q15_PairMatch';
 interface QuestionWrapperProps {
   question: Question;
   onAnswer: (correct: boolean) => void;
+  disabled?: boolean;
 }
 
 const Unsupported: React.FC<{ type: string; onAnswer: (c: boolean) => void }> = ({ type, onAnswer }) => (
@@ -38,7 +39,7 @@ const speakText = (text: string) => {
   window.speechSynthesis.speak(utt);
 };
 
-const QuestionWrapper: React.FC<QuestionWrapperProps> = ({ question, onAnswer }) => {
+const QuestionWrapper: React.FC<QuestionWrapperProps> = ({ question, onAnswer, disabled }) => {
   return (
     <div className="flex flex-col gap-4 h-full">
       {/* Question text + audio */}
@@ -60,37 +61,37 @@ const QuestionWrapper: React.FC<QuestionWrapperProps> = ({ question, onAnswer })
 
       {/* Route to appropriate question component */}
       {question.type === 'audio_picture' && (
-        <Q1_AudioPicture question={question} onAnswer={onAnswer} />
+        <Q1_AudioPicture question={question} onAnswer={onAnswer} disabled={disabled} />
       )}
       {question.type === 'syllable_count' && (
-        <Q2_SyllableCount question={question} onAnswer={onAnswer} />
+        <Q2_SyllableCount question={question} onAnswer={onAnswer} disabled={disabled} />
       )}
       {question.type === 'flower_count' && (
-        <Q3_FlowerCount question={question} onAnswer={onAnswer} />
+        <Q3_FlowerCount question={question} onAnswer={onAnswer} disabled={disabled} />
       )}
       {question.type === 'fill_blanks' && (
-        <Q5_FillBlanks question={question} onAnswer={onAnswer} />
+        <Q5_FillBlanks question={question} onAnswer={onAnswer} disabled={disabled} />
       )}
       {question.type === 'record' && (
-        <Q4_Record question={question} onAnswer={onAnswer} />
+        <Q4_Record question={question} onAnswer={onAnswer} disabled={disabled} />
       )}
       {question.type === 'handwriting' && (
         <Q6_Handwriting question={question} onAnswer={onAnswer} />
       )}
       {question.type === 'audio_options' && (
-        <Q7_AudioOptions question={question} onAnswer={onAnswer} />
+        <Q7_AudioOptions question={question} onAnswer={onAnswer} disabled={disabled} />
       )}
       {question.type === 'sentence_complete' && (
-        <Q8_SentenceComplete question={question} onAnswer={onAnswer} />
+        <Q8_SentenceComplete question={question} onAnswer={onAnswer} disabled={disabled} />
       )}
       {question.type === 'arrange' && (
-        <Q9_Arrange question={question} onAnswer={onAnswer} />
+        <Q9_Arrange question={question} onAnswer={onAnswer} disabled={disabled} />
       )}
       {question.type === 'phoneme' && (
-        <Q11_Phoneme question={question} onAnswer={onAnswer} />
+        <Q11_Phoneme question={question} onAnswer={onAnswer} disabled={disabled} />
       )}
       {question.type === 'sound_to_text' && (
-        <Q13_SoundToText question={question} onAnswer={onAnswer} />
+        <Q13_SoundToText question={question} onAnswer={onAnswer} disabled={disabled} />
       )}
       {question.type === 'color_letter' && (
         <Q14_ColorLetter question={question} onAnswer={onAnswer} />

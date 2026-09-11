@@ -6,9 +6,10 @@ import type { Question } from '../../types';
 interface Props {
   question: Question;
   onAnswer: (correct: boolean) => void;
+  disabled?: boolean;
 }
 
-const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
+const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer, disabled }) => {
   // Extract template from question.template (set by curriculum.ts) OR fall back to
   // the __template__ sentinel stored in options (handles stale SW cache)
   const [{ template, visibleOptions }] = useState(() => {
@@ -17,7 +18,20 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
     if (tpl.length === 0 && sentinelOpt?.text) {
       try { tpl = JSON.parse(sentinelOpt.text); } catch {}
     }
-    const opts = question.options.filter((o) => o.id !== '__template__');
+    const rawOpts = question.options.filter((o) => o.id !== '__template__');
+    // Defensive: some stored questions have a wrong-letters option saved as a single
+    // comma-separated string ("الف,ب,ج") instead of one option per letter — split
+    // any such option into individual selectable tiles.
+    const opts = rawOpts.flatMap((o) => {
+      if (o.text && o.text.includes(',')) {
+        return o.text
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .map((text, i) => ({ ...o, id: i === 0 ? o.id : `${o.id}-${i}`, text }));
+      }
+      return [o];
+    });
     return { template: tpl, visibleOptions: shuffleArray(opts) };
   });
 
@@ -34,7 +48,7 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
   const allFilled = filledBlanks.every((v) => v !== null);
 
   const handleOptionClick = (optId: string, optText: string) => {
-    if (usedOptions.has(optId) || nextEmptyBlankPos === -1) return;
+    if (disabled || usedOptions.has(optId) || nextEmptyBlankPos === -1) return;
     const newFilled = [...filledBlanks];
     newFilled[nextEmptyBlankPos] = optText;
     setFilledBlanks(newFilled);
@@ -42,6 +56,7 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
   };
 
   const handleBlankClick = (blankPos: number) => {
+    if (disabled) return;
     const letter = filledBlanks[blankPos];
     if (!letter) return;
     const optEntry = visibleOptions.find((o) => o.text === letter && usedOptions.has(o.id));
@@ -56,7 +71,7 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
   };
 
   const handleConfirm = () => {
-    if (!allFilled) return;
+    if (!allFilled || disabled) return;
     const answeredIds: string[] = [];
     let blankPos = 0;
     for (let i = 0; i < template.length; i++) {
@@ -124,7 +139,7 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
             type="button"
             whileTap={{ scale: 0.9 }}
             onClick={() => handleOptionClick(opt.id, opt.text ?? '')}
-            disabled={usedOptions.has(opt.id)}
+            disabled={usedOptions.has(opt.id) || disabled}
             className={`w-14 h-14 rounded-2xl text-2xl font-bold border-2 transition-all
               ${usedOptions.has(opt.id)
                 ? 'bg-gray-100 border-gray-200 text-gray-300 cursor-not-allowed'
@@ -138,7 +153,7 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer }) => {
 
       <button
         onClick={handleConfirm}
-        disabled={!allFilled}
+        disabled={!allFilled || disabled}
         className="btn-primary w-full"
       >
         تأیید

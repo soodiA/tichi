@@ -5,6 +5,7 @@ import type { Question } from '../../types';
 interface Props {
   question: Question;
   onAnswer: (correct: boolean) => void;
+  disabled?: boolean;
 }
 
 interface PlacedWord {
@@ -12,12 +13,12 @@ interface PlacedWord {
   text: string;
 }
 
-const Q9_Arrange: React.FC<Props> = ({ question, onAnswer }) => {
+const Q9_Arrange: React.FC<Props> = ({ question, onAnswer, disabled }) => {
   const [placed, setPlaced] = useState<PlacedWord[]>([]);
   const [used, setUsed] = useState<Set<string>>(new Set());
 
   const handleWordClick = (optId: string, text: string) => {
-    if (used.has(optId)) return;
+    if (disabled || used.has(optId)) return;
     setPlaced((prev) => [...prev, { id: optId, text }]);
     setUsed((prev) => new Set([...prev, optId]));
     if (question.options.find((o) => o.id === optId)?.audioUrl) {
@@ -26,6 +27,7 @@ const Q9_Arrange: React.FC<Props> = ({ question, onAnswer }) => {
   };
 
   const handlePlacedClick = (optId: string) => {
+    if (disabled) return;
     setPlaced((prev) => prev.filter((p) => p.id !== optId));
     setUsed((prev) => {
       const next = new Set(prev);
@@ -35,7 +37,7 @@ const Q9_Arrange: React.FC<Props> = ({ question, onAnswer }) => {
   };
 
   const handleConfirm = () => {
-    if (placed.length !== question.options.length) return;
+    if (placed.length !== question.options.length || disabled) return;
     const correct =
       Array.isArray(question.correctAnswer) &&
       placed.length === question.correctAnswer.length &&
@@ -87,7 +89,7 @@ const Q9_Arrange: React.FC<Props> = ({ question, onAnswer }) => {
             type="button"
             whileTap={{ scale: 0.92 }}
             onClick={() => handleWordClick(opt.id, opt.text ?? '')}
-            disabled={used.has(opt.id)}
+            disabled={used.has(opt.id) || disabled}
             className={`px-5 py-3 rounded-2xl text-xl font-bold border-2 shadow transition-all
               ${used.has(opt.id)
                 ? 'bg-gray-100 border-gray-200 text-gray-300 cursor-not-allowed'
@@ -101,7 +103,7 @@ const Q9_Arrange: React.FC<Props> = ({ question, onAnswer }) => {
 
       <button
         onClick={handleConfirm}
-        disabled={placed.length !== question.options.length}
+        disabled={placed.length !== question.options.length || disabled}
         className="btn-primary w-full"
       >
         تأیید

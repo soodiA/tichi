@@ -5,9 +5,10 @@ import type { Question } from '../../types';
 interface Props {
   question: Question;
   onAnswer: (correct: boolean) => void;
+  disabled?: boolean;
 }
 
-const Q8_SentenceComplete: React.FC<Props> = ({ question, onAnswer }) => {
+const Q8_SentenceComplete: React.FC<Props> = ({ question, onAnswer, disabled }) => {
   const [selected, setSelected] = useState<string | null>(null);
 
   // The question text might have "..." indicating where the blank is.
@@ -17,6 +18,7 @@ const Q8_SentenceComplete: React.FC<Props> = ({ question, onAnswer }) => {
     : question.questionText;
 
   const handleOptionClick = (opt: { id: string; text?: string; audioUrl?: string }) => {
+    if (disabled) return;
     if (opt.audioUrl) {
       new Audio(opt.audioUrl).play().catch(() => {/* silent */});
     }
@@ -24,7 +26,7 @@ const Q8_SentenceComplete: React.FC<Props> = ({ question, onAnswer }) => {
   };
 
   const handleConfirm = () => {
-    if (!selected) return;
+    if (!selected || disabled) return;
     const selectedOpt = question.options.find((o) => (o.text ?? o.id) === selected);
     if (!selectedOpt) return;
     const correct =
@@ -49,6 +51,7 @@ const Q8_SentenceComplete: React.FC<Props> = ({ question, onAnswer }) => {
             type="button"
             whileTap={{ scale: 0.94 }}
             onClick={() => handleOptionClick(opt)}
+            disabled={disabled}
             className={`option-card text-xl font-bold py-4 ${
               selected === (opt.text ?? opt.id) ? 'selected' : ''
             }`}
@@ -60,7 +63,7 @@ const Q8_SentenceComplete: React.FC<Props> = ({ question, onAnswer }) => {
 
       <button
         onClick={handleConfirm}
-        disabled={!selected}
+        disabled={!selected || disabled}
         className="btn-primary w-full"
       >
         تأیید

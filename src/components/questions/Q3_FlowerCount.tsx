@@ -6,14 +6,16 @@ import AudioButton from '../ui/AudioButton';
 interface Props {
   question: Question;
   onAnswer: (correct: boolean) => void;
+  disabled?: boolean;
 }
 
 const TOTAL_FLOWERS = 5;
 
-const Q3_FlowerCount: React.FC<Props> = ({ question, onAnswer }) => {
+const Q3_FlowerCount: React.FC<Props> = ({ question, onAnswer, disabled }) => {
   const [selected, setSelected] = useState(0);
 
   const handleFlowerClick = (index: number) => {
+    if (disabled) return;
     // Toggle: clicking the last selected deselects it
     if (index + 1 === selected) {
       setSelected(index);
@@ -23,7 +25,7 @@ const Q3_FlowerCount: React.FC<Props> = ({ question, onAnswer }) => {
   };
 
   const handleConfirm = () => {
-    if (selected === 0) return;
+    if (selected === 0 || disabled) return;
     const expected = question.syllableCount ?? parseInt(String(question.correctAnswer), 10);
     onAnswer(selected === expected);
     setSelected(0);
@@ -57,6 +59,7 @@ const Q3_FlowerCount: React.FC<Props> = ({ question, onAnswer }) => {
             type="button"
             whileTap={{ scale: 0.85 }}
             onClick={() => handleFlowerClick(i)}
+            disabled={disabled}
             className={`text-4xl w-14 h-14 rounded-full flex items-center justify-center transition-all
               ${i < selected ? 'bg-pink-100 shadow-md' : 'bg-gray-100'}`}
           >
@@ -71,7 +74,7 @@ const Q3_FlowerCount: React.FC<Props> = ({ question, onAnswer }) => {
 
       <button
         onClick={handleConfirm}
-        disabled={selected === 0}
+        disabled={selected === 0 || disabled}
         className="btn-primary w-full"
       >
         تأیید

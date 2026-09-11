@@ -7,6 +7,7 @@ import { shuffleArray } from '../../lib/shuffle';
 interface Props {
   question: Question;
   onAnswer: (correct: boolean) => void;
+  disabled?: boolean;
 }
 
 interface SelectedPhoneme {
@@ -14,13 +15,14 @@ interface SelectedPhoneme {
   text: string;
 }
 
-const Q11_Phoneme: React.FC<Props> = ({ question, onAnswer }) => {
+const Q11_Phoneme: React.FC<Props> = ({ question, onAnswer, disabled }) => {
   const [selected, setSelected] = useState<SelectedPhoneme[]>([]);
   const [shuffledOptions] = useState(() => shuffleArray(question.options));
 
   const usedIds = new Set(selected.map((s) => s.id));
 
   const handleChipClick = (optId: string, text: string) => {
+    if (disabled) return;
     if (usedIds.has(optId)) {
       // Remove from sequence
       setSelected((prev) => prev.filter((s) => s.id !== optId));
@@ -31,7 +33,7 @@ const Q11_Phoneme: React.FC<Props> = ({ question, onAnswer }) => {
   };
 
   const handleConfirm = () => {
-    if (selected.length === 0) return;
+    if (selected.length === 0 || disabled) return;
     const selectedIds = selected.map((s) => s.id);
     const correct =
       Array.isArray(question.correctAnswer) &&
@@ -100,6 +102,7 @@ const Q11_Phoneme: React.FC<Props> = ({ question, onAnswer }) => {
               type="button"
               whileTap={{ scale: 0.88 }}
               onClick={() => handleChipClick(opt.id, opt.text ?? '')}
+              disabled={disabled}
               className={`w-14 h-14 rounded-2xl border-2 text-2xl font-bold shadow transition-all
                 ${isUsed
                   ? 'bg-violet-600 border-violet-600 text-white scale-105'
@@ -114,7 +117,7 @@ const Q11_Phoneme: React.FC<Props> = ({ question, onAnswer }) => {
 
       <button
         onClick={handleConfirm}
-        disabled={selected.length === 0}
+        disabled={selected.length === 0 || disabled}
         className="w-full btn-primary py-3"
       >
         تأیید
