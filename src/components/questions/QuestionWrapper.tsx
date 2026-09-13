@@ -56,17 +56,22 @@ const QuestionWrapper: React.FC<QuestionWrapperProps> = ({ question, onAnswer, d
   const typePrompt = QUESTION_TYPE_PROMPT[question.type];
   const displayText = typePrompt
     ?? (audioPictureTarget ? AUDIO_PICTURE_GENERIC_TEXT[audioPictureTarget.position] : question.questionText);
-  const audioUrl = question.questionAudioUrl;
+  // fill_blanks per-row question_audio_url can leak the answer (it may speak the full
+  // word), so never play it for that type — only the safe generic TTS button remains.
+  // Other typePrompt types (e.g. color_letter) use a shared, non-leaky recorded prompt
+  // and keep playing question.questionAudioUrl as before.
+  const audioUrl = question.type === 'fill_blanks' ? undefined : question.questionAudioUrl;
 
   return (
     <div className="flex flex-col gap-4 h-full">
-      {/* Question text + audio (question's own spoken prompt lives on the right,
-          consistently across every question type). */}
-      <div className="flex items-center gap-3 bg-white/80 rounded-2xl px-4 py-3 shadow-sm">
-        <p className="text-xl font-bold text-gray-800 flex-1">{displayText}</p>
+      {/* Question text + audio. Row is RTL to match the Persian content: source order
+          AudioButton, text, speak-button renders audio icon on the physical right edge,
+          text filling the middle, and the TTS speak button on the left. */}
+      <div className="flex items-center gap-3 bg-white/80 rounded-2xl px-4 py-3 shadow-sm" dir="rtl">
         {audioUrl && (
           <AudioButton audioUrl={audioUrl} size="md" />
         )}
+        <p className="text-xl font-bold text-gray-800 flex-1">{displayText}</p>
         <button
           onClick={() => speakText(displayText)}
           className="w-8 h-8 flex items-center justify-center rounded-full bg-violet-100 text-violet-600 flex-shrink-0 active:scale-90 transition-transform"

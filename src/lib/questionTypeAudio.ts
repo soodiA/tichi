@@ -10,4 +10,11 @@ import type { Question } from '../types';
 // before she's recorded real audio, and as the caption instead of the per-question text).
 export const QUESTION_TYPE_PROMPT: Partial<Record<Question['type'], string>> = {
   color_letter: 'این شکل را رنگ کن',
+  // fill_blanks ("find the missing letter") must NEVER play a per-row recorded
+  // question_audio_url — at least one existing row's recording speaks the full
+  // correct word aloud, which gives away the answer. Any future per-row recording
+  // for this type risks the same leak, so QuestionWrapper suppresses
+  // question.questionAudioUrl specifically for this type (see audioUrl there) and
+  // only offers the safe generic TTS reading of this prompt text.
+  fill_blanks: 'حرف گم‌شده را پیدا کن',
 };

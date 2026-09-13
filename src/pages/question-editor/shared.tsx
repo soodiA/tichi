@@ -5,8 +5,17 @@ import { getClipUrl } from '../../lib/clipAudio';
 import { uploadVersioned } from '../../lib/versionedUpload';
 import { pickRecordingMimeType, extFromMime } from '../../lib/recordingFormat';
 
-export async function uploadToStorage(prefix: string, file: Blob, ext: string): Promise<string> {
-  const path = `${prefix}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+// Shared media library: every image/audio uploaded through the editor lands in one
+// flat, kind-scoped folder (instead of a narrow per-question/option prefix) so
+// "browse existing files" can actually list everything of that kind, not just
+// files already attached to this exact field. See LIBRARY_PREFIX below.
+const LIBRARY_PREFIX: Record<'image' | 'audio', string> = {
+  image: 'library/images',
+  audio: 'library/audio',
+};
+
+export async function uploadToStorage(kind: 'image' | 'audio', file: Blob, ext: string): Promise<string> {
+  const path = `${LIBRARY_PREFIX[kind]}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const { error } = await supabase.storage.from('audio').upload(path, file, { upsert: true });
   if (error) throw error;
   return supabase.storage.from('audio').getPublicUrl(path).data.publicUrl;
@@ -61,17 +70,16 @@ async function listStorageFiles(bucket: string, prefix: string): Promise<Storage
 // user can reuse one instead of uploading a duplicate.
 const BrowseExistingModal: React.FC<{
   kind: 'image' | 'audio';
-  storagePrefix: string;
   onSelect: (url: string) => void;
   onClose: () => void;
-}> = ({ kind, storagePrefix, onSelect, onClose }) => {
+}> = ({ kind, onSelect, onClose }) => {
   const [files, setFiles] = useState<StorageFile[] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    listStorageFiles('audio', storagePrefix).then((f) => { if (!cancelled) setFiles(f); });
+    listStorageFiles('audio', LIBRARY_PREFIX[kind]).then((f) => { if (!cancelled) setFiles(f); });
     return () => { cancelled = true; };
-  }, [storagePrefix]);
+  }, [kind]);
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -106,7 +114,10 @@ const BrowseExistingModal: React.FC<{
 };
 
 // Upload-or-paste-URL widget for a single image, shared across all option/media image fields.
-export const ImageField: React.FC<{ value?: string; onChange: (url: string) => void; storagePrefix: string }> = ({ value, onChange, storagePrefix }) => {
+// `storagePrefix` is accepted for backward compatibility with existing call sites but is
+// no longer used for the upload/browse location — all images share one flat library folder
+// (see LIBRARY_PREFIX) so "browse existing" can find any image uploaded anywhere.
+export const ImageField: React.FC<{ value?: string; onChange: (url: string) => void; storagePrefix?: string }> = ({ value, onChange }) => {
   const [busy, setBusy] = useState(false);
   const [browsing, setBrowsing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -115,7 +126,7 @@ export const ImageField: React.FC<{ value?: string; onChange: (url: string) => v
     setBusy(true);
     try {
       const ext = file.name.split('.').pop() || 'png';
-      const url = await uploadToStorage(storagePrefix, file, ext);
+      const url = await uploadToStorage('image', file, ext);
       onChange(url);
     } catch (e) {
       alert(`خطا در آپلود عکس: ${(e as Error).message}`);
@@ -148,14 +159,15 @@ export const ImageField: React.FC<{ value?: string; onChange: (url: string) => v
         {busy ? '…' : '📷'}
       </button>
       {browsing && (
-        <BrowseExistingModal kind="image" storagePrefix={storagePrefix} onSelect={onChange} onClose={() => setBrowsing(false)} />
+        <BrowseExistingModal kind="image" onSelect={onChange} onClose={() => setBrowsing(false)} />
       )}
     </div>
   );
 };
 
-// Record-or-upload widget for a single audio clip.
-export const AudioField: React.FC<{ value?: string; onChange: (url: string) => void; storagePrefix: string }> = ({ value, onChange, storagePrefix }) => {
+// Record-or-upload widget for a single audio clip. `storagePrefix` is accepted for
+// backward compatibility but no longer used — see ImageField comment above.
+export const AudioField: React.FC<{ value?: string; onChange: (url: string) => void; storagePrefix?: string }> = ({ value, onChange }) => {
   const [busy, setBusy] = useState(false);
   const [recording, setRecording] = useState(false);
   const [browsing, setBrowsing] = useState(false);
@@ -166,7 +178,7 @@ export const AudioField: React.FC<{ value?: string; onChange: (url: string) => v
   const upload = async (blob: Blob, ext: string) => {
     setBusy(true);
     try {
-      const url = await uploadToStorage(storagePrefix, blob, ext);
+      const url = await uploadToStorage('audio', blob, ext);
       onChange(url);
     } catch (e) {
       alert(`خطا در آپلود صدا: ${(e as Error).message}`);
@@ -215,7 +227,7 @@ export const AudioField: React.FC<{ value?: string; onChange: (url: string) => v
         🗂
       </button>
       {browsing && (
-        <BrowseExistingModal kind="audio" storagePrefix={storagePrefix} onSelect={onChange} onClose={() => setBrowsing(false)} />
+        <BrowseExistingModal kind="audio" onSelect={onChange} onClose={() => setBrowsing(false)} />
       )}
     </div>
   );
