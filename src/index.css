@@ -76,6 +76,26 @@ body {
   }
   .audio-btn:active { transform: scale(0.9); }
 
+  /* Tappable letter/word "clip" pill (ClipButton) — no icon, just an
+     embossed/raised pill so it still reads as pressable. Reuses the same
+     violet-100/700 palette as option-card's default state, plus a
+     shadow-lg-weight drop shadow (matching btn-primary/option-card) with an
+     inset top highlight + inset bottom shading for the raised look. */
+  .clip-btn {
+    @apply bg-violet-100 text-violet-700 font-extrabold rounded-2xl cursor-pointer;
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, 0.8),
+      inset 0 -3px 4px rgba(124, 58, 237, 0.18),
+      0 3px 6px rgba(124, 58, 237, 0.18);
+    transition: transform 100ms, box-shadow 100ms;
+  }
+  .clip-btn:active {
+    transform: scale(0.95);
+    box-shadow:
+      inset 0 2px 4px rgba(124, 58, 237, 0.3),
+      0 1px 2px rgba(124, 58, 237, 0.15);
+  }
+
   /* Kill the native spinner/increment arrows on any numeric-style input */
   .no-spinner::-webkit-outer-spin-button,
   .no-spinner::-webkit-inner-spin-button {

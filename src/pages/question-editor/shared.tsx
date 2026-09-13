@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import type { Option } from '../../types';
 import { getClipUrl } from '../../lib/clipAudio';
 import { uploadVersioned } from '../../lib/versionedUpload';
+import { pickRecordingMimeType, extFromMime } from '../../lib/recordingFormat';
 
 export async function uploadToStorage(prefix: string, file: Blob, ext: string): Promise<string> {
   const path = `${prefix}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
@@ -176,14 +177,14 @@ export const AudioField: React.FC<{ value?: string; onChange: (url: string) => v
 
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
-    const mr = new MediaRecorder(stream, { mimeType });
+    const { mimeType } = pickRecordingMimeType();
+    const mr = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
     chunksRef.current = [];
     mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
     mr.onstop = () => {
       stream.getTracks().forEach(t => t.stop());
       const blob = new Blob(chunksRef.current, { type: mr.mimeType });
-      upload(blob, blob.type.includes('webm') ? 'webm' : 'ogg');
+      upload(blob, extFromMime(blob.type));
     };
     mr.start();
     mrRef.current = mr;
@@ -252,8 +253,8 @@ export const ClipField: React.FC<{ folder: 'words' | 'letters'; textKey: string 
 
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
-    const mr = new MediaRecorder(stream, { mimeType });
+    const { mimeType } = pickRecordingMimeType();
+    const mr = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
     chunksRef.current = [];
     mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
     mr.onstop = () => {

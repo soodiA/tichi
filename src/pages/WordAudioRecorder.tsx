@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { uploadVersioned, latestByKey } from '../lib/versionedUpload';
+import { pickRecordingMimeType } from '../lib/recordingFormat';
 
 // The 32 letters of the Persian alphabet, standalone (not letter+vowel combos —
 // see RecordCombos.tsx for those).
@@ -77,8 +78,8 @@ const WordAudioRecorder: React.FC = () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
-      const mr = new MediaRecorder(stream, { mimeType });
+      const { mimeType } = pickRecordingMimeType();
+      const mr = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       chunks.current = [];
       mr.ondataavailable = (e) => { if (e.data.size > 0) chunks.current.push(e.data); };
       mr.start();

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Question } from '../../types';
-import AudioButton from '../ui/AudioButton';
+import ClipButton from '../ui/ClipButton';
 
 interface Props {
   question: Question;
@@ -21,25 +21,24 @@ const Q2_SyllableCount: React.FC<Props> = ({ question, onAnswer, disabled }) => 
 
   return (
     <div className="flex flex-col items-center gap-6">
-      {/* Image + label */}
-      {question.mediaImageUrl && (
+      {/* Image + tappable word (plays the word's recorded clip, falling back to TTS) */}
+      {(question.mediaImageUrl || question.mediaLabel) && (
         <div className="flex flex-col items-center gap-2">
-          <div className="relative w-40 h-40">
-            <img
-              src={question.mediaImageUrl}
-              alt={question.mediaLabel ?? ''}
-              className="w-40 h-40 object-contain rounded-2xl"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            {question.mediaAudioUrl && <AudioButton audioUrl={question.mediaAudioUrl} size="sm" />}
-            {question.mediaLabel && (
-              <span className="text-2xl font-bold text-gray-700">{question.mediaLabel}</span>
-            )}
-          </div>
+          {question.mediaImageUrl && (
+            <div className="relative w-40 h-40">
+              <img
+                src={question.mediaImageUrl}
+                alt={question.mediaLabel ?? ''}
+                className="w-40 h-40 object-contain rounded-2xl"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
+          {question.mediaLabel && (
+            <ClipButton folder="words" text={question.mediaLabel} size="md" />
+          )}
         </div>
       )}
 

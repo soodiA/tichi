@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { extFromMime } from './recordingFormat';
 
 // The anon key can INSERT new objects into the `audio` bucket but cannot
 // UPDATE (upsert) or DELETE existing ones (Storage RLS only grants insert) —
@@ -36,7 +37,7 @@ export async function uploadVersioned(
   key: string,
   blob: Blob
 ): Promise<{ url?: string; error?: string }> {
-  const ext = blob.type.includes('webm') ? 'webm' : 'ogg';
+  const ext = extFromMime(blob.type);
   const path = versionedPath(folder, key, ext);
   const { error } = await supabase.storage.from('audio').upload(path, blob);
   if (error) return { error: error.message };
