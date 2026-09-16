@@ -39,10 +39,14 @@ function toQuestion(r: RawQuestion): Question & { nodeId: string } {
     options = options.filter((o: any) => o.id !== '__template__');
   }
 
-  // Parse correctAnswer as string[] if stored as JSON array (phoneme, arrange)
+  // Parse correctAnswer as string[] if stored as JSON array (phoneme, arrange).
+  // Trim first — a leading/trailing space (e.g. from manual DB edits) used to
+  // make the startsWith('[') check miss the array and silently fall back to
+  // treating it as a single-id string, breaking those question types.
   let correctAnswer: string | string[] = r.correct_answer;
-  if (typeof r.correct_answer === 'string' && r.correct_answer.startsWith('[')) {
-    try { correctAnswer = JSON.parse(r.correct_answer); } catch {}
+  const trimmed = typeof r.correct_answer === 'string' ? r.correct_answer.trim() : '';
+  if (trimmed.startsWith('[')) {
+    try { correctAnswer = JSON.parse(trimmed); } catch {}
   }
 
   return {

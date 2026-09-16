@@ -34,11 +34,18 @@ const Q11_Phoneme: React.FC<Props> = ({ question, onAnswer, disabled }) => {
 
   const handleConfirm = () => {
     if (selected.length === 0 || disabled) return;
-    const selectedIds = selected.map((s) => s.id);
+    // Compare the resulting letter/sound SEQUENCE (by text), not the specific
+    // tile ids: when a letter repeats in the word (e.g. "بابا" has ب twice
+    // and ا twice), there are multiple option tiles sharing the same text but
+    // different ids. Which physical duplicate tile the user taps for a given
+    // position must not matter — only the sequence of texts it produces.
+    const optionTextById = new Map(question.options.map((o) => [o.id, o.text ?? '']));
+    const selectedTexts = selected.map((s) => s.text);
+    const correctIds = Array.isArray(question.correctAnswer) ? question.correctAnswer : [];
+    const correctTexts = correctIds.map((id) => optionTextById.get(id) ?? '');
     const correct =
-      Array.isArray(question.correctAnswer) &&
-      selectedIds.length === question.correctAnswer.length &&
-      selectedIds.every((id, i) => id === (question.correctAnswer as string[])[i]);
+      selectedTexts.length === correctTexts.length &&
+      selectedTexts.every((text, i) => text === correctTexts[i]);
     onAnswer(correct);
     setSelected([]);
   };

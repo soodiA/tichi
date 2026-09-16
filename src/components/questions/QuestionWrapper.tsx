@@ -24,6 +24,12 @@ interface QuestionWrapperProps {
   disabled?: boolean;
 }
 
+const KNOWN_TYPES = new Set([
+  'audio_picture', 'syllable_count', 'flower_count', 'fill_blanks', 'record',
+  'handwriting', 'audio_options', 'sentence_complete', 'arrange', 'phoneme',
+  'sound_to_text', 'color_letter', 'pair_match', 'similar_letters', 'middle_blank',
+]);
+
 const Unsupported: React.FC<{ type: string; onAnswer: (c: boolean) => void }> = ({ type, onAnswer }) => (
   <div className="flex flex-col items-center justify-center gap-4 py-10">
     <p className="text-gray-400 text-sm">نوع سوال «{type}» هنوز پشتیبانی نمی‌شود</p>
@@ -131,6 +137,15 @@ const QuestionWrapper: React.FC<QuestionWrapperProps> = ({ question, onAnswer, d
       )}
       {(question.type === 'similar_letters' ||
         question.type === 'middle_blank') && (
+        <Unsupported type={question.type} onAnswer={onAnswer} />
+      )}
+      {/* Fallback for any question type that doesn't match a known case above
+          (e.g. a typo'd/renamed type value in the data, or a new type not yet
+          wired here). Without this, such a question rendered nothing at all —
+          it silently vanished from the lesson instead of surfacing the
+          problem — which is what happened to an "arrange" (sentence
+          unscramble) question that had a mismatched type value in the data. */}
+      {!KNOWN_TYPES.has(question.type) && (
         <Unsupported type={question.type} onAnswer={onAnswer} />
       )}
     </div>

@@ -100,11 +100,14 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer, disabled }) => {
       <div className="flex gap-3 flex-wrap justify-center items-center" dir="rtl">
         {template.map((cell, i) => {
           if (cell !== null) {
+            // Fixed/given letters are NOT interactive — render as plain text
+            // (no border/shadow/button chrome) so they're clearly distinct
+            // from the tappable option buttons below.
             return (
               <div
                 key={i}
-                className="w-14 h-14 rounded-xl bg-white flex items-center justify-center
-                           text-3xl font-bold text-gray-800 border-2 border-gray-200 shadow-sm"
+                className="w-14 h-14 flex items-center justify-center
+                           text-3xl font-bold text-gray-500"
               >
                 {cell}
               </div>
@@ -143,7 +146,7 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer, disabled }) => {
             className={`w-14 h-14 rounded-2xl text-2xl font-bold border-2 transition-all
               ${usedOptions.has(opt.id)
                 ? 'bg-gray-100 border-gray-200 text-gray-300 cursor-not-allowed'
-                : 'bg-white border-violet-300 text-gray-700 shadow active:scale-90'
+                : 'bg-violet-500 border-violet-600 text-white shadow active:scale-90'
               }`}
           >
             {opt.text}
