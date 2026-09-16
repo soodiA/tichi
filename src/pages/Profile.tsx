@@ -29,7 +29,7 @@ const Profile: React.FC = () => {
       await db.profiles.delete(currentUser.id).catch(() => {});
     }
     setCurrentUser(null);
-    navigate('/onboarding');
+    navigate('/login');
   };
 
   if (!currentUser) {
