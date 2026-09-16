@@ -28,17 +28,34 @@ export async function syncProfileToCloud(profile: UserProfile): Promise<void> {
     last_active_date: profile.lastActiveDate,
     total_score: profile.totalScore,
     joined_at: profile.joinedAt,
-    // `profiles.username` (not `id`) carries the real UNIQUE constraint that
-    // production is hitting: whenever the browser ends up with a fresh
-    // anonymous auth id (session/local-storage cleared or expired) but the
-    // same locally-stored `username`, an onConflict:'id' upsert can't see
-    // that a row already exists — it isn't a PK conflict, so Postgres tries
-    // a plain INSERT and 23505s on the username unique index instead.
-    // Targeting the column that actually enforces uniqueness lets Postgres
-    // update the existing row (re-pointing it at the current auth id)
-    // instead of attempting a doomed second insert.
-  }, { onConflict: 'username' });
-  if (error) console.error('[sync] syncProfileToCloud upsert failed', error);
+    // `id` is the PK and the column the `profiles` RLS policies key off of
+    // (`USING (auth.uid() = id)`). With `persistSession: true` (see
+    // src/lib/supabase.ts) a given browser/device keeps the same
+    // `auth.uid()` across reloads, so `id` reliably matches the existing
+    // row for that device and this upsert hits the UPDATE path RLS allows.
+    //
+    // The previous `onConflict: 'username'` change "fixed" a 23505 by
+    // matching on username instead, but that path updates a row identified
+    // by a column RLS does NOT check ownership against, so Postgres/RLS
+    // rejects it with 42501 (403) whenever the existing row's `id` isn't
+    // the caller's current uid. Reverting to `id` — plus fixing session
+    // persistence so the uid doesn't churn — removes the mismatch instead
+    // of fighting RLS with a different conflict target.
+  }, { onConflict: 'id' });
+  if (error) {
+    if (error.code === '23505') {
+      // Genuine cross-device/reinstall collision: this username is already
+      // owned by a different auth.uid() than the current browser has. We
+      // cannot silently reassign ownership from the client (that would be
+      // a takeover), so log and skip rather than crash the sync loop.
+      console.error(
+        '[sync] syncProfileToCloud: username already claimed by another device/session',
+        error
+      );
+    } else {
+      console.error('[sync] syncProfileToCloud upsert failed', error);
+    }
+  }
 }
 
 export async function syncProgressToCloud(progress: NodeProgress): Promise<void> {
