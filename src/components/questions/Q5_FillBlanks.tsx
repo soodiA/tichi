@@ -100,14 +100,11 @@ const Q5_FillBlanks: React.FC<Props> = ({ question, onAnswer, disabled }) => {
       <div className="flex gap-3 flex-wrap justify-center items-center" dir="rtl">
         {template.map((cell, i) => {
           if (cell !== null) {
-            // Fixed/given letters are NOT interactive — render as plain text
-            // (no border/shadow/button chrome) so they're clearly distinct
-            // from the tappable option buttons below.
             return (
               <div
                 key={i}
-                className="w-14 h-14 flex items-center justify-center
-                           text-3xl font-bold text-gray-500"
+                className="w-14 h-14 rounded-xl bg-white flex items-center justify-center
+                           text-3xl font-bold text-gray-800 border-2 border-gray-200 shadow-sm"
               >
                 {cell}
               </div>
