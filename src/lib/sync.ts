@@ -125,12 +125,11 @@ export async function findProfileByUsername(username: string): Promise<{
   passwordHash: string | null;
 } | null> {
   const { data, error } = await supabase
-    .from('profiles')
-    .select('id, password_hash')
-    .eq('username', username.trim())
+    .rpc('get_login_profile', { p_username: username.trim() })
     .maybeSingle();
   if (error || !data) return null;
-  return { id: data.id, passwordHash: data.password_hash ?? null };
+  const row = data as { id: string; password_hash: string | null };
+  return { id: row.id, passwordHash: row.password_hash ?? null };
 }
 
 /**
