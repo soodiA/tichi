@@ -28,7 +28,16 @@ export async function syncProfileToCloud(profile: UserProfile): Promise<void> {
     last_active_date: profile.lastActiveDate,
     total_score: profile.totalScore,
     joined_at: profile.joinedAt,
-  }, { onConflict: 'id' });
+    // `profiles.username` (not `id`) carries the real UNIQUE constraint that
+    // production is hitting: whenever the browser ends up with a fresh
+    // anonymous auth id (session/local-storage cleared or expired) but the
+    // same locally-stored `username`, an onConflict:'id' upsert can't see
+    // that a row already exists — it isn't a PK conflict, so Postgres tries
+    // a plain INSERT and 23505s on the username unique index instead.
+    // Targeting the column that actually enforces uniqueness lets Postgres
+    // update the existing row (re-pointing it at the current auth id)
+    // instead of attempting a doomed second insert.
+  }, { onConflict: 'username' });
   if (error) console.error('[sync] syncProfileToCloud upsert failed', error);
 }
 
