@@ -79,12 +79,22 @@ export async function loadCurriculum(): Promise<Unit[]> {
 async function loadCurriculumUnfiltered(): Promise<Unit[]> {
   if (navigator.onLine) {
     try {
-      const [{ data: rawUnits }, { data: rawNodes }, { data: rawQuestions }] =
-        await Promise.all([
-          supabase.from('units').select('*').order('ord'),
-          supabase.from('nodes').select('*').order('ord'),
-          supabase.from('questions').select('*').order('ord'),
-        ]);
+      const [
+        { data: rawUnits, error: unitsError },
+        { data: rawNodes, error: nodesError },
+        { data: rawQuestions, error: questionsError },
+      ] = await Promise.all([
+        supabase.from('units').select('*').order('ord'),
+        supabase.from('nodes').select('*').order('ord'),
+        // Explicit .range() to avoid PostgREST's default 1000-row cap silently
+        // truncating the question set as more get added via the editor —
+        // without it, rows past the cap never reach the app or the Dexie cache.
+        supabase.from('questions').select('*').order('ord').range(0, 19999),
+      ]);
+
+      if (unitsError) console.error('[curriculum] units fetch failed', unitsError);
+      if (nodesError) console.error('[curriculum] nodes fetch failed', nodesError);
+      if (questionsError) console.error('[curriculum] questions fetch failed', questionsError);
 
       if (rawUnits && rawNodes && rawQuestions) {
         const questions = (rawQuestions as RawQuestion[]).map(toQuestion);
@@ -118,8 +128,11 @@ async function loadCurriculumUnfiltered(): Promise<Unit[]> {
 
         return units;
       }
-    } catch {
-      // fall through to local cache
+    } catch (e) {
+      // fall through to local (possibly stale) cache, but don't swallow the
+      // failure silently — this is the same "silent .catch()" class of bug
+      // already found and fixed for profile/friends sync (see src/lib/sync.ts).
+      console.error('[curriculum] live fetch threw, falling back to cached data', e);
     }
   }
 
