@@ -1,11 +1,30 @@
 import { supabase } from './supabase';
 import type { UserProfile, NodeProgress } from '../types';
 
-export async function ensureAnonSession() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    await supabase.auth.signInAnonymously();
+// Concurrent callers (e.g. React 18 StrictMode double-invoking the mount
+// effect, or two sync* calls firing back-to-back before the first resolves)
+// must not race independent `getSession()` checks: both see no session yet
+// and each calls `signInAnonymously()`, minting two different auth.uid()s
+// for the same browser/device. The second write wins in localStorage, so
+// data already upserted under the first uid is orphaned — this is the
+// actual "new identity every refresh" bug, fully reproducible in dev where
+// StrictMode always double-fires the effect. Memoizing the in-flight
+// promise makes every caller await the *same* check-then-signIn instead of
+// each starting their own.
+let anonSessionPromise: Promise<void> | null = null;
+
+export async function ensureAnonSession(): Promise<void> {
+  if (!anonSessionPromise) {
+    anonSessionPromise = (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        await supabase.auth.signInAnonymously();
+      }
+    })().finally(() => {
+      anonSessionPromise = null;
+    });
   }
+  return anonSessionPromise;
 }
 
 export async function syncProfileToCloud(profile: UserProfile): Promise<void> {
