@@ -152,36 +152,57 @@ export async function findProfileByUsername(username: string): Promise<{
  * `auth.uid()` — see the note there about cross-device username collisions.
  */
 export async function pullProfileAndProgressFromCloud(profileId: string): Promise<UserProfile | null> {
+  // A direct `.from('profiles').select(...)` here is blocked by RLS: this
+  // browser's anon `auth.uid()` (from ensureAnonSession) is NOT the same as
+  // `profileId` (the row's original owner uid) by design on login from a
+  // new/different device — see the note above this function. RLS silently
+  // returns zero rows (not an error) in that case, which used to surface as
+  // the generic "مشکلی در دریافت اطلاعات" error on every cross-device
+  // login. Use the SECURITY DEFINER RPC (bypasses RLS, but only exposes the
+  // columns we select in the function body) instead of a raw table read.
   const { data: row, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', profileId)
+    .rpc('get_login_profile_full', { p_id: profileId })
     .maybeSingle();
   if (error || !row) {
     console.error('[sync] pullProfileAndProgressFromCloud: profile fetch failed', error);
     return null;
   }
 
+  const profileRow = row as {
+    id: string;
+    name: string;
+    username: string;
+    dob: string | null;
+    avatar_url: string | null;
+    joined_at: string;
+    diamonds: number | null;
+    streak_days: number | null;
+    last_active_date: string | null;
+    total_score: number | null;
+    password_hash: string | null;
+  };
+
   const profile: UserProfile = {
-    id: row.id,
-    name: row.name,
-    username: row.username,
-    birthDate: row.dob ?? undefined,
-    avatarUrl: row.avatar_url ?? undefined,
-    joinedAt: row.joined_at,
-    diamonds: row.diamonds ?? 0,
-    streakDays: row.streak_days ?? 0,
-    lastActiveDate: row.last_active_date ?? undefined,
-    totalScore: row.total_score ?? 0,
-    passwordHash: row.password_hash ?? undefined,
+    id: profileRow.id,
+    name: profileRow.name,
+    username: profileRow.username,
+    birthDate: profileRow.dob ?? undefined,
+    avatarUrl: profileRow.avatar_url ?? undefined,
+    joinedAt: profileRow.joined_at,
+    diamonds: profileRow.diamonds ?? 0,
+    streakDays: profileRow.streak_days ?? 0,
+    lastActiveDate: profileRow.last_active_date ?? undefined,
+    totalScore: profileRow.total_score ?? 0,
+    passwordHash: profileRow.password_hash ?? undefined,
   };
 
   await db.profiles.put(profile);
 
+  // Same RLS problem as the profile row above: node_progress is keyed by
+  // `user_id = auth.uid()`, which this browser's anon session doesn't match
+  // for a cross-device login. Use the SECURITY DEFINER RPC instead.
   const { data: progressRows, error: progressError } = await supabase
-    .from('node_progress')
-    .select('*')
-    .eq('user_id', profileId);
+    .rpc('get_node_progress_by_user', { p_user_id: profileId });
   if (progressError) {
     console.error('[sync] pullProfileAndProgressFromCloud: progress fetch failed', progressError);
   } else if (progressRows) {
