@@ -12,6 +12,7 @@ const Login: React.FC = () => {
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -88,6 +89,7 @@ const Login: React.FC = () => {
               className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg
                          focus:outline-none focus:border-violet-500 transition-colors"
               dir="ltr"
+              autoComplete="username"
             />
           </div>
 
@@ -95,15 +97,26 @@ const Login: React.FC = () => {
             <label className="block text-gray-700 font-bold mb-1 text-sm">
               رمز عبور <span className="text-red-400">*</span>
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="رمز عبورت"
-              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg
-                         focus:outline-none focus:border-violet-500 transition-colors"
-              dir="ltr"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="رمز عبورت"
+                className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 pl-11 text-lg
+                           focus:outline-none focus:border-violet-500 transition-colors"
+                dir="ltr"
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'مخفی کردن رمز عبور' : 'نمایش رمز عبور'}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-xl text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
           </div>
 
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}

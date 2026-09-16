@@ -19,6 +19,7 @@ const Onboarding: React.FC = () => {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [birthDate, setBirthDate] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(AVATARS[0]);
   const [errors, setErrors] = useState<{ name?: string; username?: string; password?: string }>({});
@@ -130,6 +131,7 @@ const Onboarding: React.FC = () => {
               placeholder="مثلاً: علی"
               className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg
                          focus:outline-none focus:border-violet-500 transition-colors"
+              autoComplete="off"
             />
             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
           </div>
@@ -147,6 +149,7 @@ const Onboarding: React.FC = () => {
               className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg
                          focus:outline-none focus:border-violet-500 transition-colors"
               dir="ltr"
+              autoComplete="off"
             />
             {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
           </div>
@@ -156,15 +159,26 @@ const Onboarding: React.FC = () => {
             <label className="block text-gray-700 font-bold mb-1 text-sm">
               رمز عبور <span className="text-red-400">*</span>
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="یک رمز عبور انتخاب کن"
-              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg
-                         focus:outline-none focus:border-violet-500 transition-colors"
-              dir="ltr"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="یک رمز عبور انتخاب کن"
+                className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 pl-11 text-lg
+                           focus:outline-none focus:border-violet-500 transition-colors"
+                dir="ltr"
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'مخفی کردن رمز عبور' : 'نمایش رمز عبور'}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-xl text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
             {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
           </div>
 
