@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import Splash from './pages/Splash';
 import Onboarding from './pages/Onboarding';
+import Login from './pages/Login';
 import Home from './pages/Home';
 import Lesson from './pages/Lesson';
 import LessonComplete from './pages/LessonComplete';
@@ -116,6 +117,7 @@ const App: React.FC = () => {
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<Splash />} />
           <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/home" element={<Home />} />
           <Route path="/lesson/:nodeId" element={<Lesson />} />
           <Route path="/lesson-complete" element={<LessonComplete />} />

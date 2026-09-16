@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { db } from '../db/db';
 import type { UserProfile, NodeProgress } from '../types';
 
 // Concurrent callers (e.g. React 18 StrictMode double-invoking the mount
@@ -47,6 +48,7 @@ export async function syncProfileToCloud(profile: UserProfile): Promise<void> {
     last_active_date: profile.lastActiveDate,
     total_score: profile.totalScore,
     joined_at: profile.joinedAt,
+    password_hash: profile.passwordHash ?? null,
     // `id` is the PK and the column the `profiles` RLS policies key off of
     // (`USING (auth.uid() = id)`). With `persistSession: true` (see
     // src/lib/supabase.ts) a given browser/device keeps the same
@@ -110,4 +112,93 @@ export async function recordQuestionResult(
     p_question_type: questionType,
     p_correct: correct,
   });
+}
+
+/**
+ * Look up a cloud profile row by username (for the login flow). Returns
+ * null if not found or if offline/unreachable. Does NOT require an auth
+ * session — `profiles` select-by-username must be readable pre-auth for
+ * login to work (same as the uniqueness check in Onboarding).
+ */
+export async function findProfileByUsername(username: string): Promise<{
+  id: string;
+  passwordHash: string | null;
+} | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, password_hash')
+    .eq('username', username.trim())
+    .maybeSingle();
+  if (error || !data) return null;
+  return { id: data.id, passwordHash: data.password_hash ?? null };
+}
+
+/**
+ * Re-associate this browser/device with an EXISTING cloud profile after a
+ * successful username+password login, pulling that profile's data (and its
+ * lesson progress) down into local Dexie so the rest of the app reads the
+ * right data. This does not create a new `profiles` row — it reads the
+ * existing one by id and mirrors it locally.
+ *
+ * `ensureAnonSession()` still mints/reuses an anonymous `auth.uid()` for
+ * this browser. That uid will generally NOT equal the profile's original
+ * `id` (which belonged to whatever browser/device signed up). We keep the
+ * cloud row's original `id` as the local profile id (so existing
+ * `node_progress` rows — keyed by that id — resolve correctly), and we
+ * additionally upsert the cloud `profiles` row's `id` to point at this
+ * browser's current uid is intentionally NOT done, because RLS keys
+ * ownership off of `id = auth.uid()`; instead we simply pull data down
+ * read-only under the row's original id for local use. Future syncs from
+ * this browser will go through `syncProfileToCloud`, which writes under
+ * `auth.uid()` — see the note there about cross-device username collisions.
+ */
+export async function pullProfileAndProgressFromCloud(profileId: string): Promise<UserProfile | null> {
+  const { data: row, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', profileId)
+    .maybeSingle();
+  if (error || !row) {
+    console.error('[sync] pullProfileAndProgressFromCloud: profile fetch failed', error);
+    return null;
+  }
+
+  const profile: UserProfile = {
+    id: row.id,
+    name: row.name,
+    username: row.username,
+    birthDate: row.dob ?? undefined,
+    avatarUrl: row.avatar_url ?? undefined,
+    joinedAt: row.joined_at,
+    diamonds: row.diamonds ?? 0,
+    streakDays: row.streak_days ?? 0,
+    lastActiveDate: row.last_active_date ?? undefined,
+    totalScore: row.total_score ?? 0,
+    passwordHash: row.password_hash ?? undefined,
+  };
+
+  await db.profiles.put(profile);
+
+  const { data: progressRows, error: progressError } = await supabase
+    .from('node_progress')
+    .select('*')
+    .eq('user_id', profileId);
+  if (progressError) {
+    console.error('[sync] pullProfileAndProgressFromCloud: progress fetch failed', progressError);
+  } else if (progressRows) {
+    for (const p of progressRows) {
+      const progress: NodeProgress = {
+        nodeId: p.node_id,
+        userId: profileId,
+        completed: p.completed,
+        stars: p.stars ?? 0,
+        accuracy: p.best_accuracy ?? 0,
+        completedAt: p.last_played_at ?? undefined,
+        attempts: p.attempts ?? 0,
+      };
+      await db.progress.put(progress);
+    }
+  }
+
+  return profile;
 }

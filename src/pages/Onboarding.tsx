@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { db } from '../db/db';
 import { syncProfileToCloud } from '../lib/sync';
 import { supabase } from '../lib/supabase';
+import { hashPassword } from '../lib/password';
 import type { UserProfile } from '../types';
 import JalaliDatePicker from '../components/ui/JalaliDatePicker';
 import Mascot from '../components/ui/Mascot';
@@ -17,15 +18,17 @@ const Onboarding: React.FC = () => {
 
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(AVATARS[0]);
-  const [errors, setErrors] = useState<{ name?: string; username?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; username?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
 
   const validate = () => {
-    const errs: { name?: string; username?: string } = {};
+    const errs: { name?: string; username?: string; password?: string } = {};
     if (!name.trim()) errs.name = 'نام الزامی است';
     if (!username.trim()) errs.username = 'نام کاربری الزامی است';
+    if (!password || password.length < 4) errs.password = 'رمز عبور باید حداقل ۴ کاراکتر باشه';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -56,6 +59,7 @@ const Onboarding: React.FC = () => {
         }
       }
 
+      const passwordHash = await hashPassword(password);
       const profile: UserProfile = {
         id: crypto.randomUUID(),
         name: name.trim(),
@@ -67,6 +71,7 @@ const Onboarding: React.FC = () => {
         streakDays: 0,
         lastActiveDate: undefined,
         totalScore: 0,
+        passwordHash,
       };
       await db.profiles.add(profile);
       setCurrentUser(profile);
@@ -146,6 +151,23 @@ const Onboarding: React.FC = () => {
             {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
           </div>
 
+          {/* Password */}
+          <div>
+            <label className="block text-gray-700 font-bold mb-1 text-sm">
+              رمز عبور <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="یک رمز عبور انتخاب کن"
+              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg
+                         focus:outline-none focus:border-violet-500 transition-colors"
+              dir="ltr"
+            />
+            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+          </div>
+
           {/* Birth date */}
           <div>
             <label className="block text-gray-700 font-bold mb-1 text-sm">تاریخ تولد (اختیاری)</label>
@@ -160,6 +182,13 @@ const Onboarding: React.FC = () => {
           >
             {loading ? 'در حال ذخیره...' : 'بزن بریم! 🚀'}
           </motion.button>
+
+          <Link
+            to="/login"
+            className="text-center text-violet-600 font-bold text-sm mt-1 hover:underline"
+          >
+            قبلاً ثبت‌نام کرده‌ام / ورود
+          </Link>
         </form>
       </motion.div>
     </div>

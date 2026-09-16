@@ -68,6 +68,8 @@ export interface UserProfile {
   streakDays: number;
   lastActiveDate?: string;
   totalScore: number;
+  /** "salt:sha256hash" — see src/lib/password.ts. Absent on rows created before login support. */
+  passwordHash?: string;
 }
 
 export interface Friend {
