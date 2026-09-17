@@ -124,8 +124,11 @@ export async function findProfileByUsername(username: string): Promise<{
   id: string;
   passwordHash: string | null;
 } | null> {
+  // Normalize to lowercase on the client too (usernames are now stored
+  // lowercase, and the RPC itself also lower()s both sides — see the SQL
+  // migration notes — so this is defense in depth, not the only guard).
   const { data, error } = await supabase
-    .rpc('get_login_profile', { p_username: username.trim() })
+    .rpc('get_login_profile', { p_username: username.trim().toLowerCase() })
     .maybeSingle();
   if (error || !data) return null;
   const row = data as { id: string; password_hash: string | null };
@@ -221,4 +224,40 @@ export async function pullProfileAndProgressFromCloud(profileId: string): Promis
   }
 
   return profile;
+}
+
+/**
+ * Search public profiles by username substring for the Friends "find by
+ * username" feature. A direct `.from('profiles').select(...)` here hits the
+ * same `USING (auth.uid() = id)` RLS policy that blocked login lookups
+ * before `get_login_profile` was introduced above — RLS silently returns
+ * zero rows for any profile that isn't the caller's own, so friend search
+ * for anyone else's username always came back empty. Use a SECURITY
+ * DEFINER RPC that exposes only the public-safe columns needed for a
+ * friend-search result (no password_hash, diamonds are already
+ * intentionally shown elsewhere in-app so kept here too).
+ */
+export async function searchProfilesByUsername(query: string): Promise<Array<{
+  id: string;
+  name: string;
+  username: string;
+  avatar_url: string | null;
+  diamonds: number;
+}>> {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const { data, error } = await supabase.rpc('find_profile_by_username_public', {
+    p_query: q,
+  });
+  if (error || !data) {
+    console.error('[sync] searchProfilesByUsername failed', error);
+    return [];
+  }
+  return data as Array<{
+    id: string;
+    name: string;
+    username: string;
+    avatar_url: string | null;
+    diamonds: number;
+  }>;
 }

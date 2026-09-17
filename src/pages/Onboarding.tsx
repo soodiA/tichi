@@ -39,12 +39,21 @@ const Onboarding: React.FC = () => {
     if (!validate()) return;
     setLoading(true);
     try {
+      // Usernames are normalized to lowercase at write time so lookups are
+      // effectively case-insensitive without needing `ilike`/`lower()` in
+      // every query. The uniqueness check below still uses a case-insensitive
+      // comparison (`ilike` / Dexie `equalsIgnoreCase`) to also catch
+      // legacy rows created before this normalization that may still have
+      // mixed-case usernames stored (e.g. an existing "Saman" row would
+      // otherwise not collide with a new "saman" signup).
+      const normalizedUsername = username.trim().toLowerCase();
+
       // Check username uniqueness in Supabase
       if (navigator.onLine) {
         const { data } = await supabase
           .from('profiles')
           .select('id')
-          .eq('username', username.trim())
+          .ilike('username', normalizedUsername)
           .maybeSingle();
         if (data) {
           setErrors({ username: 'این نام کاربری قبلاً گرفته شده' });
@@ -52,7 +61,7 @@ const Onboarding: React.FC = () => {
           return;
         }
       } else {
-        const existing = await db.profiles.where('username').equals(username.trim()).first();
+        const existing = await db.profiles.where('username').equalsIgnoreCase(normalizedUsername).first();
         if (existing) {
           setErrors({ username: 'این نام کاربری قبلاً گرفته شده' });
           setLoading(false);
@@ -64,7 +73,7 @@ const Onboarding: React.FC = () => {
       const profile: UserProfile = {
         id: crypto.randomUUID(),
         name: name.trim(),
-        username: username.trim(),
+        username: normalizedUsername,
         birthDate: birthDate || undefined,
         avatarUrl: selectedAvatar,
         joinedAt: new Date().toISOString(),
