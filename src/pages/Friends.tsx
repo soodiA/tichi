@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
+import { searchProfilesByUsername } from '../lib/sync';
 import PageBg from '../components/ui/PageBg';
 
 interface Profile {
@@ -117,29 +118,12 @@ const Friends: React.FC = () => {
     setSearchDone(true);
     setResults([]);
 
-    // Search by username (unique identifier)
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    const selfId = authUser?.id;
-
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, name, username, avatar_url, diamonds')
-      .ilike('username', `%${q}%`)
-      .neq(selfId ? 'id' : 'local_id', selfId ?? currentUser.id)
-      .limit(20);
-
-    if (error) {
-      // Fallback: try name too
-      const { data: data2 } = await supabase
-        .from('profiles')
-        .select('id, name, username, avatar_url, diamonds')
-        .ilike('name', `%${q}%`)
-        .neq(selfId ? 'id' : 'local_id', selfId ?? currentUser.id)
-        .limit(20);
-      setResults((data2 as Profile[]) ?? []);
-    } else {
-      setResults((data as Profile[]) ?? []);
-    }
+    // Search by username via a SECURITY DEFINER RPC: a direct
+    // `.from('profiles').select(...)` is blocked by RLS (`auth.uid() = id`)
+    // for any profile that isn't the current user's own row, so this never
+    // found other users. See `searchProfilesByUsername` in src/lib/sync.ts.
+    const data = await searchProfilesByUsername(q);
+    setResults((data as Profile[]).filter((p) => p.id !== currentUser.id));
     setLoading(false);
   }, [search, currentUser]);
 
