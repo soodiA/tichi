@@ -72,6 +72,13 @@ function applyDemoLimit(units: Unit[]): Unit[] {
   return units.filter((u) => u.order <= DEMO_MAX_UNIT_ORD);
 }
 
+// Soodeh has repeatedly reported "missing" questions that turned out to be a stale
+// IndexedDB cache being served silently (live fetch failing/never attempted, e.g.
+// flaky connectivity) — there was no way for her to tell she was looking at old data.
+// This flag lets the UI show a visible indicator whenever that fallback happens, so
+// the next report can confirm/rule out this cause immediately instead of guessing.
+export let lastLoadWasFromCache = false;
+
 export async function loadCurriculum(): Promise<Unit[]> {
   return applyDemoLimit(await loadCurriculumUnfiltered());
 }
@@ -126,6 +133,7 @@ async function loadCurriculumUnfiltered(): Promise<Unit[]> {
           await db.questions.bulkPut(questions);
         });
 
+        lastLoadWasFromCache = false;
         return units;
       }
     } catch (e) {
@@ -136,6 +144,7 @@ async function loadCurriculumUnfiltered(): Promise<Unit[]> {
     }
   }
 
+  lastLoadWasFromCache = true;
   const cachedUnits = await db.units.orderBy('order').toArray();
   const cachedNodes = await db.nodes.orderBy('order').toArray();
   const cachedQuestions = await db.questions.toArray();

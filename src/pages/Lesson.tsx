@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { db } from '../db/db';
-import { loadCurriculum } from '../lib/curriculum';
+import { loadCurriculum, lastLoadWasFromCache } from '../lib/curriculum';
 import ProgressBar from '../components/ui/ProgressBar';
 import QuestionWrapper from '../components/questions/QuestionWrapper';
 import UnitIntroGeneric from '../components/questions/UnitIntroGeneric';
@@ -204,6 +204,14 @@ const Lesson: React.FC = () => {
         <div className="flex-1">
           <ProgressBar current={currentIndex} total={node.questions.length} />
         </div>
+        {lastLoadWasFromCache && (
+          <span
+            className="flex-shrink-0 text-[10px] font-bold text-amber-600 bg-amber-100 rounded-full px-2 py-1"
+            title="اتصال به اینترنت برقرار نشد، نسخه‌ی ذخیره‌شده‌ی قبلی نشون داده میشه"
+          >
+            🔌 آفلاین
+          </span>
+        )}
       </div>
 
       {/* Question */}
