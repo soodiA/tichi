@@ -113,6 +113,35 @@ const BrowseExistingModal: React.FC<{
   );
 };
 
+// Curated set for the emoji picker below — covers the kinds of things question content
+// tends to need (animals, food, objects, nature, faces), not the full unicode range.
+const EMOJI_CHOICES = [
+  '🐱', '🐶', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵',
+  '🐔', '🐧', '🐦', '🦆', '🦅', '🦉', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞',
+  '🐢', '🐍', '🦎', '🐙', '🐠', '🐟', '🐬', '🐳', '🐘', '🦒', '🦓', '🐫', '🐿', '🦔',
+  '🍎', '🍌', '🍇', '🍉', '🍊', '🍓', '🍒', '🍑', '🍍', '🥝', '🥕', '🌽', '🍞', '🧀', '🥚',
+  '🍪', '🍰', '🍫', '🍭', '🍦', '🥛', '🍕', '🍔',
+  '⚽', '🏀', '🎈', '🎁', '🎨', '🎵', '📚', '✏️', '🖍', '🧸', '🚗', '🚌', '🚲', '✈️', '🚀',
+  '⭐', '🌙', '☀️', '☁️', '🌈', '🌸', '🌻', '🌳', '🍀', '❄️', '🔥', '💧',
+  '😀', '😃', '😄', '😁', '😊', '🙂', '😍', '🤔', '😮', '😢', '😴', '👍', '👏', '🙌', '❤️',
+];
+
+const EmojiPickerModal: React.FC<{ onSelect: (emoji: string) => void; onClose: () => void }> = ({ onSelect, onClose }) => (
+  <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50" onClick={onClose}>
+    <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm max-h-[70vh] overflow-y-auto p-3" onClick={(e) => e.stopPropagation()}>
+      <p className="text-xs font-bold text-gray-500 mb-2 px-1">انتخاب ایموجی</p>
+      <div className="grid grid-cols-7 gap-1">
+        {EMOJI_CHOICES.map((e, i) => (
+          <button key={`${e}-${i}`} type="button" onClick={() => { onSelect(e); onClose(); }}
+            className="w-9 h-9 flex items-center justify-center text-2xl rounded-lg hover:bg-violet-50 active:scale-90">
+            {e}
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 // Upload-or-paste-URL widget for a single image, shared across all option/media image fields.
 // `storagePrefix` is accepted for backward compatibility with existing call sites but is
 // no longer used for the upload/browse location — all images share one flat library folder
@@ -120,6 +149,7 @@ const BrowseExistingModal: React.FC<{
 export const ImageField: React.FC<{ value?: string; onChange: (url: string) => void; storagePrefix?: string }> = ({ value, onChange }) => {
   const [busy, setBusy] = useState(false);
   const [browsing, setBrowsing] = useState(false);
+  const [pickingEmoji, setPickingEmoji] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFile = async (file: File) => {
@@ -150,6 +180,10 @@ export const ImageField: React.FC<{ value?: string; onChange: (url: string) => v
       />
       <input ref={fileRef} type="file" accept="image/*" className="hidden"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+      <button type="button" onClick={() => setPickingEmoji(true)}
+        className="w-9 h-9 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center text-lg active:scale-95">
+        😀
+      </button>
       <button type="button" onClick={() => setBrowsing(true)}
         className="w-9 h-9 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center text-lg active:scale-95">
         🗂
@@ -160,6 +194,9 @@ export const ImageField: React.FC<{ value?: string; onChange: (url: string) => v
       </button>
       {browsing && (
         <BrowseExistingModal kind="image" onSelect={onChange} onClose={() => setBrowsing(false)} />
+      )}
+      {pickingEmoji && (
+        <EmojiPickerModal onSelect={onChange} onClose={() => setPickingEmoji(false)} />
       )}
     </div>
   );
