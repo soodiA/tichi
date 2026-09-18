@@ -172,6 +172,18 @@ const QuestionEditor: React.FC = () => {
     setEditingId('new');
     setEditingType(type);
     setDraft({ ...emptyDraft(), questionText: QUESTION_TYPE_DEFAULT_TEXT[type] ?? '' });
+    // Every question of a type shares one recorded prompt (see AudioRecorder.tsx) —
+    // default a new question's audio to whatever an existing sibling already has.
+    (async () => {
+      const { data } = await supabase
+        .from('questions')
+        .select('question_audio_url')
+        .eq('type', type)
+        .not('question_audio_url', 'is', null)
+        .limit(1);
+      const url = data?.[0]?.question_audio_url;
+      if (url) patch({ questionAudioUrl: url });
+    })();
   };
 
   const startEdit = (row: QuestionRow) => {
