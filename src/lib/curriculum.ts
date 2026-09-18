@@ -83,6 +83,35 @@ export async function loadCurriculum(): Promise<Unit[]> {
   return applyDemoLimit(await loadCurriculumUnfiltered());
 }
 
+// PostgREST enforces its own server-side max-rows cap (1000 on this project) that a
+// client-requested .range() past that size CANNOT override — a single .range(0, 19999)
+// call silently comes back truncated at row 1000 once the table grows past it (confirmed
+// directly: server replies "Content-Range: 0-999/*" no matter how large a range is asked
+// for). `ord` is only unique per-node, not globally, so sorting the whole table by it
+// alone also ties heavily across nodes — added `id` as a secondary sort key so repeated
+// paged requests return a stable, non-overlapping sequence. Fetch in pages of 1000 and
+// concatenate until a page comes back short, which is the only way to get every row.
+const QUESTIONS_PAGE_SIZE = 1000;
+
+async function fetchAllQuestions(): Promise<{ data: RawQuestion[] | null; error: unknown }> {
+  const all: RawQuestion[] = [];
+  let offset = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from('questions')
+      .select('*')
+      .order('ord')
+      .order('id')
+      .range(offset, offset + QUESTIONS_PAGE_SIZE - 1);
+    if (error) return { data: null, error };
+    if (!data) break;
+    all.push(...(data as RawQuestion[]));
+    if (data.length < QUESTIONS_PAGE_SIZE) break;
+    offset += QUESTIONS_PAGE_SIZE;
+  }
+  return { data: all, error: null };
+}
+
 async function loadCurriculumUnfiltered(): Promise<Unit[]> {
   if (navigator.onLine) {
     try {
@@ -93,10 +122,7 @@ async function loadCurriculumUnfiltered(): Promise<Unit[]> {
       ] = await Promise.all([
         supabase.from('units').select('*').order('ord'),
         supabase.from('nodes').select('*').order('ord'),
-        // Explicit .range() to avoid PostgREST's default 1000-row cap silently
-        // truncating the question set as more get added via the editor —
-        // without it, rows past the cap never reach the app or the Dexie cache.
-        supabase.from('questions').select('*').order('ord').range(0, 19999),
+        fetchAllQuestions(),
       ]);
 
       if (unitsError) console.error('[curriculum] units fetch failed', unitsError);
