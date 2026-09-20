@@ -5,7 +5,7 @@ import { latestByKey } from './versionedUpload';
 // "words/<base64url(word)>--<ts>.<ext>" and "letters/<base64url(letter)>--<ts>.<ext>").
 // Results are cached per folder for the lifetime of the page.
 
-type Folder = 'words' | 'letters';
+type Folder = 'words' | 'letters' | 'intro';
 
 const folderCache: Partial<Record<Folder, Record<string, string>>> = {};
 const folderPromise: Partial<Record<Folder, Promise<Record<string, string>>>> = {};

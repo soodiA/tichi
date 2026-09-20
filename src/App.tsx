@@ -16,6 +16,7 @@ import QuestionEditor from './pages/QuestionEditor';
 import RecordCombos from './pages/RecordCombos';
 import RecordQuestionAudio from './pages/RecordQuestionAudio';
 import WordAudioRecorder from './pages/WordAudioRecorder';
+import IntroAudioRecorder from './pages/IntroAudioRecorder';
 import { db } from './db/db';
 import { syncProfileToCloud } from './lib/sync';
 
@@ -129,6 +130,7 @@ const App: React.FC = () => {
           <Route path="/record-combos" element={<RecordCombos />} />
           <Route path="/record-audio" element={<RecordQuestionAudio />} />
           <Route path="/word-audio-recorder" element={<WordAudioRecorder />} />
+          <Route path="/intro-audio-recorder" element={<IntroAudioRecorder />} />
         </Routes>
       </AnimatePresence>
       <BottomNav />

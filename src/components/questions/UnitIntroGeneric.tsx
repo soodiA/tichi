@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Mascot from '../ui/Mascot';
+import { getClipUrl } from '../../lib/clipAudio';
 import type { UnitIntroData } from '../../data/unitIntros';
 
 interface Props {
@@ -8,7 +9,7 @@ interface Props {
   onComplete: () => void;
 }
 
-interface Scene {
+export interface Scene {
   id: number;
   bg: string;
   accent: string;
@@ -23,14 +24,24 @@ interface Scene {
   mascotExpression: 'happy' | 'excited' | 'thinking' | 'celebrating';
 }
 
-const SCENE_DURATION = 3200;
+// Soodeh wants to record her own voice over these scenes instead of TTS — until she
+// does, a scene with no recorded clip still needs enough time on screen to record
+// against (was 3200ms, too tight to comfortably read+speak the line). See
+// /intro-audio-recorder for the recording tool (keys as `${letter}-${sceneId}`).
+const SCENE_DURATION = 6000;
+// Safety net in case a recorded clip fails to load/play — don't get stuck on a scene.
+const AUDIO_SAFETY_TIMEOUT = 12000;
+
+// Recording key for a given unit+scene — shared with IntroAudioRecorder.tsx so
+// recorder and playback always agree on where a clip lives.
+export const introClipKey = (letter: string, sceneId: number) => `${letter}-${sceneId}`;
 
 const BGROUPS = [
   '#EFF6FF', '#F5F0FF', '#ECFDF5', '#FFF7ED',
   '#EFF9FF', '#FFF1F2', '#FFFBEB', '#F0FFF4',
 ];
 
-function buildScenes(data: UnitIntroData): Scene[] {
+export function buildScenes(data: UnitIntroData): Scene[] {
   const scenes: Scene[] = [];
   let id = 0;
   const bg = (i: number) => BGROUPS[i % BGROUPS.length];
@@ -138,23 +149,57 @@ const Dot: React.FC<{ x: number; y: number; color: string; size: number; delay: 
 const UnitIntroGeneric: React.FC<Props> = ({ data, onComplete }) => {
   const scenes = useMemo(() => buildScenes(data), [data]);
   const [sceneIndex, setSceneIndex] = useState(0);
+  const [clipUrls, setClipUrls] = useState<Record<number, string>>({});
+  const [clipsLoaded, setClipsLoaded] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const isLast = sceneIndex === scenes.length - 1;
 
+  // Load any recorded clips for this unit's scenes once, up front (small list, cheap) —
+  // gated so the per-scene playback effect below only ever runs once we know whether
+  // a clip exists, instead of restarting TTS/audio mid-scene when the lookup resolves.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const entries = await Promise.all(
+        scenes.map(async (s) => [s.id, await getClipUrl('intro', introClipKey(data.letter, s.id))] as const)
+      );
+      if (cancelled) return;
+      const map: Record<number, string> = {};
+      entries.forEach(([id, url]) => { if (url) map[id] = url; });
+      setClipUrls(map);
+      setClipsLoaded(true);
+    })();
+    return () => { cancelled = true; };
+  }, [scenes, data.letter]);
+
   const advance = useCallback(() => {
-    setSceneIndex((prev) => {
-      const next = prev + 1;
-      if (next < scenes.length) { tts(scenes[next].speak); return next; }
-      return prev;
-    });
+    setSceneIndex((prev) => (prev + 1 < scenes.length ? prev + 1 : prev));
   }, [scenes]);
 
-  useEffect(() => { tts(scenes[0].speak); }, [scenes]);
-
+  // Speaks/plays the current scene (recorded clip if she's recorded one, else TTS)
+  // and, for every scene but the last, auto-advances when it's done — on the
+  // clip's 'ended' event if there is one, otherwise after SCENE_DURATION.
   useEffect(() => {
+    if (!clipsLoaded) return;
+    const scene = scenes[sceneIndex];
+    const clip = clipUrls[scene.id];
+
+    if (clip) {
+      window.speechSynthesis?.cancel();
+      const audio = new Audio(clip);
+      audioRef.current = audio;
+      if (!isLast) audio.onended = advance;
+      audio.play().catch(() => {/* fall through to safety timer below */});
+      if (isLast) return () => { audio.pause(); };
+      const safety = setTimeout(advance, AUDIO_SAFETY_TIMEOUT);
+      return () => { clearTimeout(safety); audio.onended = null; audio.pause(); };
+    }
+
+    tts(scene.speak);
     if (isLast) return;
     const timer = setTimeout(advance, SCENE_DURATION);
     return () => clearTimeout(timer);
-  }, [sceneIndex, isLast, advance]);
+  }, [sceneIndex, isLast, advance, scenes, clipUrls, clipsLoaded]);
 
   const scene = scenes[sceneIndex];
 
