@@ -85,10 +85,10 @@ const Lesson: React.FC = () => {
       // For wrong answers: find readable correct answer text
       if (!correct) {
         let correctDisplay = String(question.correctAnswer);
-        if (question.type === 'audio_picture' || question.type === 'audio_options' || question.type === 'fill_blanks') {
+        if (question.type === 'audio_picture' || question.type === 'audio_options' || question.type === 'fill_blanks' || question.type === 'sound_to_text') {
           const opt = question.options?.find((o) => o.id === question.correctAnswer);
           if (opt?.text) correctDisplay = opt.text;
-        } else if (question.type === 'phoneme' && Array.isArray(question.correctAnswer)) {
+        } else if ((question.type === 'phoneme' || question.type === 'arrange') && Array.isArray(question.correctAnswer)) {
           // Map each option ID to its text, join with space
           correctDisplay = (question.correctAnswer as string[])
             .map((id) => question.options?.find((o) => o.id === id)?.text ?? id)

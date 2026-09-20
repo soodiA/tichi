@@ -330,6 +330,7 @@ const QuestionEditor: React.FC = () => {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-violet-500 font-bold">{TYPE_LABELS[q.type]}</p>
                         <p className="text-sm text-gray-700 truncate">{q.question_text}</p>
+                        {q.media_label && <p className="text-xs text-gray-400 truncate">برچسب: {q.media_label}</p>}
                       </div>
                       <button onClick={() => startEdit(q)} className="text-sm font-bold text-violet-600 py-1.5 px-3 shrink-0">ویرایش</button>
                       <button onClick={() => remove(q.id)} className="text-sm font-bold text-red-400 py-1.5 px-3 shrink-0">حذف</button>
@@ -388,6 +389,7 @@ const QuestionEditor: React.FC = () => {
                       <p className="text-xs text-gray-400">{nodeLabel(q.node_id)}</p>
                       <p className="text-xs text-violet-500 font-bold">{TYPE_LABELS[q.type]}</p>
                       <p className="text-sm text-gray-700 truncate">{q.question_text}</p>
+                      {q.media_label && <p className="text-xs text-gray-400 truncate">برچسب: {q.media_label}</p>}
                     </div>
                     <button onClick={() => startEdit(q)} className="text-sm font-bold text-violet-600 py-1.5 px-3 shrink-0">ویرایش</button>
                     <button onClick={() => remove(q.id)} className="text-sm font-bold text-red-400 py-1.5 px-3 shrink-0">حذف</button>
