@@ -219,6 +219,19 @@ const QuestionEditor: React.FC = () => {
     if (viewMode === 'flat') loadFlatQuestions();
   };
 
+  const moveQuestion = async (index: number, direction: -1 | 1) => {
+    const otherIndex = index + direction;
+    if (otherIndex < 0 || otherIndex >= questions.length) return;
+    const a = questions[index];
+    const b = questions[otherIndex];
+    // Swap their `ord` values — works regardless of gaps between existing
+    // ord numbers, and only touches these two rows.
+    const { error: err1 } = await supabase.from('questions').update({ ord: b.ord }).eq('id', a.id);
+    const { error: err2 } = err1 ? { error: err1 } : await supabase.from('questions').update({ ord: a.ord }).eq('id', b.id);
+    if (err1 || err2) { alert(`خطا در جابجایی: ${(err1 ?? err2)!.message}`); return; }
+    if (selectedNodeId) loadQuestions(selectedNodeId);
+  };
+
   const remove = async (id: string) => {
     if (!confirm('این سوال حذف بشه؟')) return;
     const { error } = await supabase.from('questions').delete().eq('id', id);
@@ -306,8 +319,14 @@ const QuestionEditor: React.FC = () => {
                 <p className="text-sm text-gray-400">در حال بارگذاری...</p>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  {questions.map(q => (
+                  {questions.map((q, i) => (
                     <div key={q.id} className="bg-white rounded-xl border-2 border-gray-200 p-3 flex items-center justify-between gap-2">
+                      <div className="flex flex-col shrink-0">
+                        <button onClick={() => moveQuestion(i, -1)} disabled={i === 0}
+                          className="text-gray-400 hover:text-violet-600 disabled:opacity-20 disabled:hover:text-gray-400 px-1" aria-label="بالاتر">▲</button>
+                        <button onClick={() => moveQuestion(i, 1)} disabled={i === questions.length - 1}
+                          className="text-gray-400 hover:text-violet-600 disabled:opacity-20 disabled:hover:text-gray-400 px-1" aria-label="پایین‌تر">▼</button>
+                      </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-violet-500 font-bold">{TYPE_LABELS[q.type]}</p>
                         <p className="text-sm text-gray-700 truncate">{q.question_text}</p>
