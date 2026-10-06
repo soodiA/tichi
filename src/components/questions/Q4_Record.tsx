@@ -32,6 +32,9 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer, disabled }) => {
   const [transcript, setTranscript] = useState('');
   const [correct, setCorrect] = useState<boolean | null>(null);
   const [debugMsg, setDebugMsg] = useState('');
+  // Consecutive attempts where nothing was captured at all (no speech/no result);
+  // after 2 we ask whether to keep trying or skip.
+  const [emptyTries, setEmptyTries] = useState(0);
   const recRef = useRef<any>(null);
   const safetyRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -83,6 +86,7 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer, disabled }) => {
       const alts: string[] = Array.from(lastResult).map((r: any) => normalize(r.transcript));
       const expected = normalize(String(question.correctAnswer));
       const heard = alts[0] || '';
+      setEmptyTries(heard ? 0 : (n) => n + 1);
       const ok = heard.length > 0 && check(alts, expected);
       setTranscript(heard);
       setCorrect(ok);
@@ -97,6 +101,7 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer, disabled }) => {
         setStatus('idle');
       } else {
         setDebugMsg(`(${code})`);
+        setEmptyTries((n) => n + 1);
         setStatus('idle');
       }
     };
@@ -106,6 +111,7 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer, disabled }) => {
       setStatus((prev) => {
         if (prev === 'listening' || prev === 'processing') {
           setDebugMsg('(no-result)');
+          setEmptyTries((n) => n + 1);
           return 'idle';
         }
         return prev;
@@ -117,6 +123,7 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer, disabled }) => {
       try { rec.abort(); } catch {}
       setStatus('idle');
       setDebugMsg('(timeout)');
+      setEmptyTries((n) => n + 1);
     }, 15000);
 
     rec.start();
@@ -209,7 +216,20 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer, disabled }) => {
         </div>
       )}
 
-      {permState === 'granted' && status !== 'result' && (
+      {permState === 'granted' && status === 'idle' && emptyTries >= 2 && (
+        <div className="flex flex-col items-center gap-4 w-full px-4">
+          <div className="w-full rounded-3xl py-5 px-4 text-center bg-amber-50 border-2 border-amber-200">
+            <p className="font-extrabold text-lg text-amber-700 mb-1">صدایی ضبط نشد 🎙</p>
+            <p className="text-gray-500 text-sm">می‌خوای دوباره امتحان کنی یا بری سوال بعدی؟</p>
+          </div>
+          <div className="flex gap-3 w-full">
+            <button onClick={() => { setEmptyTries(0); setDebugMsg(''); }} className="flex-1 btn-primary py-4">ادامه (دوباره)</button>
+            <button onClick={() => onAnswer(false)} className="flex-1 py-4 rounded-2xl bg-red-100 text-red-600 font-bold active:scale-95 transition-transform">رد شدن</button>
+          </div>
+        </div>
+      )}
+
+      {permState === 'granted' && status !== 'result' && !(status === 'idle' && emptyTries >= 2) && (
         <div className="flex flex-col items-center gap-3">
           <button
             onPointerDown={handlePressStart}

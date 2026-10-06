@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { uploadVersioned, latestByKey } from '../lib/versionedUpload';
+import { uploadVersioned, getLatestUrls } from '../lib/versionedUpload';
 import { pickRecordingMimeType } from '../lib/recordingFormat';
 
 // All consonants with their curriculum ordinal
@@ -73,14 +73,12 @@ export default function RecordCombos() {
   // Load existing audio URLs from Supabase storage
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.storage.from('audio').list('combos');
-      if (!data) return;
-      const getPublicUrl = (path: string) => supabase.storage.from('audio').getPublicUrl(path).data.publicUrl;
+      const keys = CONSONANTS.flatMap((c) => VOWELS.map((v) => `${c.uid}-${v.key}`));
+      const found = await getLatestUrls('combos', keys);
       const map: Record<string, ComboStatus> = {};
-      latestByKey(data, getPublicUrl, 'combos').forEach((v, key) => {
-        map[key] = { audioUrl: v.url, state: 'done' };
-      });
-      setStatuses(map);
+      found.forEach((url, key) => { map[key] = { audioUrl: url, state: 'done' }; });
+      // Merge: don't clobber anything recorded while the lookup was running.
+      setStatuses((prev) => ({ ...map, ...prev }));
     })();
   }, []);
 

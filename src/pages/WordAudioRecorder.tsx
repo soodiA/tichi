@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { uploadVersioned, latestByKey } from '../lib/versionedUpload';
+import { uploadVersioned, getLatestUrls } from '../lib/versionedUpload';
 import { pickRecordingMimeType } from '../lib/recordingFormat';
 
 // The 32 letters of the Persian alphabet, standalone (not letter+vowel combos —
@@ -58,21 +58,27 @@ const WordAudioRecorder: React.FC = () => {
     })();
   }, []);
 
-  // Load already-recorded clips for both sections from storage.
+  // Load already-recorded clips by probing each key's public URL (Storage
+  // `.list()` is blocked for the anon key, so it can't be used to enumerate).
   useEffect(() => {
     (async () => {
+      const found = await getLatestUrls('letters', LETTERS);
       const map: Record<string, ClipStatus> = {};
-      for (const [folder] of [['words'], ['letters']] as const) {
-        const { data } = await supabase.storage.from('audio').list(folder);
-        if (!data) continue;
-        const getPublicUrl = (path: string) => supabase.storage.from('audio').getPublicUrl(path).data.publicUrl;
-        latestByKey(data, getPublicUrl, folder).forEach((v, name) => {
-          map[`${folder}:${name}`] = { audioUrl: v.url, state: 'done' };
-        });
-      }
-      setStatuses(map);
+      found.forEach((url, k) => { map[`letters:${k}`] = { audioUrl: url, state: 'done' }; });
+      setStatuses((prev) => ({ ...map, ...prev }));
     })();
   }, []);
+
+  // Words come from the questions table, so look them up once that list is ready.
+  useEffect(() => {
+    if (words.length === 0) return;
+    (async () => {
+      const found = await getLatestUrls('words', words);
+      const map: Record<string, ClipStatus> = {};
+      found.forEach((url, k) => { map[`words:${k}`] = { audioUrl: url, state: 'done' }; });
+      setStatuses((prev) => ({ ...map, ...prev }));
+    })();
+  }, [words]);
 
   const startRecording = useCallback(async (key: string) => {
     try {

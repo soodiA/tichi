@@ -1,14 +1,19 @@
 import { supabase } from './supabase';
-import { extFromMime } from './recordingFormat';
 
 // The anon key can INSERT new objects into the `audio` bucket but cannot
 // UPDATE (upsert) or DELETE existing ones (Storage RLS only grants insert) —
 // confirmed by Soodeh hitting "new row violates row-level security policy"
 // when re-recording something that already had a clip. Rather than needing
 // her to change bucket policies in the Supabase dashboard, every recording
-// is uploaded under a new versioned filename ("<key>--<timestamp>.<ext>")
+// is uploaded under a new versioned filename ("<key>--v<N>.a", N = 1, 2, 3...)
 // instead of overwriting the old one; old clips are just left behind
-// (harmless — a few KB each) and the newest one wins when reading back.
+// (harmless — a few KB each) and the highest N wins when reading back.
+//
+// The anon key also has NO SELECT policy on storage.objects, so Storage's
+// `.list()` always returns [] — we can't enumerate files. Versions are therefore
+// contiguous counters that we discover by probing the (public) object URLs.
+// The filename extension is always ".a"; the real type is carried by the
+// Content-Type stored with the object.
 
 // Supabase Storage rejects object keys containing "%" (so percent-encoding
 // non-ASCII text like Persian words fails with "Invalid key"). Base64url-encode
@@ -20,16 +25,63 @@ function encodeKey(key: string): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-function decodeKey(encoded: string): string {
-  let b64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
-  while (b64.length % 4) b64 += '=';
-  const binary = atob(b64);
-  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
+
+export function versionedPath(folder: string, key: string, n: number): string {
+  return `${folder}/${encodeKey(key)}--v${n}.a`;
 }
 
-export function versionedPath(folder: string, key: string, ext: string): string {
-  return `${folder}/${encodeKey(key)}--${Date.now()}.${ext}`;
+function publicUrl(path: string): string {
+  return supabase.storage.from('audio').getPublicUrl(path).data.publicUrl;
+}
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    // Cache-buster so a CDN-cached 404 from before the upload can't hide a new clip.
+    const res = await fetch(`${publicUrl(path)}?cb=${Date.now()}`, { method: 'HEAD', cache: 'no-store' });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// Highest existing version number for a key (0 if none): exponential probe,
+// then bisect. Versions are contiguous, so this is O(log N) requests.
+async function latestVersion(folder: string, key: string): Promise<number> {
+  if (!(await exists(versionedPath(folder, key, 1)))) return 0;
+  let lo = 1;
+  let hi = 2;
+  while (await exists(versionedPath(folder, key, hi))) { lo = hi; hi *= 2; }
+  while (hi - lo > 1) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (await exists(versionedPath(folder, key, mid))) lo = mid; else hi = mid;
+  }
+  return lo;
+}
+
+const urlCache = new Map<string, string | undefined>();
+
+export async function getLatestUrl(folder: string, key: string): Promise<string | undefined> {
+  const ck = `${folder}:${key}`;
+  if (urlCache.has(ck) && urlCache.get(ck)) return urlCache.get(ck);
+  const n = await latestVersion(folder, key);
+  const url = n ? publicUrl(versionedPath(folder, key, n)) : undefined;
+  if (url) urlCache.set(ck, url);
+  return url;
+}
+
+// Looks up many keys with limited concurrency; returns key -> url for those that exist.
+export async function getLatestUrls(folder: string, keys: string[], concurrency = 8): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  let next = 0;
+  const worker = async () => {
+    while (next < keys.length) {
+      const k = keys[next++];
+      const u = await getLatestUrl(folder, k);
+      if (u) out.set(k, u);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, keys.length) }, worker));
+  return out;
 }
 
 export async function uploadVersioned(
@@ -37,26 +89,19 @@ export async function uploadVersioned(
   key: string,
   blob: Blob
 ): Promise<{ url?: string; error?: string }> {
-  const ext = extFromMime(blob.type);
-  const path = versionedPath(folder, key, ext);
-  const { error } = await supabase.storage.from('audio').upload(path, blob);
-  if (error) return { error: error.message };
-  const { data } = supabase.storage.from('audio').getPublicUrl(path);
-  return { url: data.publicUrl };
-}
-
-// Groups a Storage `.list()` result by original key, keeping only the
-// newest ("--<timestamp>") version of each.
-export function latestByKey(files: { name: string }[], getPublicUrl: (path: string) => string, folder: string) {
-  const latest = new Map<string, { name: string; ts: number; url: string }>();
-  for (const f of files) {
-    const m = f.name.match(/^(.*)--(\d+)\.[a-z0-9]+$/);
-    const key = m ? decodeKey(m[1]) : decodeKey(f.name.replace(/\.[a-z0-9]+$/, ''));
-    const ts = m ? parseInt(m[2], 10) : 0;
-    const existing = latest.get(key);
-    if (!existing || ts > existing.ts) {
-      latest.set(key, { name: f.name, ts, url: getPublicUrl(`${folder}/${f.name}`) });
+  let n = (await latestVersion(folder, key)) + 1;
+  for (let attempt = 0; attempt < 5; attempt++, n++) {
+    const path = versionedPath(folder, key, n);
+    const { error } = await supabase.storage.from('audio').upload(path, blob, {
+      contentType: blob.type || 'audio/webm',
+    });
+    if (!error) {
+      const url = publicUrl(path);
+      urlCache.set(`${folder}:${key}`, url);
+      return { url };
     }
+    // Someone else (or a stale probe) already holds this version — try the next.
+    if (!/exist|duplicate/i.test(error.message)) return { error: error.message };
   }
-  return latest;
+  return { error: 'could not allocate a version' };
 }

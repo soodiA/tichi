@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { uploadVersioned, latestByKey } from '../lib/versionedUpload';
+import { uploadVersioned, getLatestUrls } from '../lib/versionedUpload';
 import { buildScenes, introClipKey, type Scene } from '../components/questions/UnitIntroGeneric';
 import { UNIT_INTROS } from '../data/unitIntros';
 
@@ -21,12 +20,11 @@ const IntroAudioRecorder: React.FC = () => {
 
   const loadClips = async () => {
     setLoadingClips(true);
-    const { data } = await supabase.storage.from('audio').list('intro');
-    const getPublicUrl = (path: string) => supabase.storage.from('audio').getPublicUrl(path).data.publicUrl;
-    const latest = latestByKey(data ?? [], getPublicUrl, 'intro');
+    const keys = LETTERS.flatMap((l) => buildScenes(UNIT_INTROS[l]).map((s) => introClipKey(l, s.id)));
+    const found = await getLatestUrls('intro', keys);
     const map: Record<string, { url: string }> = {};
-    latest.forEach((v, key) => { map[key] = { url: v.url }; });
-    setClips(map);
+    found.forEach((url, key) => { map[key] = { url }; });
+    setClips((prev) => ({ ...map, ...prev }));
     setLoadingClips(false);
   };
 
