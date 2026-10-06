@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { uploadVersioned, getLatestUrls } from '../lib/versionedUpload';
 import { buildScenes, introClipKey, type Scene } from '../components/questions/UnitIntroGeneric';
 import { UNIT_INTROS } from '../data/unitIntros';
+import { loadIntroConfig, saveIntroConfig, applyIntroConfig, type IntroConfig, type SceneOverride } from '../lib/introConfig';
 
 const LETTERS = Object.keys(UNIT_INTROS);
 
@@ -16,7 +17,46 @@ const IntroAudioRecorder: React.FC = () => {
   const chunksRef = React.useRef<Blob[]>([]);
   const streamRef = React.useRef<MediaStream | null>(null);
 
-  const scenes: Scene[] = buildScenes(UNIT_INTROS[activeLetter]);
+  const baseScenes: Scene[] = buildScenes(UNIT_INTROS[activeLetter]);
+  const [cfg, setCfg] = useState<IntroConfig>({});
+  const [cfgDirty, setCfgDirty] = useState(false);
+  const [savingCfg, setSavingCfg] = useState(false);
+  const [imgUploading, setImgUploading] = useState(false);
+  const scenes: Scene[] = applyIntroConfig(baseScenes, cfg);
+
+  useEffect(() => {
+    let cancelled = false;
+    setCfg({});
+    setCfgDirty(false);
+    loadIntroConfig(activeLetter).then((c) => { if (!cancelled) setCfg(c); });
+    return () => { cancelled = true; };
+  }, [activeLetter]);
+
+  const patchScene = (id: number, patch: SceneOverride) => {
+    setCfg((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+    setCfgDirty(true);
+  };
+
+  const resetScene = (id: number) => {
+    setCfg((prev) => { const n = { ...prev }; delete n[id]; return n; });
+    setCfgDirty(true);
+  };
+
+  const saveCfg = async () => {
+    setSavingCfg(true);
+    const err = await saveIntroConfig(activeLetter, cfg);
+    setSavingCfg(false);
+    if (err) { alert(`خطا در ذخیره: ${err}`); return; }
+    setCfgDirty(false);
+  };
+
+  const uploadImage = async (file: File) => {
+    setImgUploading(true);
+    const { url, error } = await uploadVersioned('introimg', introClipKey(activeLetter, activeScene), file);
+    setImgUploading(false);
+    if (error || !url) { alert(`خطا در آپلود تصویر: ${error}`); return; }
+    patchScene(activeScene, { imageUrl: url });
+  };
 
   const loadClips = async () => {
     setLoadingClips(true);
@@ -125,6 +165,52 @@ const IntroAudioRecorder: React.FC = () => {
         </div>
 
         {uploading && <p className="text-sm text-violet-500">در حال آپلود...</p>}
+
+        <div className="border-t border-violet-100 pt-3 flex flex-col gap-2">
+          <p className="text-sm font-bold text-violet-800">ویرایش متن و تصویر این صحنه</p>
+          <label className="text-xs text-gray-500">عنوان
+            <input value={scene.title} onChange={(e) => patchScene(activeScene, { title: e.target.value })}
+              className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-800" />
+          </label>
+          <label className="text-xs text-gray-500">زیرعنوان
+            <input value={scene.subtitle ?? ''} onChange={(e) => patchScene(activeScene, { subtitle: e.target.value })}
+              className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-800" />
+          </label>
+          <label className="text-xs text-gray-500">متنی که خوانده می‌شود (وقتی صدایی ضبط نشده)
+            <input value={scene.speak} onChange={(e) => patchScene(activeScene, { speak: e.target.value })}
+              className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-800" />
+          </label>
+          <div className="flex gap-2">
+            <label className="text-xs text-gray-500 flex-1">اموجی
+              <input value={scene.emoji ?? ''} onChange={(e) => patchScene(activeScene, { emoji: e.target.value })}
+                className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-lg text-gray-800" />
+            </label>
+            <label className="text-xs text-gray-500 flex-1">کلمه / حرف بزرگ
+              <input value={scene.word ?? ''} onChange={(e) => patchScene(activeScene, { word: e.target.value })}
+                className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-lg text-gray-800" />
+            </label>
+          </div>
+          <div className="flex items-center gap-3">
+            {scene.imageUrl && <img src={scene.imageUrl} alt="" className="w-16 h-16 object-contain rounded-lg border border-gray-200" />}
+            <label className="text-xs font-bold text-violet-700 bg-violet-100 rounded-lg py-2 px-3 cursor-pointer">
+              {imgUploading ? 'در حال آپلود...' : scene.imageUrl ? 'تغییر تصویر' : 'انتخاب تصویر'}
+              <input type="file" accept="image/*" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f); e.target.value = ''; }} />
+            </label>
+            {scene.imageUrl && (
+              <button onClick={() => patchScene(activeScene, { imageUrl: '' })} className="text-xs text-red-500 font-bold">حذف تصویر</button>
+            )}
+          </div>
+          <p className="text-[11px] text-gray-400">اگه تصویر بذاری به‌جای اموجی نشون داده میشه.</p>
+          <div className="flex gap-2 mt-1">
+            <button onClick={saveCfg} disabled={!cfgDirty || savingCfg}
+              className="flex-1 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-bold disabled:bg-gray-300">
+              {savingCfg ? 'در حال ذخیره...' : cfgDirty ? 'ذخیره‌ی تغییرات واحد' : 'ذخیره شد ✓'}
+            </button>
+            <button onClick={() => resetScene(activeScene)} disabled={!cfg[activeScene]}
+              className="py-2.5 px-3 rounded-xl bg-gray-100 text-gray-600 text-sm font-bold disabled:opacity-40">بازگشت به پیش‌فرض</button>
+          </div>
+        </div>
 
         {!loadingClips && clips[activeKey] && !uploading && (
           <div className="flex flex-col gap-2 items-center">

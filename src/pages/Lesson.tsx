@@ -53,6 +53,7 @@ const Lesson: React.FC = () => {
 
   const [node, setNode] = useState<Node | null>(null);
   const [unitLetter, setUnitLetter] = useState<string>('');
+  const [stageInfo, setStageInfo] = useState<{ index: number; total: number } | null>(null);
   const [loadingNode, setLoadingNode] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [, setAnswers] = useState<Record<string, boolean>>({});
@@ -66,7 +67,14 @@ const Lesson: React.FC = () => {
     loadCurriculum().then((units) => {
       for (const u of units) {
         const found = u.nodes.find((n) => n.id === nodeId);
-        if (found) { setNode(found); setUnitLetter(u.letter); break; }
+        if (found) {
+          setNode(found);
+          setUnitLetter(u.letter);
+          const stages = u.nodes.filter((n) => n.type !== 'intro');
+          const idx = stages.findIndex((n) => n.id === nodeId);
+          setStageInfo(idx >= 0 ? { index: idx + 1, total: stages.length } : null);
+          break;
+        }
       }
       setLoadingNode(false);
     });
@@ -202,6 +210,11 @@ const Lesson: React.FC = () => {
           </svg>
         </button>
         <div className="flex-1">
+          {stageInfo && (
+            <p className="text-xs font-bold text-violet-700 mb-1 text-center">
+              مرحله {stageInfo.index.toLocaleString('fa-IR')} از {stageInfo.total.toLocaleString('fa-IR')} · واحد «{unitLetter}»
+            </p>
+          )}
           <ProgressBar current={currentIndex} total={node.questions.length} />
         </div>
         {lastLoadWasFromCache && (

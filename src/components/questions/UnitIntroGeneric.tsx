@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import Mascot from '../ui/Mascot';
 import { getClipUrl } from '../../lib/clipAudio';
+import { loadIntroConfig, applyIntroConfig, type IntroConfig } from '../../lib/introConfig';
 import type { UnitIntroData } from '../../data/unitIntros';
 
 interface Props {
@@ -14,6 +15,7 @@ export interface Scene {
   bg: string;
   accent: string;
   emoji?: string;
+  imageUrl?: string;
   word?: string;
   forms?: { text: string; label: string; color: string }[];
   highlightChar?: string;
@@ -147,7 +149,9 @@ const Dot: React.FC<{ x: number; y: number; color: string; size: number; delay: 
 );
 
 const UnitIntroGeneric: React.FC<Props> = ({ data, onComplete }) => {
-  const scenes = useMemo(() => buildScenes(data), [data]);
+  const baseScenes = useMemo(() => buildScenes(data), [data]);
+  const [introCfg, setIntroCfg] = useState<IntroConfig>({});
+  const scenes = useMemo(() => applyIntroConfig(baseScenes, introCfg), [baseScenes, introCfg]);
   const [sceneIndex, setSceneIndex] = useState(0);
   const [clipUrls, setClipUrls] = useState<Record<number, string>>({});
   const [clipsLoaded, setClipsLoaded] = useState(false);
@@ -160,17 +164,21 @@ const UnitIntroGeneric: React.FC<Props> = ({ data, onComplete }) => {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const entries = await Promise.all(
-        scenes.map(async (s) => [s.id, await getClipUrl('intro', introClipKey(data.letter, s.id))] as const)
-      );
+      const [cfg, entries] = await Promise.all([
+        loadIntroConfig(data.letter),
+        Promise.all(
+          baseScenes.map(async (s) => [s.id, await getClipUrl('intro', introClipKey(data.letter, s.id))] as const)
+        ),
+      ]);
       if (cancelled) return;
+      setIntroCfg(cfg);
       const map: Record<number, string> = {};
       entries.forEach(([id, url]) => { if (url) map[id] = url; });
       setClipUrls(map);
       setClipsLoaded(true);
     })();
     return () => { cancelled = true; };
-  }, [scenes, data.letter]);
+  }, [baseScenes, data.letter]);
 
   const advance = useCallback(() => {
     setSceneIndex((prev) => (prev + 1 < scenes.length ? prev + 1 : prev));
@@ -244,7 +252,18 @@ const UnitIntroGeneric: React.FC<Props> = ({ data, onComplete }) => {
         >
           <Mascot size={140} expression={scene.mascotExpression} />
 
-          {scene.emoji && (
+          {scene.imageUrl && (
+            <motion.img
+              src={scene.imageUrl}
+              alt=""
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 15, delay: 0.2 }}
+              className="w-28 h-28 object-contain -mt-4"
+            />
+          )}
+
+          {!scene.imageUrl && scene.emoji && (
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}

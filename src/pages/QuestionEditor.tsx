@@ -240,6 +240,21 @@ const QuestionEditor: React.FC = () => {
     if (viewMode === 'flat') loadFlatQuestions();
   };
 
+  // Appends a new empty practice stage ("lesson" node) at the end of a unit.
+  const addStage = async (unitId: string) => {
+    const unitNodes = nodes.filter(n => n.unit_id === unitId);
+    const nextOrd = Math.max(0, ...unitNodes.map(n => n.ord)) + 1;
+    const letter = unitNodes[0]?.unit_letter ?? '?';
+    if (!window.confirm(`یک مرحله‌ی جدید (شماره ${nextOrd}) به واحد «${letter}» اضافه شود؟`)) return;
+    const id = `${unitId.replace(/^unit-/, 'node-')}-${nextOrd}`;
+    const { error } = await supabase.from('nodes').insert({ id, unit_id: unitId, ord: nextOrd, type: 'lesson' });
+    if (error) { alert(`خطا: ${error.message}`); return; }
+    const row = { id, unit_id: unitId, ord: nextOrd, type: 'lesson', unit_letter: letter,
+      unit_ord: unitNodes[0]?.unit_ord ?? 999 } as NodeRow;
+    setNodes(prev => [...prev, row].sort((a, b) => a.unit_ord - b.unit_ord || a.ord - b.ord));
+    selectNode(id);
+  };
+
   const filteredNodes = nodeFilter.trim()
     ? nodes.filter(n => n.unit_letter.includes(nodeFilter) || n.id.includes(nodeFilter))
     : nodes;
@@ -299,7 +314,11 @@ const QuestionEditor: React.FC = () => {
             <div className="flex flex-col gap-3 md:max-h-[75vh] md:overflow-y-auto pr-1">
               {nodeGroups.map(g => (
                 <div key={g.unitId} className="bg-white/60 rounded-xl border border-violet-100 p-2">
-                  <p className="text-sm font-extrabold text-violet-700 mb-1.5 px-1">واحد {g.unitLetter}</p>
+                  <p className="text-sm font-extrabold text-violet-700 mb-1.5 px-1 flex items-center justify-between">
+                    <span>واحد {g.unitLetter}</span>
+                    <button onClick={() => addStage(g.unitId)}
+                      className="text-xs font-bold text-white bg-emerald-500 rounded-lg py-1 px-2 active:scale-95">+ مرحله جدید</button>
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {g.nodes.map(n => (
                       <button key={n.id} onClick={() => selectNode(n.id)}
