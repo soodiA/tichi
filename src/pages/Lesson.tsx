@@ -212,7 +212,7 @@ const Lesson: React.FC = () => {
         <div className="flex-1">
           {stageInfo && (
             <p className="text-xs font-bold text-violet-700 mb-1 text-center">
-              مرحله {stageInfo.index.toLocaleString('fa-IR')} از {stageInfo.total.toLocaleString('fa-IR')} · واحد «{unitLetter}»
+              مرحله {stageInfo.index.toLocaleString('fa-IR')} از {stageInfo.total.toLocaleString('fa-IR')} · بخش «{unitLetter}»
             </p>
           )}
           <ProgressBar current={currentIndex} total={node.questions.length} />
