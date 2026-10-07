@@ -10,6 +10,8 @@ import type { Question } from '../types';
 // before she's recorded real audio, and as the caption instead of the per-question text).
 export const QUESTION_TYPE_PROMPT: Partial<Record<Question['type'], string>> = {
   color_letter: 'این شکل را رنگ کن',
+  // The phrase itself lives in question_text and is rendered by Q12_MiddleBlank.
+  middle_blank: 'گزینه صحیح را انتخاب کن.',
   // fill_blanks ("find the missing letter") must NEVER play a per-row recorded
   // question_audio_url — at least one existing row's recording speaks the full
   // correct word aloud, which gives away the answer. Any future per-row recording

@@ -13,6 +13,7 @@ import Q6_Handwriting from './Q6_Handwriting';
 import Q7_AudioOptions from './Q7_AudioOptions';
 import Q8_SentenceComplete from './Q8_SentenceComplete';
 import Q9_Arrange from './Q9_Arrange';
+import Q12_MiddleBlank from './Q12_MiddleBlank';
 import Q11_Phoneme from './Q11_Phoneme';
 import Q13_SoundToText from './Q13_SoundToText';
 import Q14_ColorLetter from './Q14_ColorLetter';
@@ -135,8 +136,10 @@ const QuestionWrapper: React.FC<QuestionWrapperProps> = ({ question, onAnswer, d
       {question.type === 'pair_match' && (
         <Q15_PairMatch question={question} onAnswer={onAnswer} />
       )}
-      {(question.type === 'similar_letters' ||
-        question.type === 'middle_blank') && (
+      {question.type === 'middle_blank' && (
+        <Q12_MiddleBlank question={question} onAnswer={onAnswer} disabled={disabled} />
+      )}
+      {question.type === 'similar_letters' && (
         <Unsupported type={question.type} onAnswer={onAnswer} />
       )}
       {/* Fallback for any question type that doesn't match a known case above
