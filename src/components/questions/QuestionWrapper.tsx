@@ -40,15 +40,6 @@ const Unsupported: React.FC<{ type: string; onAnswer: (c: boolean) => void }> = 
   </div>
 );
 
-const speakText = (text: string) => {
-  if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const utt = new SpeechSynthesisUtterance(text);
-  utt.lang = 'fa-IR';
-  utt.rate = 0.9;
-  window.speechSynthesis.speak(utt);
-};
-
 const QuestionWrapper: React.FC<QuestionWrapperProps> = ({ question, onAnswer, disabled }) => {
   // audio_picture embeds its target letter in question_text ("کدام یکی با X شروع
   // میشه؟" / "...آخرش X داره؟") — show one generic sentence per direction instead,
@@ -79,15 +70,6 @@ const QuestionWrapper: React.FC<QuestionWrapperProps> = ({ question, onAnswer, d
           <AudioButton audioUrl={audioUrl} size="md" />
         )}
         <p className="text-xl font-bold text-gray-800 flex-1">{displayText}</p>
-        <button
-          onClick={() => speakText(displayText)}
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-violet-100 text-violet-600 flex-shrink-0 active:scale-90 transition-transform"
-          aria-label="خواندن سوال"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
-          </svg>
-        </button>
       </div>
 
       {audioPictureTarget && (

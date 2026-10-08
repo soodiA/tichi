@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import type { Question, Option } from '../../types';
 import { shuffleArray } from '../../lib/shuffle';
+import { getClipUrl } from '../../lib/clipAudio';
 import { isImagePath, resolveImageSrc } from '../../lib/media';
 
 interface Props {
@@ -27,10 +28,26 @@ const OptionCard: React.FC<{
   onClick: () => void;
   disabled?: boolean;
 }> = ({ option, selected, onClick, disabled }) => {
+  // Word clip recorded in /word-audio-recorder (keyed by the word, with or without
+  // diacritics). Prefetched so play() still runs inside the tap gesture.
+  const [clipUrl, setClipUrl] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    const text = option.text;
+    if (!text) return;
+    let cancelled = false;
+    (async () => {
+      const u = (await getClipUrl('words', text))
+        ?? (await getClipUrl('words', text.replace(/[ً-ْ]/g, '')));
+      if (!cancelled) setClipUrl(u);
+    })();
+    return () => { cancelled = true; };
+  }, [option.text]);
+
   const handleClick = () => {
     if (disabled) return;
-    if (option.audioUrl) {
-      new Audio(option.audioUrl).play().catch(() => {});
+    const url = clipUrl ?? option.audioUrl;
+    if (url) {
+      new Audio(url).play().catch(() => {});
     } else if (option.text) {
       speakWord(option.text);
     }
