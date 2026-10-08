@@ -1,10 +1,11 @@
 import { getLatestUrl } from './versionedUpload';
+import { comboKeyForText } from './combos';
 
 // Looks up recordings made in the recorder pages (storage paths
 // "<folder>/<base64url(key)>--v<N>.a" — see versionedUpload.ts). Results are
 // cached per key for the lifetime of the page.
 
-type Folder = 'words' | 'letters' | 'intro';
+type Folder = 'words' | 'letters' | 'intro' | 'combos';
 
 export async function getClipUrl(folder: Folder, text: string): Promise<string | undefined> {
   if (!text) return undefined;
@@ -34,3 +35,9 @@ export const AUDIO_PICTURE_GENERIC_TEXT: Record<AudioPicturePosition, string> = 
   start: 'کدام یکی با این صدا شروع می‌شود.',
   end: 'آخر کدام یکی مثل این صداست',
 };
+
+// Recording of a letter+vowel combo (see /record-combos), or undefined if none yet.
+export async function getComboClipUrl(text: string): Promise<string | undefined> {
+  const key = comboKeyForText(text);
+  return key ? getLatestUrl('combos', key) : undefined;
+}

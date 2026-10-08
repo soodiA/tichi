@@ -2,6 +2,7 @@ import React from 'react';
 
 interface AudioButtonProps {
   audioUrl?: string;
+  onPlay?: () => void; // overrides default playback of audioUrl
   size?: 'sm' | 'md' | 'lg';
 }
 
@@ -17,8 +18,9 @@ const iconSizeMap = {
   lg: 30,
 };
 
-const AudioButton: React.FC<AudioButtonProps> = ({ audioUrl, size = 'md' }) => {
-  const handleClick = () => {
+const AudioButton: React.FC<AudioButtonProps> = ({ audioUrl, onPlay, size = 'md' }) => {
+  const handleClick = (e: React.MouseEvent) => {
+    if (onPlay) { e.stopPropagation(); onPlay(); return; }
     if (!audioUrl) return;
     const audio = new Audio(audioUrl);
     audio.play().catch(() => {/* silent fail */});
