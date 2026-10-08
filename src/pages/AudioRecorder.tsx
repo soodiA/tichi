@@ -1,9 +1,33 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { uploadVersioned } from '../lib/versionedUpload';
-import { QUESTION_TYPE_PROMPT } from '../lib/questionTypeAudio';
+import { QUESTION_TYPE_PROMPT, AUDIO_PICTURE_END_KEY } from '../lib/questionTypeAudio';
 import { TYPE_LABELS, ALL_TYPES } from '../lib/questionTypes';
 import type { QuestionType } from '../types';
+
+// One recording slot per question type, plus a second slot for the audio_picture
+// "end" phrasing (its spoken prompt differs from the "start" one).
+type SlotKey = QuestionType | typeof AUDIO_PICTURE_END_KEY;
+const END_FILTER = 'question_text.ilike.%آخر%,question_text.ilike.%ختم%'; // keep in sync with isAudioPictureEnd
+const SLOTS: SlotKey[] = ALL_TYPES.flatMap((t) => (t === 'audio_picture' ? [t, AUDIO_PICTURE_END_KEY] : [t]));
+const SLOT_LABELS: Record<string, string> = {
+  ...TYPE_LABELS,
+  audio_picture: 'صدا + عکس (شروع: «با این صدا شروع میشه»)',
+  [AUDIO_PICTURE_END_KEY]: 'صدا + عکس (آخر: «صدای آخر شبیه این صداست»)',
+};
+const SLOT_PROMPT: Partial<Record<string, string>> = {
+  ...QUESTION_TYPE_PROMPT,
+  audio_picture: 'کدام یکی با این صدا شروع می‌شود؟',
+  [AUDIO_PICTURE_END_KEY]: 'صدای آخر کدام یکی شبیه این صداست؟',
+};
+const slotType = (k: SlotKey): QuestionType => (k === AUDIO_PICTURE_END_KEY ? 'audio_picture' : k);
+// Narrows a questions query to the rows that belong to a slot.
+const forSlot = <Q extends { eq: any; or: any; not: any }>(q: Q, k: SlotKey): Q => {
+  const base = q.eq('type', slotType(k));
+  if (k === AUDIO_PICTURE_END_KEY) return base.or(END_FILTER);
+  if (k === 'audio_picture') return base.not('question_text', 'ilike', '%آخر%').not('question_text', 'ilike', '%ختم%');
+  return base;
+};
 
 interface ExampleRow {
   type: QuestionType;
@@ -12,31 +36,32 @@ interface ExampleRow {
 }
 
 const AudioRecorder: React.FC = () => {
-  const [examples, setExamples] = useState<Partial<Record<QuestionType, ExampleRow>>>({});
+  const [examples, setExamples] = useState<Partial<Record<SlotKey, ExampleRow>>>({});
   const [loading, setLoading] = useState(true);
-  const [activeType, setActiveType] = useState<QuestionType>(ALL_TYPES[0]);
+  const [activeType, setActiveType] = useState<SlotKey>(SLOTS[0]);
   const [recording, setRecording] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [clips, setClips] = useState<Partial<Record<QuestionType, { url: string; count: number }>>>({});
+  const [clips, setClips] = useState<Partial<Record<SlotKey, { url: string; count: number }>>>({});
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     (async () => {
-      const found: Partial<Record<QuestionType, ExampleRow>> = {};
-      const clipsFound: Partial<Record<QuestionType, { url: string; count: number }>> = {};
-      for (const t of ALL_TYPES) {
-        const { data } = await supabase
+      const found: Partial<Record<SlotKey, ExampleRow>> = {};
+      const clipsFound: Partial<Record<SlotKey, { url: string; count: number }>> = {};
+      for (const t of SLOTS) {
+        const { data } = await forSlot(supabase
           .from('questions')
-          .select('type, question_text, node_id, question_audio_url')
-          .eq('type', t)
+          .select('type, question_text, node_id, question_audio_url'), t)
           .order('id', { ascending: true })
           .limit(1);
         if (data && data.length > 0) {
           found[t] = data[0] as ExampleRow;
           const url = (data[0] as { question_audio_url?: string }).question_audio_url;
-          if (url) clipsFound[t] = { url, count: 0 };
+          // End rows used to share the start recording; that doesn't count as recorded.
+          const isEndClip = url?.includes('/audio/types/YXVkaW9fcGljdHVyZV9lbmQ');
+          if (url && (t !== AUDIO_PICTURE_END_KEY || isEndClip) && !(t === 'audio_picture' && isEndClip)) clipsFound[t] = { url, count: 0 };
         }
       }
       setExamples(found);
@@ -76,10 +101,9 @@ const AudioRecorder: React.FC = () => {
     }
 
     // Every question of this type shares the same recorded prompt.
-    const { error: updErr } = await supabase
+    const { error: updErr } = await forSlot(supabase
       .from('questions')
-      .update({ question_audio_url: url })
-      .eq('type', t);
+      .update({ question_audio_url: url }), t);
     setUploading(false);
     if (updErr) {
       alert(`فایل آپلود شد ولی وصل کردنش به سوال‌ها خطا داد: ${updErr.message}`);
@@ -89,8 +113,8 @@ const AudioRecorder: React.FC = () => {
   };
 
   const activeExample = examples[activeType];
-  const activePrompt = QUESTION_TYPE_PROMPT[activeType];
-  const recordedTypes = ALL_TYPES.filter(t => !!clips[t]);
+  const activePrompt = SLOT_PROMPT[activeType];
+  const recordedTypes = SLOTS.filter(t => !!clips[t]);
 
   return (
     <div dir="rtl" className="min-h-screen bg-violet-50 flex flex-col items-center p-4 gap-4 pb-10">
@@ -100,13 +124,13 @@ const AudioRecorder: React.FC = () => {
       </p>
 
       <div className="flex flex-wrap gap-2 justify-center max-w-lg">
-        {ALL_TYPES.map(t => (
+        {SLOTS.map(t => (
           <button key={t} onClick={() => setActiveType(t)}
             className={`py-2 px-3 rounded-xl text-sm font-bold border-2 transition-all relative
               ${t === activeType ? 'bg-violet-600 text-white border-violet-600'
                 : clips[t] ? 'bg-green-100 text-green-800 border-green-400'
                 : 'bg-white text-gray-700 border-violet-200'}`}>
-            {TYPE_LABELS[t]}
+            {SLOT_LABELS[t]}
             {clips[t] && t !== activeType && (
               <span className="absolute -top-1 -left-1 w-3 h-3 bg-green-500 rounded-full" />
             )}
@@ -115,7 +139,7 @@ const AudioRecorder: React.FC = () => {
       </div>
 
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-lg border-2 border-violet-200 p-4 flex flex-col gap-3">
-        <p className="text-sm text-gray-500">نوع: <strong className="text-violet-700">{TYPE_LABELS[activeType]}</strong></p>
+        <p className="text-sm text-gray-500">نوع: <strong className="text-violet-700">{SLOT_LABELS[activeType]}</strong></p>
 
         {loading ? (
           <p className="text-sm text-gray-400">در حال بارگذاری نمونه...</p>
@@ -153,7 +177,7 @@ const AudioRecorder: React.FC = () => {
 
       {recordedTypes.length > 0 && (
         <p className="text-xs text-gray-500 text-center max-w-sm">
-          ضبط‌شده‌ها ({recordedTypes.length} از {ALL_TYPES.length}): {recordedTypes.map(t => TYPE_LABELS[t]).join('، ')}
+          ضبط‌شده‌ها ({recordedTypes.length} از {SLOTS.length}): {recordedTypes.map(t => SLOT_LABELS[t]).join('، ')}
         </p>
       )}
     </div>

@@ -8,6 +8,15 @@ import type { Question } from '../types';
 // playback just reads question.questionAudioUrl as normal, no separate map needed.
 // QUESTION_TYPE_PROMPT only holds the generic Persian text shown/spoken (TTS fallback
 // before she's recorded real audio, and as the caption instead of the per-question text).
+// audio_picture has two phrasings with different spoken prompts:
+//   start: "کدام یکی با این صدا شروع میشه؟"   end: "صدای آخر کدام یکی شبیه این صداست؟"
+// so its shared prompt is recorded once per phrasing. The end phrasing is told apart
+// by its text ("آخر…" / "…ختم"); keep in sync with the ilike filters in AudioRecorder.
+export const AUDIO_PICTURE_END_KEY = 'audio_picture_end';
+export const isAudioPictureEnd = (text: string) => /آخر|ختم/.test(text);
+export const promptKeyFor = (q: { type: string; questionText: string }): string =>
+  q.type === 'audio_picture' && isAudioPictureEnd(q.questionText) ? AUDIO_PICTURE_END_KEY : q.type;
+
 export const QUESTION_TYPE_PROMPT: Partial<Record<Question['type'], string>> = {
   color_letter: 'این شکل را رنگ کن',
   text_choice: 'کدام یکی درست نوشته شده؟',

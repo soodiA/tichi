@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { db } from '../db/db';
 import type { Unit, Node, Question } from '../types';
+import { promptKeyFor, AUDIO_PICTURE_END_KEY } from './questionTypeAudio';
 
 interface RawQuestion {
   id: string;
@@ -69,16 +70,23 @@ function toQuestion(r: RawQuestion): Question & { nodeId: string } {
 // Replace those with the type's shared prompt recording (from /audio-recorder),
 // taken from any sibling row of the same type that has one.
 const NON_PROMPT_AUDIO = /\/audio\/(words|letters|combos|intro)\//;
+// Recordings made for the audio_picture "end" phrasing live at types/<base64url(key)>--…
+const END_CLIP = /\/audio\/types\/YXVkaW9fcGljdHVyZV9lbmQ/;
 function withTypePromptAudio<T extends Question>(qs: T[]): T[] {
+  // audio_picture: start rows must not play the end recording and vice versa.
+  const fits = (q: T, url: string) =>
+    q.type !== 'audio_picture' || END_CLIP.test(url) === (promptKeyFor(q) === AUDIO_PICTURE_END_KEY);
   const typeUrl = new Map<string, string>();
   for (const q of qs) {
-    if (q.questionAudioUrl && !NON_PROMPT_AUDIO.test(q.questionAudioUrl) && !typeUrl.has(q.type)) {
-      typeUrl.set(q.type, q.questionAudioUrl);
+    const k = promptKeyFor(q);
+    if (q.questionAudioUrl && !NON_PROMPT_AUDIO.test(q.questionAudioUrl) && fits(q, q.questionAudioUrl) && !typeUrl.has(k)) {
+      typeUrl.set(k, q.questionAudioUrl);
     }
   }
   return qs.map((q) => {
-    if (!q.questionAudioUrl || !NON_PROMPT_AUDIO.test(q.questionAudioUrl)) return q;
-    return { ...q, questionAudioUrl: typeUrl.get(q.type) };
+    if (!q.questionAudioUrl) return q;
+    if (!NON_PROMPT_AUDIO.test(q.questionAudioUrl) && fits(q, q.questionAudioUrl)) return q;
+    return { ...q, questionAudioUrl: typeUrl.get(promptKeyFor(q)) };
   });
 }
 
