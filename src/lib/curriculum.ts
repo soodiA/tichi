@@ -63,6 +63,25 @@ function toQuestion(r: RawQuestion): Question & { nodeId: string } {
   };
 }
 
+// The yellow speaker next to a question must read the QUESTION. Some rows had a
+// word/letter/combo clip written into question_audio_url (old per-word recorder
+// pages matched on media_label), so the icon spoke the target word instead.
+// Replace those with the type's shared prompt recording (from /audio-recorder),
+// taken from any sibling row of the same type that has one.
+const NON_PROMPT_AUDIO = /\/audio\/(words|letters|combos|intro)\//;
+function withTypePromptAudio<T extends Question>(qs: T[]): T[] {
+  const typeUrl = new Map<string, string>();
+  for (const q of qs) {
+    if (q.questionAudioUrl && !NON_PROMPT_AUDIO.test(q.questionAudioUrl) && !typeUrl.has(q.type)) {
+      typeUrl.set(q.type, q.questionAudioUrl);
+    }
+  }
+  return qs.map((q) => {
+    if (!q.questionAudioUrl || !NON_PROMPT_AUDIO.test(q.questionAudioUrl)) return q;
+    return { ...q, questionAudioUrl: typeUrl.get(q.type) };
+  });
+}
+
 const DEMO_MAX_UNIT_ORD = import.meta.env.VITE_DEMO_MAX_UNIT_ORD
   ? Number(import.meta.env.VITE_DEMO_MAX_UNIT_ORD)
   : undefined;
@@ -130,7 +149,7 @@ async function loadCurriculumUnfiltered(): Promise<Unit[]> {
       if (questionsError) console.error('[curriculum] questions fetch failed', questionsError);
 
       if (rawUnits && rawNodes && rawQuestions) {
-        const questions = (rawQuestions as RawQuestion[]).map(toQuestion);
+        const questions = withTypePromptAudio((rawQuestions as RawQuestion[]).map(toQuestion));
         const nodes: Node[] = (rawNodes as RawNode[]).map((n) => ({
           id: n.id,
           unitId: n.unit_id,
