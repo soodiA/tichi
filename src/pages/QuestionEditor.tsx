@@ -19,6 +19,7 @@ import PhonemeForm from './question-editor/forms/Phoneme';
 import SoundToTextForm from './question-editor/forms/SoundToText';
 import ColorLetterForm from './question-editor/forms/ColorLetter';
 import MiddleBlankForm from './question-editor/forms/MiddleBlank';
+import TextChoiceForm from './question-editor/forms/TextChoice';
 import PairMatchForm from './question-editor/forms/PairMatch';
 
 const FORM_BY_TYPE: Partial<Record<QuestionType, React.FC<FormProps>>> = {
@@ -36,6 +37,7 @@ const FORM_BY_TYPE: Partial<Record<QuestionType, React.FC<FormProps>>> = {
   color_letter: ColorLetterForm,
   pair_match: PairMatchForm,
   middle_blank: MiddleBlankForm,
+  text_choice: TextChoiceForm,
 };
 
 interface NodeRow {

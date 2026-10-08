@@ -10,6 +10,7 @@ import type { Question } from '../types';
 // before she's recorded real audio, and as the caption instead of the per-question text).
 export const QUESTION_TYPE_PROMPT: Partial<Record<Question['type'], string>> = {
   color_letter: 'این شکل را رنگ کن',
+  text_choice: 'کدام یکی درست نوشته شده؟',
   // The phrase itself lives in question_text and is rendered by Q12_MiddleBlank.
   middle_blank: 'گزینه صحیح را انتخاب کن.',
   audio_options: 'کدام صدا مربوط به این ترکیب است؟',

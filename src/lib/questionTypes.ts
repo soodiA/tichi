@@ -16,6 +16,7 @@ export const TYPE_LABELS: Record<QuestionType, string> = {
   sound_to_text: 'صدا به نوشتار',
   color_letter: 'رنگ کردن حرف',
   pair_match: 'جفت‌یابی',
+  text_choice: 'انتخاب نوشتار درست',
 };
 
 export const ALL_TYPES = Object.keys(TYPE_LABELS) as QuestionType[];
@@ -42,4 +43,5 @@ export const QUESTION_TYPE_DEFAULT_TEXT: Partial<Record<QuestionType, string>> =
   arrange: 'جمله را مرتب کن.',
   sentence_complete: 'جمله را کامل کن: ...',
   middle_blank: 'مادَر ..... مَن',
+  text_choice: 'کدام یکی درست نوشته شده؟',
 };

@@ -14,6 +14,7 @@ import Q7_AudioOptions from './Q7_AudioOptions';
 import Q8_SentenceComplete from './Q8_SentenceComplete';
 import Q9_Arrange from './Q9_Arrange';
 import Q12_MiddleBlank from './Q12_MiddleBlank';
+import Q16_TextChoice from './Q16_TextChoice';
 import Q11_Phoneme from './Q11_Phoneme';
 import Q13_SoundToText from './Q13_SoundToText';
 import Q14_ColorLetter from './Q14_ColorLetter';
@@ -28,7 +29,7 @@ interface QuestionWrapperProps {
 const KNOWN_TYPES = new Set([
   'audio_picture', 'syllable_count', 'flower_count', 'fill_blanks', 'record',
   'handwriting', 'audio_options', 'sentence_complete', 'arrange', 'phoneme',
-  'sound_to_text', 'color_letter', 'pair_match', 'similar_letters', 'middle_blank',
+  'sound_to_text', 'color_letter', 'pair_match', 'similar_letters', 'middle_blank', 'text_choice',
 ]);
 
 const Unsupported: React.FC<{ type: string; onAnswer: (c: boolean) => void }> = ({ type, onAnswer }) => (
@@ -117,6 +118,9 @@ const QuestionWrapper: React.FC<QuestionWrapperProps> = ({ question, onAnswer, d
       )}
       {question.type === 'pair_match' && (
         <Q15_PairMatch question={question} onAnswer={onAnswer} />
+      )}
+      {question.type === 'text_choice' && (
+        <Q16_TextChoice question={question} onAnswer={onAnswer} disabled={disabled} />
       )}
       {question.type === 'middle_blank' && (
         <Q12_MiddleBlank question={question} onAnswer={onAnswer} disabled={disabled} />

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import type { Question } from '../../types';
 import ClipButton from '../ui/ClipButton';
+import { isImagePath, resolveImageSrc } from '../../lib/media';
 
 interface Props {
   question: Question;
@@ -165,13 +166,14 @@ const Q4_Record: React.FC<Props> = ({ question, onAnswer, disabled }) => {
   return (
     <div className="flex flex-col items-center gap-6 py-4 flex-1 justify-center">
       <div className="flex flex-col items-center gap-2">
-        {question.options?.find((o) => o.id === '__image__')?.imageUrl && (
-          <img
-            src={question.options.find((o) => o.id === '__image__')!.imageUrl}
-            alt=""
-            className="w-28 h-28 object-contain rounded-2xl mb-1"
-          />
-        )}
+        {(() => {
+          const img = question.options?.find((o) => o.id === '__image__')?.imageUrl;
+          if (!img) return null;
+          // The editor's image field also accepts an emoji — render that as text.
+          return isImagePath(img)
+            ? <img src={resolveImageSrc(img)} alt="" className="w-28 h-28 object-contain rounded-2xl mb-1" />
+            : <span className="text-7xl leading-none mb-1">{img}</span>;
+        })()}
         <p className="text-gray-500 text-sm">این کلمه را بلند بگو:</p>
         <ClipButton folder="words" text={String(question.correctAnswer)} />
       </div>

@@ -4,6 +4,7 @@ import type { Option } from '../../types';
 import { getClipUrl } from '../../lib/clipAudio';
 import { uploadVersioned } from '../../lib/versionedUpload';
 import { pickRecordingMimeType, extFromMime } from '../../lib/recordingFormat';
+import { isImagePath, resolveImageSrc } from '../../lib/media';
 
 // Shared media library: every image/audio uploaded through the editor lands in one
 // flat, kind-scoped folder (instead of a narrow per-question/option prefix) so
@@ -167,8 +168,9 @@ export const ImageField: React.FC<{ value?: string; onChange: (url: string) => v
 
   return (
     <div className="flex items-center gap-2">
-      {value && (
-        <img src={value} alt="" className="w-10 h-10 object-contain rounded-lg border border-gray-200 bg-white" />
+      {value && (isImagePath(value)
+        ? <img src={resolveImageSrc(value)} alt="" className="w-10 h-10 object-contain rounded-lg border border-gray-200 bg-white" />
+        : <span className="w-10 h-10 flex items-center justify-center text-2xl rounded-lg border border-gray-200 bg-white">{value}</span>
       )}
       <input
         type="text"

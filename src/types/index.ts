@@ -13,7 +13,8 @@ export type QuestionType =
   | 'middle_blank'       // Q12: fill blank in middle of phrase
   | 'sound_to_text'      // Q13: hear sound, pick written form
   | 'color_letter'       // Q14: color hollow letter with finger
-  | 'pair_match';        // Q15: tap 2 cards that share the same starting sound
+  | 'pair_match'         // Q15: tap 2 cards that share the same starting sound
+  | 'text_choice';       // Q16: pick the correctly written text option
 
 export interface Option {
   id: string;
