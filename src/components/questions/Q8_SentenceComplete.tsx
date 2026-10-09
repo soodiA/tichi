@@ -13,9 +13,9 @@ const Q8_SentenceComplete: React.FC<Props> = ({ question, onAnswer, disabled }) 
 
   // The question text might have "..." indicating where the blank is.
   // Show the sentence, replace "..." with the selected option if chosen.
-  const sentenceDisplay = selected
-    ? question.questionText.replace('...', selected)
-    : question.questionText;
+  // The sentence lives in mediaLabel; older questions kept it in questionText.
+  const sentence = question.mediaLabel || question.questionText;
+  const sentenceDisplay = selected ? sentence.replace('...', selected) : sentence;
 
   const handleOptionClick = (opt: { id: string; text?: string; audioUrl?: string }) => {
     if (disabled) return;

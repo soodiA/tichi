@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import type { FormProps } from '../types';
-import { OptionsEditor, SingleCorrectPicker, genOptionId } from '../shared';
+import { Field, TextInput, OptionsEditor, SingleCorrectPicker, genOptionId } from '../shared';
 
 const SentenceCompleteForm: React.FC<FormProps> = ({ draft, patch }) => {
   useEffect(() => {
@@ -11,7 +11,10 @@ const SentenceCompleteForm: React.FC<FormProps> = ({ draft, patch }) => {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-xs text-gray-500">توی متن سوال بالا از «...» به‌جای کلمه‌ی جاافتاده استفاده کن (مثلاً «من ... را دوست دارم»).</p>
+      <Field label="متن جمله (media_label)">
+        <TextInput value={draft.mediaLabel} onChange={(v) => patch({ mediaLabel: v })} placeholder="مثلاً: من ... را دوست دارم" />
+      </Field>
+      <p className="text-xs text-gray-500">به‌جای کلمه‌ی جاافتاده «...» بگذار. در فیلد سوال بالا فقط بنویس «جمله را کامل کن».</p>
       <OptionsEditor
         options={draft.options}
         onChange={(options) => patch({ options })}

@@ -41,7 +41,7 @@ export const QUESTION_TYPE_DEFAULT_TEXT: Partial<Record<QuestionType, string>> =
   audio_options: 'کدام یکی «_» خوانده می‌شه؟',
   pair_match: 'کدام شکل‌ها صدای اول مثل هم دارند؟',
   arrange: 'جمله را مرتب کن.',
-  sentence_complete: 'جمله را کامل کن: ...',
+  sentence_complete: 'جمله را کامل کن',
   middle_blank: 'مادَر ..... مَن',
   text_choice: 'کدام یکی درست نوشته شده؟',
 };
