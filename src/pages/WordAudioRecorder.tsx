@@ -8,6 +8,8 @@ import { pickRecordingMimeType } from '../lib/recordingFormat';
 const LETTERS = [
   'ا', 'ب', 'پ', 'ت', 'ث', 'ج', 'چ', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'ژ', 'س', 'ش',
   'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ک', 'گ', 'ل', 'م', 'ن', 'و', 'ه', 'ی',
+  // Short-vowel carriers (their units' letters), recorded as standalone sounds.
+  'اَ', 'اِ', 'اُ',
 ];
 
 type RecordState = 'idle' | 'recording' | 'uploading' | 'done';
@@ -185,7 +187,7 @@ const WordAudioRecorder: React.FC = () => {
           </button>
           <button onClick={() => setSection('letters')}
             className={`flex-1 py-3 rounded-xl text-base font-bold border-2 ${section === 'letters' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}>
-            ۳۲ حرف الفبا ({recordedLetterCount}/{LETTERS.length})
+            ۳۲ حرف الفبا + اَ اِ اُ ({recordedLetterCount}/{LETTERS.length})
           </button>
         </div>
 

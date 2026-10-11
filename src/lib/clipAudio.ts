@@ -40,9 +40,9 @@ export const AUDIO_PICTURE_GENERIC_TEXT: Record<AudioPicturePosition, string> = 
 export async function getComboClipUrl(text: string): Promise<string | undefined> {
   const key = comboKeyForText(text);
   if (key) return getLatestUrl('combos', key);
-  // A bare letter ("بـ") has no vowel combo — use its letter-name clip instead.
+  // A bare letter ("بـ") or vowel carrier ("اَ") has no combo — use its letters clip.
   const bare = text.normalize('NFC').replace(/[\u200c\u0640]/g, '');
-  return [...bare].length === 1 ? getLatestUrl('letters', bare) : undefined;
+  return [...bare].length <= 2 ? getLatestUrl('letters', bare) : undefined;
 }
 
 const speakText = (text: string) => {
