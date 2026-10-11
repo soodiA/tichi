@@ -36,13 +36,40 @@ export const AUDIO_PICTURE_GENERIC_TEXT: Record<AudioPicturePosition, string> = 
   end: 'آخر کدام یکی مثل این صداست',
 };
 
-// Recording of a letter+vowel combo (see /record-combos), or undefined if none yet.
+// Spellings under which the same sound may have been recorded: editors type the
+// tatweel and the vowel mark in either order ("بَـ" vs "بـَ"), or omit the tatweel.
+function spellingVariants(text: string): string[] {
+  const t = text.normalize('NFC').replace(/\u200c/g, '');
+  const bare = t.replace(/\u0640/g, '');
+  const marks = (bare.match(/[\u064B-\u0652]/g) ?? []).join('');
+  const base = bare.replace(/[\u064B-\u0652]/g, '');
+  const hadTatweel = t.includes('\u0640');
+  return [...new Set([
+    t,
+    base + (hadTatweel ? '\u0640' : '') + marks, // tatweel before the vowel mark
+    base + marks + (hadTatweel ? '\u0640' : ''), // vowel mark before the tatweel
+    bare,
+  ])];
+}
+
+// Recording of a letter+vowel combo or bare letter/word: /record-combos first, then
+// the words and letters recorded in /word-audio-recorder (any spelling variant), or
+// undefined if none yet.
 export async function getComboClipUrl(text: string): Promise<string | undefined> {
   const key = comboKeyForText(text);
-  if (key) return getLatestUrl('combos', key);
-  // A bare letter ("بـ") or vowel carrier ("اَ") has no combo — use its letters clip.
-  const bare = text.normalize('NFC').replace(/[\u200c\u0640]/g, '');
-  return [...bare].length <= 2 ? getLatestUrl('letters', bare) : undefined;
+  if (key) {
+    const u = await getLatestUrl('combos', key);
+    if (u) return u;
+  }
+  const variants = spellingVariants(text);
+  for (const folder of ['words', 'letters'] as const) {
+    for (const v of variants) {
+      if (!v) continue;
+      const u = await getLatestUrl(folder, v);
+      if (u) return u;
+    }
+  }
+  return undefined;
 }
 
 const speakText = (text: string) => {
@@ -57,7 +84,7 @@ const speakText = (text: string) => {
 // Plays the sound for a question's hidden label: the combo/letter/word recording
 // if one exists, else `fallbackUrl`, else browser TTS.
 export async function playLabelSound(label: string, fallbackUrl?: string): Promise<void> {
-  const url = (await getComboClipUrl(label)) ?? (await getClipUrl('words', label)) ?? fallbackUrl;
+  const url = (await getComboClipUrl(label)) ?? fallbackUrl;
   if (url) { new Audio(url).play().catch(() => {}); return; }
   speakText(label.normalize('NFC').replace(/[\u200c\u0640]/g, ''));
 }
