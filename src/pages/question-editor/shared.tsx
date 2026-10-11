@@ -17,7 +17,10 @@ const LIBRARY_PREFIX: Record<'image' | 'audio', string> = {
 
 export async function uploadToStorage(kind: 'image' | 'audio', file: Blob, ext: string): Promise<string> {
   const path = `${LIBRARY_PREFIX[kind]}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const { error } = await supabase.storage.from('audio').upload(path, file, { upsert: true });
+  // Path is unique per upload, so no upsert: the anon key only has INSERT on the
+  // bucket, and `upsert: true` makes Storage check UPDATE RLS and reject with
+  // "new row violates row-level security policy" (see lib/versionedUpload.ts).
+  const { error } = await supabase.storage.from('audio').upload(path, file, { contentType: file.type || undefined });
   if (error) throw error;
   return supabase.storage.from('audio').getPublicUrl(path).data.publicUrl;
 }
