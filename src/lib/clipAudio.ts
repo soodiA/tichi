@@ -39,5 +39,8 @@ export const AUDIO_PICTURE_GENERIC_TEXT: Record<AudioPicturePosition, string> = 
 // Recording of a letter+vowel combo (see /record-combos), or undefined if none yet.
 export async function getComboClipUrl(text: string): Promise<string | undefined> {
   const key = comboKeyForText(text);
-  return key ? getLatestUrl('combos', key) : undefined;
+  if (key) return getLatestUrl('combos', key);
+  // A bare letter ("بـ") has no vowel combo — use its letter-name clip instead.
+  const bare = text.normalize('NFC').replace(/[\u200c\u0640]/g, '');
+  return [...bare].length === 1 ? getLatestUrl('letters', bare) : undefined;
 }

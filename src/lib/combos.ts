@@ -1,5 +1,9 @@
 export // All consonants with their curriculum ordinal
 const CONSONANTS = [
+  // ب and د are taught before the vowels (ord 2 / 4), but later questions combine
+  // them with every vowel — ord 41 makes /record-combos offer all vowels for them.
+  { letter: 'ب', uid: 'ba', ord: 41 },
+  { letter: 'د', uid: 'da', ord: 41 },
   { letter: 'م', uid: 'mim', ord: 5 },
   { letter: 'س', uid: 'sin', ord: 6 },
   { letter: 'ت', uid: 'te', ord: 7 },
@@ -48,7 +52,8 @@ export function comboText(letter: string, suffix: string) {
 
 // Clip lookup for a combo's text (e.g. "با", "مَ") against recordings made in
 // /record-combos (storage "combos/<uid>-<vowelKey>--<ts>.<ext>").
-const strip = (t: string) => t.normalize('NFC').replace(/\u200c/g, '');
+// Also drops tatweel (ـ): editors type initial forms like "بَـ" / "بـ".
+const strip = (t: string) => t.normalize('NFC').replace(/[\u200c\u0640]/g, '');
 export function comboKeyForText(text: string): string | undefined {
   const t = strip(text);
   for (const c of CONSONANTS) for (const v of VOWELS) {
