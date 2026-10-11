@@ -61,15 +61,12 @@ export async function getComboClipUrl(text: string): Promise<string | undefined>
     const u = await getLatestUrl('combos', key);
     if (u) return u;
   }
-  const variants = spellingVariants(text);
-  for (const folder of ['words', 'letters'] as const) {
-    for (const v of variants) {
-      if (!v) continue;
-      const u = await getLatestUrl(folder, v);
-      if (u) return u;
-    }
-  }
-  return undefined;
+  // Probe every candidate in parallel (each probe is a network round-trip), then
+  // take the first hit in priority order: words before letters, exact spelling first.
+  const variants = spellingVariants(text).filter(Boolean);
+  const candidates = (['words', 'letters'] as const).flatMap((f) => variants.map((v) => [f, v] as const));
+  const urls = await Promise.all(candidates.map(([f, v]) => getLatestUrl(f, v)));
+  return urls.find((u) => !!u);
 }
 
 const speakText = (text: string) => {
