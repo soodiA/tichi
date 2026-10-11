@@ -44,3 +44,20 @@ export async function getComboClipUrl(text: string): Promise<string | undefined>
   const bare = text.normalize('NFC').replace(/[\u200c\u0640]/g, '');
   return [...bare].length === 1 ? getLatestUrl('letters', bare) : undefined;
 }
+
+const speakText = (text: string) => {
+  if (!window.speechSynthesis || !text) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = 'fa-IR';
+  utt.rate = 0.85;
+  window.speechSynthesis.speak(utt);
+};
+
+// Plays the sound for a question's hidden label: the combo/letter/word recording
+// if one exists, else `fallbackUrl`, else browser TTS.
+export async function playLabelSound(label: string, fallbackUrl?: string): Promise<void> {
+  const url = (await getComboClipUrl(label)) ?? (await getClipUrl('words', label)) ?? fallbackUrl;
+  if (url) { new Audio(url).play().catch(() => {}); return; }
+  speakText(label.normalize('NFC').replace(/[\u200c\u0640]/g, ''));
+}

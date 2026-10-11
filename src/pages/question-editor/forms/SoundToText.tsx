@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import type { FormProps } from '../types';
-import { OptionsEditor, SingleCorrectPicker, genOptionId } from '../shared';
+import { Field, TextInput, OptionsEditor, SingleCorrectPicker, genOptionId } from '../shared';
 
 const SoundToTextForm: React.FC<FormProps> = ({ draft, patch }) => {
   useEffect(() => {
@@ -11,7 +11,18 @@ const SoundToTextForm: React.FC<FormProps> = ({ draft, patch }) => {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-xs text-gray-500">صدایی که پخش میشه (کاربر باید نوشتار درستش رو انتخاب کنه) — این همون فیلد «صدای سوال» در بالای فرمه.</p>
+      <Field label="لیبل (حرف یا ترکیبی که صداش پخش میشه — به کاربر نشون داده نمیشه)">
+        <TextInput
+          value={draft.mediaLabel}
+          onChange={(v) => {
+            const key = (t?: string) => (t ?? '').normalize('NFC').replace(/[\u200c\u0640]/g, '').trim();
+            const match = draft.options.find((o) => key(o.text) !== '' && key(o.text) === key(v));
+            patch({ mediaLabel: v, ...(match ? { correctAnswer: match.id } : {}) });
+          }}
+          placeholder="مثلاً: بَ"
+        />
+      </Field>
+      <p className="text-xs text-gray-500">برنامه از روی لیبل می‌فهمه چه صدایی پخش بشه (ضبط‌های صفحه‌ی ضبط ترکیب‌ها/حروف). گزینه‌ی درست باید با لیبل برابر باشه؛ اگه یکی از گزینه‌ها دقیقاً همین متن رو داشته باشه خودکار به‌عنوان جواب درست انتخاب میشه.</p>
       <OptionsEditor
         options={draft.options}
         onChange={(options) => patch({ options })}

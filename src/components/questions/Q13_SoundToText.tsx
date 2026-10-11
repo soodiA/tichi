@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import type { Question } from '../../types';
 import AudioButton from '../ui/AudioButton';
 import { shuffleArray } from '../../lib/shuffle';
+import { playLabelSound } from '../../lib/clipAudio';
 
 interface Props {
   question: Question;
@@ -23,7 +24,10 @@ const Q13_SoundToText: React.FC<Props> = ({ question, onAnswer, disabled }) => {
     onAnswer(correct);
   };
 
-  const audioUrl = question.questionAudioUrl ?? question.mediaAudioUrl;
+  // mediaLabel is the hidden letter/combo whose sound plays (never rendered). Older
+  // questions without one keep using their recorded audio URL.
+  const label = question.mediaLabel?.trim();
+  const audioUrl = label ? question.mediaAudioUrl : (question.questionAudioUrl ?? question.mediaAudioUrl);
 
   return (
     <div className="flex flex-col items-center gap-6">
@@ -35,7 +39,7 @@ const Q13_SoundToText: React.FC<Props> = ({ question, onAnswer, disabled }) => {
       ) : null}
       {/* Large play button */}
       <div className="flex flex-col items-center gap-3">
-        <AudioButton audioUrl={audioUrl} size="lg" />
+        <AudioButton audioUrl={audioUrl} size="lg" onPlay={label ? () => { playLabelSound(label, audioUrl); } : undefined} />
         <p className="text-gray-500 text-sm">صدا را گوش بده</p>
       </div>
 
