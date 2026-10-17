@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
-import { searchProfilesByUsername } from '../lib/sync';
+import { searchProfilesByUsername, ensureAnonSession } from '../lib/sync';
 import PageBg from '../components/ui/PageBg';
 
 interface Profile {
@@ -72,43 +72,69 @@ const Friends: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [searchDone, setSearchDone] = useState(false);
   const [suggestLoading, setSuggestLoading] = useState(true);
+  const [authUid, setAuthUid] = useState<string | null>(null);
+  const [addError, setAddError] = useState(false);
+
+  // friendships RLS requires user_id = auth.uid(), and `profiles` rows of other
+  // users are hidden from direct selects. So: key friendships by the auth uid
+  // (not the local profile id) and read candidates via the public RPC.
+  const getAuthUid = async (): Promise<string | null> => {
+    await ensureAnonSession();
+    const { data: { user } } = await supabase.auth.getUser();
+    return user?.id ?? null;
+  };
 
   // Load existing friendships, then load suggestions
   useEffect(() => {
     if (!currentUser) return;
+    let cancelled = false;
 
-    supabase
-      .from('friendships')
-      .select('friend_id')
-      .eq('user_id', currentUser.id)
-      .then(async ({ data: friendData }) => {
-        const friendIds = new Set<string>((friendData ?? []).map((r: any) => r.friend_id));
-        setAdded(friendIds);
+    (async () => {
+      const uid = await getAuthUid();
+      if (!uid || cancelled) { setSuggestLoading(false); return; }
+      setAuthUid(uid);
 
-        // Get Supabase auth id to properly exclude self
-        const { data: { user: authUser } } = await supabase.auth.getUser();
+      const { data: friendData } = await supabase
+        .from('friendships')
+        .select('friend_id')
+        .eq('user_id', uid);
+      const friendIds = new Set<string>((friendData ?? []).map((r: any) => r.friend_id));
+      if (cancelled) return;
+      setAdded(friendIds);
 
-        // Fetch 50 profiles, shuffle, take 10 excluding self + friends
-        const query = supabase
-          .from('profiles')
-          .select('id, name, username, avatar_url, diamonds')
-          .order('diamonds', { ascending: false })
-          .limit(50);
-        if (authUser?.id) query.neq('id', authUser.id);
-        else query.neq('local_id', currentUser.id);
-        const { data } = await query;
-
-        if (data) {
-          const filtered = (data as Profile[]).filter((p) => !friendIds.has(p.id));
-          // Shuffle
-          for (let i = filtered.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
-          }
-          setSuggestions(filtered.slice(0, 10));
+      const everyone = (await searchProfilesByUsername('')) as Profile[];
+      const byId = new Map(everyone.map((p) => [p.id, p]));
+      const candidates = (ids: Iterable<string>) =>
+        [...new Set(ids)]
+          .filter((id) => id !== uid && id !== currentUser.id && !friendIds.has(id))
+          .map((id) => byId.get(id))
+          .filter((p): p is Profile => !!p);
+      const shuffle = <T,>(arr: T[]) => {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
         }
-        setSuggestLoading(false);
-      });
+        return arr;
+      };
+
+      // 1) friends of my friends (needs the policy to allow reading them; empty otherwise)
+      let fof: Profile[] = [];
+      if (friendIds.size > 0) {
+        const { data: fofData } = await supabase
+          .from('friendships')
+          .select('friend_id')
+          .in('user_id', [...friendIds]);
+        fof = shuffle(candidates((fofData ?? []).map((r: any) => r.friend_id)));
+      }
+      // 2) top up with random people
+      const picked = new Set(fof.map((p) => p.id));
+      const random = shuffle(candidates(everyone.map((p) => p.id)).filter((p) => !picked.has(p.id)));
+      if (cancelled) return;
+      setSuggestions([...fof, ...random].slice(0, 10));
+      setSuggestLoading(false);
+    })();
+
+    return () => { cancelled = true; };
   }, [currentUser]);
 
   const doSearch = useCallback(async () => {
@@ -123,18 +149,26 @@ const Friends: React.FC = () => {
     // for any profile that isn't the current user's own row, so this never
     // found other users. See `searchProfilesByUsername` in src/lib/sync.ts.
     const data = await searchProfilesByUsername(q);
-    setResults((data as Profile[]).filter((p) => p.id !== currentUser.id));
+    setResults((data as Profile[]).filter((p) => p.id !== currentUser.id && p.id !== authUid));
     setLoading(false);
   }, [search, currentUser]);
 
   const handleAdd = async (friendId: string) => {
     if (!currentUser || added.has(friendId)) return;
+    const uid = authUid ?? (await getAuthUid());
+    if (!uid) { setAddError(true); return; }
+    setAddError(false);
     setAdded((prev) => new Set([...prev, friendId]));
-    await supabase.from('friendships').upsert({
-      user_id: currentUser.id,
+    const { error } = await supabase.from('friendships').upsert({
+      user_id: uid,
       friend_id: friendId,
       created_at: new Date().toISOString(),
     });
+    if (error) {
+      console.error('[friends] add failed', error);
+      setAdded((prev) => { const n = new Set(prev); n.delete(friendId); return n; });
+      setAddError(true);
+    }
   };
 
   const clearSearch = () => {
@@ -185,6 +219,10 @@ const Friends: React.FC = () => {
             جستجو
           </button>
         </div>
+
+        {addError && (
+          <p className="text-center text-red-500 text-sm font-bold mb-3">افزودن دوست انجام نشد، دوباره تلاش کن</p>
+        )}
 
         {/* Search results */}
         {loading && (
