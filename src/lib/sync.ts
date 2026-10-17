@@ -237,7 +237,7 @@ export async function pullProfileAndProgressFromCloud(profileId: string): Promis
  * friend-search result (no password_hash, diamonds are already
  * intentionally shown elsewhere in-app so kept here too).
  */
-export async function searchProfilesByUsername(query: string): Promise<Array<{
+export async function searchProfilesByUsername(query: string, allowEmpty = false): Promise<Array<{
   id: string;
   name: string;
   username: string;
@@ -245,7 +245,7 @@ export async function searchProfilesByUsername(query: string): Promise<Array<{
   diamonds: number;
 }>> {
   const q = query.trim().toLowerCase();
-  if (!q) return [];
+  if (!q && !allowEmpty) return [];
   const { data, error } = await supabase.rpc('find_profile_by_username_public', {
     p_query: q,
   });

@@ -36,9 +36,10 @@ export const useStore = create<AppState>()(
       incrementStreak: () => {
         const user = get().currentUser;
         if (!user) return;
-        const today = new Date().toISOString().split('T')[0];
+        const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const today = ymd(new Date());
         if (user.lastActiveDate === today) return;
-        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        const yesterday = ymd(new Date(Date.now() - 86400000));
         const newStreak = user.lastActiveDate === yesterday ? user.streakDays + 1 : 1;
         set({ currentUser: { ...user, streakDays: newStreak, lastActiveDate: today } });
       },

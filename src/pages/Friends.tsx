@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
-import { searchProfilesByUsername, ensureAnonSession } from '../lib/sync';
+import { searchProfilesByUsername, ensureAnonSession, syncProfileToCloud } from '../lib/sync';
 import PageBg from '../components/ui/PageBg';
 
 interface Profile {
@@ -74,6 +74,7 @@ const Friends: React.FC = () => {
   const [suggestLoading, setSuggestLoading] = useState(true);
   const [authUid, setAuthUid] = useState<string | null>(null);
   const [addError, setAddError] = useState(false);
+  const [addErrorCode, setAddErrorCode] = useState('');
 
   // friendships RLS requires user_id = auth.uid(), and `profiles` rows of other
   // users are hidden from direct selects. So: key friendships by the auth uid
@@ -102,7 +103,7 @@ const Friends: React.FC = () => {
       if (cancelled) return;
       setAdded(friendIds);
 
-      const everyone = (await searchProfilesByUsername('')) as Profile[];
+      const everyone = (await searchProfilesByUsername('', true)) as Profile[];
       const byId = new Map(everyone.map((p) => [p.id, p]));
       const candidates = (ids: Iterable<string>) =>
         [...new Set(ids)]
@@ -158,6 +159,9 @@ const Friends: React.FC = () => {
     const uid = authUid ?? (await getAuthUid());
     if (!uid) { setAddError(true); return; }
     setAddError(false);
+    // friendships.user_id has an FK to profiles(id): make sure this device's
+    // auth uid actually has a cloud profile row before inserting.
+    await syncProfileToCloud(currentUser);
     setAdded((prev) => new Set([...prev, friendId]));
     const { error } = await supabase.from('friendships').upsert({
       user_id: uid,
@@ -166,6 +170,7 @@ const Friends: React.FC = () => {
     });
     if (error) {
       console.error('[friends] add failed', error);
+      setAddErrorCode(error.code ?? error.message);
       setAdded((prev) => { const n = new Set(prev); n.delete(friendId); return n; });
       setAddError(true);
     }
@@ -221,7 +226,7 @@ const Friends: React.FC = () => {
         </div>
 
         {addError && (
-          <p className="text-center text-red-500 text-sm font-bold mb-3">افزودن دوست انجام نشد، دوباره تلاش کن</p>
+          <p className="text-center text-red-500 text-sm font-bold mb-3">افزودن دوست انجام نشد، دوباره تلاش کن {addErrorCode && <span dir="ltr">({addErrorCode})</span>}</p>
         )}
 
         {/* Search results */}

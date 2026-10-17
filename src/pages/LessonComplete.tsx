@@ -101,6 +101,7 @@ const LessonComplete: React.FC = () => {
 
   const currentUser = useStore((s) => s.currentUser);
   const addDiamonds = useStore((s) => s.addDiamonds);
+  const incrementStreak = useStore((s) => s.incrementStreak);
   const savedRef = useRef(false);
 
   const starCount = accuracy === 100 ? 3 : accuracy >= 80 ? 2 : 1;
@@ -113,9 +114,11 @@ const LessonComplete: React.FC = () => {
     if (savedRef.current || !currentUser) return;
     savedRef.current = true;
     addDiamonds(coinsEarned);
+    incrementStreak();
+    const streaked = useStore.getState().currentUser ?? currentUser;
     const progress = { nodeId, userId: currentUser.id, completed: true, stars: starCount, accuracy, completedAt: new Date().toISOString(), attempts: 1 };
     db.progress.put(progress).then(() => { syncProgressToCloud(progress).catch((e) => console.error('[sync] progress sync failed', e)); });
-    syncProfileToCloud({ ...currentUser, diamonds: currentUser.diamonds + coinsEarned, totalScore: currentUser.totalScore + coinsEarned }).catch((e) => console.error('[sync] lesson-complete profile sync failed', e));
+    syncProfileToCloud({ ...streaked, diamonds: currentUser.diamonds + coinsEarned, totalScore: currentUser.totalScore + coinsEarned }).catch((e) => console.error('[sync] lesson-complete profile sync failed', e));
   }, []);
 
   return (
