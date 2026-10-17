@@ -41,3 +41,8 @@ export async function verifyPassword(password: string, stored: string): Promise<
   const candidate = await sha256Hex(`${salt}:${password}`);
   return candidate === hash;
 }
+
+/** Recompute the stored "salt:hash" string for a known salt (used for server-side login checks). */
+export async function hashWithSalt(password: string, salt: string): Promise<string> {
+  return `${salt}:${await sha256Hex(`${salt}:${password}`)}`;
+}

@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { db } from '../db/db';
 import type { UserProfile, NodeProgress } from '../types';
+import { hashWithSalt } from './password';
 
 // Concurrent callers (e.g. React 18 StrictMode double-invoking the mount
 // effect, or two sync* calls firing back-to-back before the first resolves)
@@ -48,7 +49,7 @@ export async function syncProfileToCloud(profile: UserProfile): Promise<void> {
     last_active_date: profile.lastActiveDate,
     total_score: profile.totalScore,
     joined_at: profile.joinedAt,
-    password_hash: profile.passwordHash ?? null,
+    password_hash: profile.passwordHash ?? undefined,
     // `id` is the PK and the column the `profiles` RLS policies key off of
     // (`USING (auth.uid() = id)`). With `persistSession: true` (see
     // src/lib/supabase.ts) a given browser/device keeps the same
@@ -260,4 +261,56 @@ export async function searchProfilesByUsername(query: string, allowEmpty = false
     avatar_url: string | null;
     diamonds: number;
   }>;
+}
+
+/**
+ * Hardened login: the server never sends a password hash to the client. The
+ * client asks only for the (public) salt, recomputes the hash and the server
+ * compares it, returning the profile + progress only on a match.
+ * Requires the `get_login_salt` / `login_with_hash` functions from
+ * SECURITY-SQL.md; `legacy` means they are not installed yet.
+ */
+export type LoginResult =
+  | { status: 'ok'; profile: UserProfile }
+  | { status: 'notfound' | 'wrong' | 'legacy' | 'error' };
+
+export async function loginWithPassword(username: string, password: string): Promise<LoginResult> {
+  await ensureAnonSession();
+  const uname = username.trim().toLowerCase();
+  const { data: salt, error: saltErr } = await supabase.rpc('get_login_salt', { p_username: uname });
+  if (saltErr) return { status: saltErr.code === 'PGRST202' ? 'legacy' : 'error' };
+  if (!salt) return { status: 'notfound' };
+
+  const stored = await hashWithSalt(password, salt as string);
+  const { data, error } = await supabase.rpc('login_with_hash', { p_username: uname, p_hash: stored });
+  if (error) return { status: error.code === 'PGRST202' ? 'legacy' : 'error' };
+  if (!data) return { status: 'wrong' };
+
+  const row = (data as { profile: any; progress: any[] }).profile;
+  const profile: UserProfile = {
+    id: row.id,
+    name: row.name,
+    username: row.username,
+    birthDate: row.dob ?? undefined,
+    avatarUrl: row.avatar_url ?? undefined,
+    joinedAt: row.joined_at,
+    diamonds: row.diamonds ?? 0,
+    streakDays: row.streak_days ?? 0,
+    lastActiveDate: row.last_active_date ?? undefined,
+    totalScore: row.total_score ?? 0,
+    passwordHash: stored,
+  };
+  await db.profiles.put(profile);
+  for (const p of (data as { progress: any[] }).progress ?? []) {
+    await db.progress.put({
+      nodeId: p.node_id,
+      userId: profile.id,
+      completed: p.completed,
+      stars: p.stars ?? 0,
+      accuracy: p.best_accuracy ?? 0,
+      completedAt: p.last_played_at ?? undefined,
+      attempts: p.attempts ?? 0,
+    });
+  }
+  return { status: 'ok', profile };
 }

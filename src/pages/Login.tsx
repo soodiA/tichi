@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
-import { ensureAnonSession, findProfileByUsername, pullProfileAndProgressFromCloud } from '../lib/sync';
+import { ensureAnonSession, findProfileByUsername, loginWithPassword, pullProfileAndProgressFromCloud } from '../lib/sync';
 import { verifyPassword } from '../lib/password';
 import Mascot from '../components/ui/Mascot';
 
@@ -25,6 +25,23 @@ const Login: React.FC = () => {
     }
     setLoading(true);
     try {
+      const res = await loginWithPassword(username, password);
+      if (res.status === 'ok') {
+        setCurrentUser(res.profile);
+        navigate('/home');
+        return;
+      }
+      if (res.status === 'notfound' || res.status === 'wrong') {
+        setError(res.status === 'notfound' ? 'کاربری با این نام کاربری پیدا نشد' : 'رمز عبور اشتباهه');
+        setLoading(false);
+        return;
+      }
+      if (res.status === 'error') {
+        setError('مشکلی پیش اومد، دوباره تلاش کن');
+        setLoading(false);
+        return;
+      }
+      // 'legacy': hardened server functions not installed yet — old flow.
       const found = await findProfileByUsername(username.trim());
       if (!found) {
         setError('کاربری با این نام کاربری پیدا نشد');
