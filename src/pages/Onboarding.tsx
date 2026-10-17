@@ -3,8 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { db } from '../db/db';
-import { syncProfileToCloud } from '../lib/sync';
-import { supabase } from '../lib/supabase';
+import { syncProfileToCloud, findProfileByUsername, ensureAnonSession } from '../lib/sync';
 import { hashPassword } from '../lib/password';
 import type { UserProfile } from '../types';
 import JalaliDatePicker from '../components/ui/JalaliDatePicker';
@@ -50,11 +49,11 @@ const Onboarding: React.FC = () => {
 
       // Check username uniqueness in Supabase
       if (navigator.onLine) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('id')
-          .ilike('username', normalizedUsername)
-          .maybeSingle();
+        // Direct `profiles` selects are blocked by RLS (only the caller's own row is
+        // visible), so this check used to always pass and allowed duplicate usernames.
+        // get_login_profile is a SECURITY DEFINER RPC that sees every row.
+        await ensureAnonSession();
+        const data = await findProfileByUsername(normalizedUsername);
         if (data) {
           setErrors({ username: 'این نام کاربری قبلاً گرفته شده' });
           setLoading(false);
