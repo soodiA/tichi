@@ -151,7 +151,7 @@ const Login: React.FC = () => {
             to="/onboarding"
             className="text-center text-violet-600 font-bold text-sm mt-1 hover:underline"
           >
-            حساب ندارم / ثبت‌نام
+            تا حالا اکانتی ندارم / کاربر جدید
           </Link>
         </form>
       </motion.div>

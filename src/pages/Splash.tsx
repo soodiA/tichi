@@ -13,7 +13,7 @@ const Splash: React.FC = () => {
       if (currentUser) {
         navigate('/home');
       } else {
-        navigate('/onboarding');
+        navigate('/login');
       }
     }, 2200);
     return () => clearTimeout(timer);

@@ -24,6 +24,16 @@ $$;
 revoke all on function public.get_login_salt(text), public.login_with_hash(text, text) from public;
 grant execute on function public.get_login_salt(text), public.login_with_hash(text, text) to anon, authenticated;
 
+-- Friends list cards (adds streak + score). Public-safe columns only.
+create or replace function public.get_public_profiles(p_ids uuid[])
+returns table(id uuid, name text, username text, avatar_url text, diamonds int, streak_days int, total_score int)
+language sql security definer set search_path = public stable as $$
+  select p.id, p.name, p.username, p.avatar_url, p.diamonds::int, p.streak_days::int, p.total_score::int
+  from public.profiles p where p.id = any(p_ids)
+$$;
+revoke all on function public.get_public_profiles(uuid[]) from public;
+grant execute on function public.get_public_profiles(uuid[]) to anon, authenticated;
+
 -- Friends: let everyone read friendships (for "friends of friends").
 create policy "friendships read all" on public.friendships for select using (true);
 ```

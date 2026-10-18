@@ -3,16 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
-import { searchProfilesByUsername, ensureAnonSession, syncProfileToCloud } from '../lib/sync';
+import { searchProfilesByUsername, ensureAnonSession, syncProfileToCloud, getPublicProfiles, type PublicProfile } from '../lib/sync';
 import PageBg from '../components/ui/PageBg';
 
-interface Profile {
-  id: string;
-  name: string;
-  username: string;
-  avatar_url: string | null;
-  diamonds: number;
-}
+type Profile = PublicProfile;
 
 const Avatar: React.FC<{ profile: Profile }> = ({ profile }) => {
   const isUrl = profile.avatar_url?.startsWith('data:') || profile.avatar_url?.startsWith('http');
@@ -30,7 +24,7 @@ const Avatar: React.FC<{ profile: Profile }> = ({ profile }) => {
 const ProfileCard: React.FC<{
   profile: Profile;
   isAdded: boolean;
-  onAdd: (id: string) => void;
+  onAdd?: (id: string) => void;
   delay: number;
 }> = ({ profile, isAdded, onAdd, delay }) => (
   <motion.div
@@ -44,20 +38,27 @@ const ProfileCard: React.FC<{
       <p className="font-bold text-gray-800 truncate">{profile.name}</p>
       <p className="text-gray-400 text-sm truncate">@{profile.username}</p>
     </div>
-    <div className="flex items-center gap-1 text-amber-500 text-sm font-bold flex-shrink-0">
-      🪙 {profile.diamonds.toLocaleString('fa-IR')}
+    <div className="flex flex-col items-end gap-0.5 text-sm font-bold flex-shrink-0">
+      {profile.streak_days != null && (
+        <span className="text-orange-500">🔥 {profile.streak_days.toLocaleString('fa-IR')}</span>
+      )}
+      <span className="text-amber-500">
+        ⭐ {(profile.total_score ?? profile.diamonds).toLocaleString('fa-IR')}
+      </span>
     </div>
-    <button
-      onClick={() => onAdd(profile.id)}
-      disabled={isAdded}
-      className={`flex-shrink-0 px-4 py-2 rounded-xl font-bold text-sm transition-all
-        ${isAdded
-          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-          : 'bg-violet-600 text-white active:scale-95'
-        }`}
-    >
-      {isAdded ? '✓' : 'افزودن'}
-    </button>
+    {onAdd && (
+      <button
+        onClick={() => onAdd(profile.id)}
+        disabled={isAdded}
+        className={`flex-shrink-0 px-4 py-2 rounded-xl font-bold text-sm transition-all
+          ${isAdded
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            : 'bg-violet-600 text-white active:scale-95'
+          }`}
+      >
+        {isAdded ? '✓' : 'افزودن'}
+      </button>
+    )}
   </motion.div>
 );
 
@@ -72,6 +73,9 @@ const Friends: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [searchDone, setSearchDone] = useState(false);
   const [suggestLoading, setSuggestLoading] = useState(true);
+  const [mode, setMode] = useState<'list' | 'add'>('list');
+  const [friends, setFriends] = useState<Profile[]>([]);
+  const [friendsLoading, setFriendsLoading] = useState(true);
   const [authUid, setAuthUid] = useState<string | null>(null);
   const [addError, setAddError] = useState(false);
   const [addErrorCode, setAddErrorCode] = useState('');
@@ -92,7 +96,7 @@ const Friends: React.FC = () => {
 
     (async () => {
       const uid = await getAuthUid();
-      if (!uid || cancelled) { setSuggestLoading(false); return; }
+      if (!uid || cancelled) { setSuggestLoading(false); setFriendsLoading(false); return; }
       setAuthUid(uid);
 
       const { data: friendData } = await supabase
@@ -102,6 +106,8 @@ const Friends: React.FC = () => {
       const friendIds = new Set<string>((friendData ?? []).map((r: any) => r.friend_id));
       if (cancelled) return;
       setAdded(friendIds);
+      getPublicProfiles([...friendIds]).then((list) => { if (!cancelled) { setFriends(list); setFriendsLoading(false); } });
+      if (friendIds.size === 0) setFriendsLoading(false);
 
       const everyone = (await searchProfilesByUsername('', true)) as Profile[];
       const byId = new Map(everyone.map((p) => [p.id, p]));
@@ -168,6 +174,8 @@ const Friends: React.FC = () => {
       friend_id: friendId,
       created_at: new Date().toISOString(),
     });
+    const added_ = [...suggestions, ...results].find((p) => p.id === friendId);
+    if (!error && added_) setFriends((prev) => (prev.some((f) => f.id === friendId) ? prev : [...prev, added_]));
     if (error) {
       console.error('[friends] add failed', error);
       setAddErrorCode(error.code ?? error.message);
@@ -188,16 +196,37 @@ const Friends: React.FC = () => {
       {/* Header */}
       <div className="relative z-10 flex items-center gap-3 px-5 pt-6 pb-4 bg-white/70 backdrop-blur-sm shadow-sm">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => (mode === 'add' ? (clearSearch(), setMode('list')) : navigate(-1))}
           className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'scaleX(-1)' }}>
             <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
           </svg>
         </button>
-        <h1 className="text-xl font-extrabold text-gray-800">دوستان</h1>
+        <h1 className="text-xl font-extrabold text-gray-800">{mode === 'add' ? 'افزودن دوست' : 'دوستان'}</h1>
       </div>
 
+      {mode === 'list' && (
+        <div className="relative z-10 px-5 pt-5">
+          <button
+            onClick={() => setMode('add')}
+            className="w-full mb-5 py-3 rounded-2xl bg-violet-600 text-white font-extrabold active:scale-95 transition-transform"
+          >
+            ➕ افزودن دوست
+          </button>
+          {friendsLoading && <p className="text-center text-gray-400 py-6 animate-pulse">در حال بارگذاری...</p>}
+          {!friendsLoading && friends.length === 0 && (
+            <p className="text-center text-gray-400 py-8 text-sm">هنوز دوستی نداری. با «افزودن دوست» شروع کن</p>
+          )}
+          <div className="flex flex-col gap-3">
+            {friends.map((p, i) => (
+              <ProfileCard key={p.id} profile={p} isAdded onAdd={undefined} delay={i * 0.05} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {mode === 'add' && (
       <div className="relative z-10 px-5 pt-5">
         {/* Search bar */}
         <div className="flex gap-2 mb-6">
@@ -277,6 +306,7 @@ const Friends: React.FC = () => {
           </>
         )}
       </div>
+      )}
     </div>
   );
 };

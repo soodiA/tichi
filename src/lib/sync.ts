@@ -314,3 +314,27 @@ export async function loginWithPassword(username: string, password: string): Pro
   }
   return { status: 'ok', profile };
 }
+
+export interface PublicProfile {
+  id: string;
+  name: string;
+  username: string;
+  avatar_url: string | null;
+  diamonds: number;
+  streak_days?: number | null;
+  total_score?: number | null;
+}
+
+/**
+ * Public profile cards for a set of ids (friends list). Prefers the
+ * `get_public_profiles` RPC (adds streak + score, see SECURITY-SQL.md); falls
+ * back to the older public search RPC, which has no streak and uses diamonds.
+ */
+export async function getPublicProfiles(ids: string[]): Promise<PublicProfile[]> {
+  if (ids.length === 0) return [];
+  const { data, error } = await supabase.rpc('get_public_profiles', { p_ids: ids });
+  if (!error && data) return data as PublicProfile[];
+  const all = await searchProfilesByUsername('', true);
+  const want = new Set(ids);
+  return all.filter((p) => want.has(p.id));
+}
