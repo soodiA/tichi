@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
-import { searchProfilesByUsername, ensureAnonSession, syncProfileToCloud, getPublicProfiles, type PublicProfile } from '../lib/sync';
+import { searchProfilesByUsername, ensureAnonSession, syncProfileToCloud, getPublicProfiles, addFriendSecure, getMyFriendIds, type PublicProfile } from '../lib/sync';
 import PageBg from '../components/ui/PageBg';
 
 type Profile = PublicProfile;
@@ -99,11 +99,15 @@ const Friends: React.FC = () => {
       if (!uid || cancelled) { setSuggestLoading(false); setFriendsLoading(false); return; }
       setAuthUid(uid);
 
-      const { data: friendData } = await supabase
-        .from('friendships')
-        .select('friend_id')
-        .eq('user_id', uid);
-      const friendIds = new Set<string>((friendData ?? []).map((r: any) => r.friend_id));
+      let ids = await getMyFriendIds(currentUser);
+      if (!ids) {
+        const { data: friendData } = await supabase
+          .from('friendships')
+          .select('friend_id')
+          .eq('user_id', uid);
+        ids = (friendData ?? []).map((r: any) => r.friend_id);
+      }
+      const friendIds = new Set<string>(ids);
       if (cancelled) return;
       setAdded(friendIds);
       getPublicProfiles([...friendIds]).then((list) => { if (!cancelled) { setFriends(list); setFriendsLoading(false); } });
@@ -165,15 +169,20 @@ const Friends: React.FC = () => {
     const uid = authUid ?? (await getAuthUid());
     if (!uid) { setAddError(true); return; }
     setAddError(false);
-    // friendships.user_id has an FK to profiles(id): make sure this device's
-    // auth uid actually has a cloud profile row before inserting.
-    await syncProfileToCloud(currentUser);
     setAdded((prev) => new Set([...prev, friendId]));
-    const { error } = await supabase.from('friendships').upsert({
+    // Preferred: authenticated by the account's password hash (works on any device).
+    let error: { code?: string; message: string } | null = null;
+    if (await addFriendSecure(currentUser, friendId)) {
+      error = null;
+    } else {
+    // Fallback (older DB): friendships.user_id FK needs a cloud profile for this auth uid.
+    await syncProfileToCloud(currentUser);
+    ({ error } = await supabase.from('friendships').upsert({
       user_id: uid,
       friend_id: friendId,
       created_at: new Date().toISOString(),
-    });
+    }));
+    }
     const added_ = [...suggestions, ...results].find((p) => p.id === friendId);
     if (!error && added_) setFriends((prev) => (prev.some((f) => f.id === friendId) ? prev : [...prev, added_]));
     if (error) {

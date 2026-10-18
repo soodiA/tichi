@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { db } from '../db/db';
 import type { UserProfile, LessonSession } from '../types';
 
 interface AppState {
@@ -31,6 +32,7 @@ export const useStore = create<AppState>()(
         const user = get().currentUser;
         if (!user) return;
         set({ currentUser: { ...user, avatarUrl } });
+        db.profiles.update(user.id, { avatarUrl }).catch(() => {});
       },
 
       incrementStreak: () => {

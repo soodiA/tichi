@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { db } from '../db/db';
 import type { UserProfile, NodeProgress } from '../types';
 import { hashWithSalt } from './password';
+import { useStore } from '../store/useStore';
 
 // Concurrent callers (e.g. React 18 StrictMode double-invoking the mount
 // effect, or two sync* calls firing back-to-back before the first resolves)
@@ -29,8 +30,35 @@ export async function ensureAnonSession(): Promise<void> {
   return anonSessionPromise;
 }
 
+/** True when the RPC ran and authenticated the account; false/'missing' lets callers fall back. */
+async function rpcAuthed(fn: string, args: Record<string, unknown>): Promise<boolean> {
+  const { data, error } = await supabase.rpc(fn, args);
+  if (error) {
+    if (error.code !== 'PGRST202') console.error(`[sync] ${fn} failed`, error);
+    return false;
+  }
+  return data === true;
+}
+
 export async function syncProfileToCloud(profile: UserProfile): Promise<void> {
   await ensureAnonSession();
+  // Preferred path (SECURITY-SQL.md phase 3): authenticated by the account's own password
+  // hash, so it works on any browser/device — not only the one that created the row.
+  if (profile.passwordHash) {
+    const ok = await rpcAuthed('update_my_profile', {
+      p_me: profile.id,
+      p_hash: profile.passwordHash,
+      p_patch: {
+        name: profile.name,
+        avatar_url: profile.avatarUrl ?? null,
+        diamonds: profile.diamonds,
+        streak_days: profile.streakDays,
+        last_active_date: profile.lastActiveDate ?? null,
+        total_score: profile.totalScore,
+      },
+    });
+    if (ok) return;
+  }
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (!user) {
     console.error('[sync] syncProfileToCloud: no auth user', userError);
@@ -82,6 +110,22 @@ export async function syncProfileToCloud(profile: UserProfile): Promise<void> {
 
 export async function syncProgressToCloud(progress: NodeProgress): Promise<void> {
   await ensureAnonSession();
+  const hash = useStore.getState().currentUser?.passwordHash;
+  if (hash) {
+    const ok = await rpcAuthed('save_my_progress', {
+      p_me: progress.userId,
+      p_hash: hash,
+      p_row: {
+        node_id: progress.nodeId,
+        stars: progress.stars,
+        completed: progress.completed,
+        best_accuracy: progress.accuracy,
+        attempts: progress.attempts,
+        last_played_at: progress.completedAt ?? null,
+      },
+    });
+    if (ok) return;
+  }
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (!user) {
     console.error('[sync] syncProgressToCloud: no auth user', userError);
@@ -337,4 +381,17 @@ export async function getPublicProfiles(ids: string[]): Promise<PublicProfile[]>
   const all = await searchProfilesByUsername('', true);
   const want = new Set(ids);
   return all.filter((p) => want.has(p.id));
+}
+
+export async function addFriendSecure(me: UserProfile, friendId: string): Promise<boolean> {
+  if (!me.passwordHash) return false;
+  return rpcAuthed('add_friend_secure', { p_me: me.id, p_hash: me.passwordHash, p_friend: friendId });
+}
+
+/** Friend ids of this account, or null when the RPC is unavailable / auth failed. */
+export async function getMyFriendIds(me: UserProfile): Promise<string[] | null> {
+  if (!me.passwordHash) return null;
+  const { data, error } = await supabase.rpc('get_my_friend_ids', { p_me: me.id, p_hash: me.passwordHash });
+  if (error || !Array.isArray(data)) return null;
+  return data as string[];
 }
