@@ -35,6 +35,7 @@ revoke all on function public.get_public_profiles(uuid[]) from public;
 grant execute on function public.get_public_profiles(uuid[]) to anon, authenticated;
 
 -- Friends: let everyone read friendships (for "friends of friends").
+drop policy if exists "friendships read all" on public.friendships;
 create policy "friendships read all" on public.friendships for select using (true);
 ```
 
