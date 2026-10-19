@@ -11,7 +11,9 @@ const COLORS = {
   peach:  { sky1: '#F5CBA0', sky2: '#FAD9B8', sky3: '#FDEBD4', mtn1: '#D4A870', mtn2: '#E0BA8C' },
 };
 
-const PageBg: React.FC<PageBgProps> = ({ variant = 'blue' }) => {
+// The app-wide pink sky/cloud wallpaper now lives on <body> (src/index.css), so the
+// per-page SVG scenery is intentionally not rendered anymore.
+export const LegacyPageBg: React.FC<PageBgProps> = ({ variant = 'blue' }) => {
   const c = COLORS[variant];
   const id = variant;
   return (
@@ -95,5 +97,7 @@ const PageBg: React.FC<PageBgProps> = ({ variant = 'blue' }) => {
     </svg>
   );
 };
+
+const PageBg: React.FC<PageBgProps> = () => null;
 
 export default PageBg;

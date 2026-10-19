@@ -10,6 +10,7 @@ import Lesson from './pages/Lesson';
 import LessonComplete from './pages/LessonComplete';
 import Profile from './pages/Profile';
 import Friends from './pages/Friends';
+import Leaderboard from './pages/Leaderboard';
 import PathEditor from './pages/PathEditor';
 import AudioRecorder from './pages/AudioRecorder';
 import QuestionEditor from './pages/QuestionEditor';
@@ -20,7 +21,7 @@ import IntroAudioRecorder from './pages/IntroAudioRecorder';
 import { db } from './db/db';
 import { syncProfileToCloud } from './lib/sync';
 
-const NAV_ROUTES = ['/home', '/profile', '/friends'];
+const NAV_ROUTES = ['/home', '/profile', '/friends', '/leaderboard'];
 
 interface NavItem {
   path: string;
@@ -44,6 +45,15 @@ const navItems: NavItem[] = [
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
         <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+      </svg>
+    ),
+  },
+  {
+    path: '/leaderboard',
+    label: 'رقابت',
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0011 15.9V19H7v2h10v-2h-4v-3.1a5.01 5.01 0 003.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z" />
       </svg>
     ),
   },
@@ -124,6 +134,7 @@ const App: React.FC = () => {
           <Route path="/lesson-complete" element={<LessonComplete />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/friends" element={<Friends />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/path-editor" element={<PathEditor />} />
           <Route path="/audio-recorder" element={<AudioRecorder />} />
           <Route path="/question-editor" element={<QuestionEditor />} />

@@ -80,7 +80,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div dir="rtl" className="min-h-full bg-gradient-to-b from-violet-50 to-amber-50 flex flex-col items-center justify-center px-5 py-10">
+    <div dir="rtl" className="min-h-full flex flex-col items-center justify-center px-5 py-10">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}

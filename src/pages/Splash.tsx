@@ -22,7 +22,7 @@ const Splash: React.FC = () => {
   return (
     <div
       dir="rtl"
-      className="h-full flex flex-col items-center justify-center bg-gradient-to-b from-violet-100 to-amber-50 gap-6"
+      className="h-full flex flex-col items-center justify-center gap-6"
     >
       <motion.div
         initial={{ scale: 0, opacity: 0 }}

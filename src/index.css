@@ -16,7 +16,7 @@ body {
   font-family: 'Vazirmatn', sans-serif;
   direction: rtl;
   text-align: right;
-  background-color: #FFF8F0;
+  background: #FFD6E8 url('/bg-pink.jpg') center bottom / cover no-repeat fixed;
   -webkit-font-smoothing: antialiased;
 }
 
