@@ -18,7 +18,8 @@ interface AppState {
 
 export const STREAK_COST_PER_DAY = 40;
 
-const dayString = (d: Date) => d.toISOString().split('T')[0];
+// Local calendar date, matching incrementStreak.
+const dayString = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 /** Whole days skipped between lastActiveDate and today (0 if active today or yesterday). */
 export function missedDays(lastActiveDate?: string): number {
