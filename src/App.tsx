@@ -18,6 +18,7 @@ import RecordCombos from './pages/RecordCombos';
 import RecordQuestionAudio from './pages/RecordQuestionAudio';
 import WordAudioRecorder from './pages/WordAudioRecorder';
 import IntroAudioRecorder from './pages/IntroAudioRecorder';
+import Admin from './pages/Admin';
 import { db } from './db/db';
 import { syncProfileToCloud } from './lib/sync';
 
@@ -110,7 +111,7 @@ const BottomNav: React.FC = () => {
   );
 };
 
-const ADMIN_ROUTES = ['/path-editor', '/audio-recorder', '/question-editor', '/record-combos', '/word-audio-recorder'];
+const ADMIN_ROUTES = ['/admin', '/path-editor', '/audio-recorder', '/question-editor', '/record-combos', '/word-audio-recorder'];
 
 const App: React.FC = () => {
   const location = useLocation();
@@ -135,6 +136,7 @@ const App: React.FC = () => {
           <Route path="/profile" element={<Profile />} />
           <Route path="/friends" element={<Friends />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="/path-editor" element={<PathEditor />} />
           <Route path="/audio-recorder" element={<AudioRecorder />} />
           <Route path="/question-editor" element={<QuestionEditor />} />

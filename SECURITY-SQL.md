@@ -131,3 +131,69 @@ grant execute on function public.update_my_profile(uuid, text, jsonb),
   public.get_my_friend_ids(uuid, text),
   public.save_my_progress(uuid, text, jsonb) to anon, authenticated;
 ```
+
+## Phase 4 (question error reports + admin page) — run in Supabase Dashboard → SQL Editor
+
+Users report a problem on a question (button under every question). Reports are stored in
+`question_reports`; the table is NOT directly readable/writable by the public key — only these RPCs.
+Reading/resolving needs the admin key. **Change `CHANGE-ME` to your own secret before running.**
+
+```sql
+create table if not exists public.question_reports (
+  id uuid primary key default gen_random_uuid(),
+  question_id text not null,
+  node_id text,
+  question_type text,
+  question_snapshot jsonb,
+  description text,
+  reporter_username text,
+  status text not null default 'open' check (status in ('open','resolved')),
+  created_at timestamptz not null default now()
+);
+alter table public.question_reports enable row level security;  -- no policies: RPC-only access
+
+create table if not exists public.admin_secrets (k text primary key, v text not null);
+alter table public.admin_secrets enable row level security;     -- no policies: RPC-only access
+insert into public.admin_secrets (k, v) values ('admin_key', 'CHANGE-ME')
+  on conflict (k) do update set v = excluded.v;
+
+create or replace function public.submit_question_report(
+  p_question_id text, p_node_id text, p_question_type text,
+  p_snapshot jsonb, p_description text, p_reporter_username text)
+returns boolean language plpgsql security definer set search_path = public as $$
+begin
+  if coalesce(p_question_id, '') = '' then return false; end if;
+  insert into public.question_reports (question_id, node_id, question_type, question_snapshot, description, reporter_username)
+  values (left(p_question_id, 200), left(p_node_id, 200), left(p_question_type, 100), p_snapshot,
+          left(p_description, 1000), left(p_reporter_username, 100));
+  return true;
+end $$;
+
+create or replace function public.admin_list_question_reports(p_key text)
+returns setof public.question_reports language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from public.admin_secrets where k = 'admin_key' and v = p_key) then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
+  return query select * from public.question_reports order by created_at desc limit 500;
+end $$;
+
+create or replace function public.admin_set_question_report_status(p_key text, p_id uuid, p_status text)
+returns boolean language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from public.admin_secrets where k = 'admin_key' and v = p_key) then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
+  update public.question_reports set status = p_status where id = p_id;
+  return found;
+end $$;
+
+revoke all on function public.submit_question_report(text,text,text,jsonb,text,text),
+  public.admin_list_question_reports(text), public.admin_set_question_report_status(text,uuid,text) from public;
+grant execute on function public.submit_question_report(text,text,text,jsonb,text,text),
+  public.admin_list_question_reports(text), public.admin_set_question_report_status(text,uuid,text) to anon, authenticated;
+```
+
+Limits of this control: the admin key gates only the reports list. It does NOT protect the `/admin`
+page or the other admin tools (question-editor, recorders) themselves, and does NOT stop anyone from
+spamming `submit_question_report` (no rate limit) or from writing to the still-public `questions` table.

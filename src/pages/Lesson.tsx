@@ -8,6 +8,7 @@ import ProgressBar from '../components/ui/ProgressBar';
 import QuestionWrapper from '../components/questions/QuestionWrapper';
 import UnitIntroGeneric from '../components/questions/UnitIntroGeneric';
 import PageBg from '../components/ui/PageBg';
+import ReportButton from '../components/ui/ReportButton';
 import Mascot from '../components/ui/Mascot';
 import { UNIT_INTROS } from '../data/unitIntros';
 import type { Node } from '../types';
@@ -243,6 +244,9 @@ const Lesson: React.FC = () => {
               onAnswer={handleAnswer}
               disabled={feedback !== 'idle'}
             />
+            <div className="pt-4 flex justify-center">
+              <ReportButton question={currentQuestion} nodeId={node.id} />
+            </div>
           </motion.div>
         </AnimatePresence>
       </div>
