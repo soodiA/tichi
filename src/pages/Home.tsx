@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useStore } from '../store/useStore';
+import { useStore, missedDays, STREAK_COST_PER_DAY } from '../store/useStore';
+import { syncProfileToCloud } from '../lib/sync';
+import StreakRecoveryModal from '../components/ui/StreakRecoveryModal';
 import { db } from '../db/db';
 import { loadCurriculum } from '../lib/curriculum';
 import PathNode from '../components/path/PathNode';
@@ -21,6 +23,15 @@ const Home: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [introUnit, setIntroUnit] = useState<Unit | null>(null);
   const didScrollRef = useRef(false);
+  const restoreStreak = useStore((s) => s.restoreStreak);
+  const resetStreak = useStore((s) => s.resetStreak);
+  const missed = currentUser && currentUser.streakDays > 0 ? missedDays(currentUser.lastActiveDate) : 0;
+  const streakCost = missed * STREAK_COST_PER_DAY;
+
+  const syncCurrentUser = () => {
+    const u = useStore.getState().currentUser;
+    if (u) syncProfileToCloud(u).catch((e) => console.error('[sync] streak profile sync failed', e));
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 15000); // safety fallback
@@ -101,6 +112,17 @@ const Home: React.FC = () => {
         />
       )}
 
+      {missed > 0 && (
+        <StreakRecoveryModal
+          streakDays={currentUser.streakDays}
+          missed={missed}
+          cost={streakCost}
+          coins={currentUser.diamonds}
+          onPayCoins={() => { if (restoreStreak(streakCost)) syncCurrentUser(); }}
+          onReset={() => { resetStreak(); syncCurrentUser(); }}
+        />
+      )}
+
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white/70 backdrop-blur-sm shadow-sm px-5 pt-5 pb-3">
         <div className="flex items-center justify-between">
@@ -154,6 +176,7 @@ const Home: React.FC = () => {
                         isCurrent={isCurrent}
                         isCompleted={completed}
                         unitColor={unit.color}
+                        stars={progressMap[node.id]?.stars ?? 0}
                         onClick={() => {
                           if (unlocked || completed) navigate(`/lesson/${node.id}`);
                         }}

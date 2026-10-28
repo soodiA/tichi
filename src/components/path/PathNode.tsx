@@ -9,7 +9,16 @@ interface PathNodeProps {
   isCompleted: boolean;
   unitColor: string;
   onClick: () => void;
+  stars?: number;
 }
+
+const StarRow: React.FC<{ stars: number }> = ({ stars }) => (
+  <div dir="ltr" className="flex gap-0.5 text-sm leading-none" aria-label={`${stars} ستاره`}>
+    {[1, 2, 3].map((i) => (
+      <span key={i} className={i <= stars ? '' : 'grayscale opacity-30'}>⭐</span>
+    ))}
+  </div>
+);
 
 const PathNode: React.FC<PathNodeProps> = ({
   node,
@@ -18,6 +27,7 @@ const PathNode: React.FC<PathNodeProps> = ({
   isCompleted,
   unitColor,
   onClick,
+  stars = 0,
 }) => {
   const isLocked = !isUnlocked && !isCompleted;
 
@@ -62,6 +72,7 @@ const PathNode: React.FC<PathNodeProps> = ({
             <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
           </svg>
         </motion.div>
+        <StarRow stars={stars} />
       </div>
     );
   }

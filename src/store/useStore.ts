@@ -11,6 +11,20 @@ interface AppState {
   addDiamonds: (amount: number) => void;
   incrementStreak: () => void;
   updateAvatar: (avatarUrl: string) => void;
+  /** Spend coins to keep the streak across missed days; returns false if coins are insufficient. */
+  restoreStreak: (cost: number) => boolean;
+  resetStreak: () => void;
+}
+
+export const STREAK_COST_PER_DAY = 40;
+
+const dayString = (d: Date) => d.toISOString().split('T')[0];
+
+/** Whole days skipped between lastActiveDate and today (0 if active today or yesterday). */
+export function missedDays(lastActiveDate?: string): number {
+  if (!lastActiveDate) return 0;
+  const diff = Math.round((Date.parse(dayString(new Date())) - Date.parse(lastActiveDate)) / 86400000);
+  return Math.max(0, diff - 1);
 }
 
 export const useStore = create<AppState>()(
@@ -33,6 +47,20 @@ export const useStore = create<AppState>()(
         if (!user) return;
         set({ currentUser: { ...user, avatarUrl } });
         db.profiles.update(user.id, { avatarUrl }).catch(() => {});
+      },
+
+      restoreStreak: (cost) => {
+        const user = get().currentUser;
+        if (!user || user.diamonds < cost) return false;
+        // Pretend the user was active yesterday so the next lesson continues the streak.
+        set({ currentUser: { ...user, diamonds: user.diamonds - cost, lastActiveDate: dayString(new Date(Date.now() - 86400000)) } });
+        return true;
+      },
+
+      resetStreak: () => {
+        const user = get().currentUser;
+        if (!user) return;
+        set({ currentUser: { ...user, streakDays: 0 } });
       },
 
       incrementStreak: () => {
