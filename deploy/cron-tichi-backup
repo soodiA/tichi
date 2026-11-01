@@ -1,0 +1,2 @@
+# Daily trigger; backup.sh itself enforces the 3-day interval.
+17 3 * * * root /srv/tichi/bin/backup.sh >> /srv/tichi/backups/backup.log 2>&1
