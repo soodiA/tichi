@@ -1,0 +1,45 @@
+name: deploy
+
+# Runs on the project's own server (self-hosted runner). Only pushes to main trigger it — never
+# pull_request — so code from a fork can never execute on that machine.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # to push the release tag
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, tichi]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute version
+        id: v
+        run: |
+          VERSION="v$(cat deploy/VERSION).${GITHUB_RUN_NUMBER}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Deploying $VERSION ($GITHUB_SHA)"
+
+      - name: Backend tests (throwaway Postgres)
+        run: ./deploy/ci-test.sh
+
+      - name: Build frontend (pnpm)
+        run: ./deploy/build-web.sh
+
+      - name: Deploy
+        run: ./deploy/release.sh "${{ steps.v.outputs.version }}" "$PWD/dist"
+
+      - name: Tag release
+        run: |
+          git tag -a "${{ steps.v.outputs.version }}" -m "Deployed by workflow run ${GITHUB_RUN_NUMBER}" "$GITHUB_SHA"
+          git push origin "${{ steps.v.outputs.version }}"
