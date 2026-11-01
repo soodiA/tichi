@@ -95,22 +95,22 @@ func verifyHash(stored *string, clientHash string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(*stored), []byte(m[2])) == nil
 }
 
-// resolveProfile finds the profile for (id-or-local_id, clientHash). Returns "" if no match.
-func (s *Server) resolveProfile(r *http.Request, id, clientHash string) (string, error) {
-	var pid string
+// resolveProfile finds the profile for (id-or-local_id, clientHash). found=false means no such
+// profile (the client should register it); pid=="" with found=true means the hash did not match.
+func (s *Server) resolveProfile(r *http.Request, id, clientHash string) (pid string, found bool, err error) {
 	var stored *string
-	err := s.DB.QueryRow(r.Context(),
+	err = s.DB.QueryRow(r.Context(),
 		`SELECT id::text, password_hash FROM profiles WHERE (id::text=$1 OR local_id::text=$1) AND NOT is_deleted ORDER BY (id::text=$1) DESC LIMIT 1`, id).Scan(&pid, &stored)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", nil
+		return "", false, nil
 	}
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	if !verifyHash(stored, clientHash) {
-		return "", nil
+		return "", true, nil
 	}
-	return pid, nil
+	return pid, true, nil
 }
 
 type registerReq struct {
@@ -232,9 +232,13 @@ func (s *Server) tokenFromHash(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusTooManyRequests, "RATE_LIMITED", "too many attempts, try later")
 		return
 	}
-	pid, err := s.resolveProfile(r, in.ProfileID, in.PasswordHash)
+	pid, found, err := s.resolveProfile(r, in.ProfileID, in.PasswordHash)
 	if err != nil {
 		serverError(w, err)
+		return
+	}
+	if !found {
+		httpx.Error(w, http.StatusNotFound, "NOT_FOUND", "no such profile")
 		return
 	}
 	if pid == "" {

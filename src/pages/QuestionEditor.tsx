@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { adminJson } from '../lib/api';
 import type { QuestionType, Option } from '../types';
 import { TYPE_LABELS, ALL_TYPES, UNSUPPORTED_TYPES, QUESTION_TYPE_DEFAULT_TEXT } from '../lib/questionTypes';
 import { QUESTION_TYPE_PROMPT } from '../lib/questionTypeAudio';
@@ -124,9 +124,15 @@ const QuestionEditor: React.FC = () => {
 
   useEffect(() => {
     (async () => {
-      const { data: unitsData } = await supabase.from('units').select('id, letter, ord').order('ord');
-      const { data: nodesData } = await supabase.from('nodes').select('id, unit_id, ord, type').order('ord');
-      if (!unitsData || !nodesData) return;
+      let unitsData: { id: string; letter: string; ord: number }[];
+      let nodesData: { id: string; unit_id: string; ord: number; type: string }[];
+      try {
+        unitsData = await adminJson('/api/v1/admin/units');
+        nodesData = await adminJson('/api/v1/admin/nodes');
+      } catch (e) {
+        console.error('[editor] loading units/nodes failed', e);
+        return;
+      }
       const letterByUnit = new Map(unitsData.map(u => [u.id, u.letter]));
       const ordByUnit = new Map(unitsData.map(u => [u.id, u.ord]));
       const withUnitOrd = nodesData.map(n => ({
@@ -142,15 +148,15 @@ const QuestionEditor: React.FC = () => {
 
   const loadQuestions = async (nodeId: string) => {
     setLoadingQuestions(true);
-    const { data } = await supabase.from('questions').select('*').eq('node_id', nodeId).order('ord');
-    setQuestions((data ?? []) as QuestionRow[]);
+    const data = await adminJson<QuestionRow[]>(`/api/v1/admin/questions?node_id=${encodeURIComponent(nodeId)}`).catch(() => []);
+    setQuestions(data.slice().sort((a, b) => a.ord - b.ord));
     setLoadingQuestions(false);
   };
 
   const loadFlatQuestions = async () => {
     setLoadingFlat(true);
-    const { data } = await supabase.from('questions').select('*').order('node_id').order('ord');
-    setFlatQuestions((data ?? []) as QuestionRow[]);
+    const data = await adminJson<QuestionRow[]>('/api/v1/admin/questions').catch(() => []);
+    setFlatQuestions(data);
     setLoadingFlat(false);
   };
 
@@ -179,13 +185,9 @@ const QuestionEditor: React.FC = () => {
     // Every question of a type shares one recorded prompt (see AudioRecorder.tsx) —
     // default a new question's audio to whatever an existing sibling already has.
     (async () => {
-      const { data } = await supabase
-        .from('questions')
-        .select('question_audio_url')
-        .eq('type', type)
-        .not('question_audio_url', 'is', null)
-        .limit(1);
-      const url = data?.[0]?.question_audio_url;
+      const data = await adminJson<{ question_audio_url: string | null }[]>(
+        `/api/v1/admin/questions?type=${encodeURIComponent(type)}&with_audio=1&limit=1`).catch(() => []);
+      const url = data[0]?.question_audio_url;
       if (url) patch({ questionAudioUrl: url });
     })();
   };
@@ -210,11 +212,13 @@ const QuestionEditor: React.FC = () => {
     if (editingId === 'new') {
       const nextOrd = questions.length > 0 ? Math.max(...questions.map(q => q.ord)) + 1 : 1;
       const id = `q-${editingType}-${Date.now()}`;
-      const { error } = await supabase.from('questions').insert({ id, node_id: selectedNodeId, ord: nextOrd, ...row });
-      if (error) { alert(`خطا در ذخیره: ${error.message}`); setSaving(false); return; }
+      try {
+        await adminJson('/api/v1/admin/questions', { method: 'POST', body: { id, node_id: selectedNodeId, ord: nextOrd, ...row } });
+      } catch (e) { alert(`خطا در ذخیره: ${(e as Error).message}`); setSaving(false); return; }
     } else if (editingId) {
-      const { error } = await supabase.from('questions').update(row).eq('id', editingId);
-      if (error) { alert(`خطا در ذخیره: ${error.message}`); setSaving(false); return; }
+      try {
+        await adminJson(`/api/v1/admin/questions/${encodeURIComponent(editingId)}`, { method: 'PUT', body: row });
+      } catch (e) { alert(`خطا در ذخیره: ${(e as Error).message}`); setSaving(false); return; }
     }
     setSaving(false);
     setEditingId(null);
@@ -228,18 +232,18 @@ const QuestionEditor: React.FC = () => {
     if (otherIndex < 0 || otherIndex >= questions.length) return;
     const a = questions[index];
     const b = questions[otherIndex];
-    // Swap their `ord` values — works regardless of gaps between existing
-    // ord numbers, and only touches these two rows.
-    const { error: err1 } = await supabase.from('questions').update({ ord: b.ord }).eq('id', a.id);
-    const { error: err2 } = err1 ? { error: err1 } : await supabase.from('questions').update({ ord: a.ord }).eq('id', b.id);
-    if (err1 || err2) { alert(`خطا در جابجایی: ${(err1 ?? err2)!.message}`); return; }
+    // The server swaps the two `ord` values atomically (works regardless of gaps).
+    try {
+      await adminJson(`/api/v1/admin/questions/${encodeURIComponent(a.id)}/swap/${encodeURIComponent(b.id)}`, { method: 'POST' });
+    } catch (e) { alert(`خطا در جابجایی: ${(e as Error).message}`); return; }
     if (selectedNodeId) loadQuestions(selectedNodeId);
   };
 
   const remove = async (id: string) => {
     if (!confirm('این سوال حذف بشه؟')) return;
-    const { error } = await supabase.from('questions').delete().eq('id', id);
-    if (error) { alert(`خطا در حذف: ${error.message}`); return; }
+    try {
+      await adminJson(`/api/v1/admin/questions/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    } catch (e) { alert(`خطا در حذف: ${(e as Error).message}`); return; }
     if (selectedNodeId) loadQuestions(selectedNodeId);
     if (viewMode === 'flat') loadFlatQuestions();
   };
@@ -251,8 +255,9 @@ const QuestionEditor: React.FC = () => {
     const letter = unitNodes[0]?.unit_letter ?? '?';
     if (!window.confirm(`یک مرحله‌ی جدید (شماره ${nextOrd}) به واحد «${letter}» اضافه شود؟`)) return;
     const id = `${unitId.replace(/^unit-/, 'node-')}-${nextOrd}`;
-    const { error } = await supabase.from('nodes').insert({ id, unit_id: unitId, ord: nextOrd, type: 'lesson' });
-    if (error) { alert(`خطا: ${error.message}`); return; }
+    try {
+      await adminJson('/api/v1/admin/nodes', { method: 'POST', body: { id, unit_id: unitId, ord: nextOrd, type: 'lesson' } });
+    } catch (e) { alert(`خطا: ${(e as Error).message}`); return; }
     const row = { id, unit_id: unitId, ord: nextOrd, type: 'lesson', unit_letter: letter,
       unit_ord: unitNodes[0]?.unit_ord ?? 999 } as NodeRow;
     setNodes(prev => [...prev, row].sort((a, b) => a.unit_ord - b.unit_ord || a.ord - b.ord));

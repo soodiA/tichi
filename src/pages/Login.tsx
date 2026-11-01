@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
-import { ensureAnonSession, findProfileByUsername, loginWithPassword, pullProfileAndProgressFromCloud } from '../lib/sync';
-import { verifyPassword } from '../lib/password';
+import { loginWithPassword } from '../lib/sync';
 import Mascot from '../components/ui/Mascot';
 
 const Login: React.FC = () => {
@@ -36,42 +35,13 @@ const Login: React.FC = () => {
         setLoading(false);
         return;
       }
-      if (res.status === 'error') {
-        setError('مشکلی پیش اومد، دوباره تلاش کن');
+      if (res.status === 'limited') {
+        setError('تلاش‌های زیادی انجام شد، چند دقیقه دیگه دوباره امتحان کن');
         setLoading(false);
         return;
       }
-      // 'legacy': hardened server functions not installed yet — old flow.
-      const found = await findProfileByUsername(username.trim());
-      if (!found) {
-        setError('کاربری با این نام کاربری پیدا نشد');
-        setLoading(false);
-        return;
-      }
-      if (!found.passwordHash) {
-        setError('این حساب رمز عبور ندارد و از این طریق قابل ورود نیست');
-        setLoading(false);
-        return;
-      }
-      const ok = await verifyPassword(password, found.passwordHash);
-      if (!ok) {
-        setError('رمز عبور اشتباهه');
-        setLoading(false);
-        return;
-      }
-
-      // Establish an anonymous session for this browser, then pull the
-      // EXISTING profile + progress down locally (does not create a new row).
-      await ensureAnonSession();
-      const profile = await pullProfileAndProgressFromCloud(found.id);
-      if (!profile) {
-        setError('مشکلی در دریافت اطلاعات پیش اومد، دوباره تلاش کن');
-        setLoading(false);
-        return;
-      }
-
-      setCurrentUser(profile);
-      navigate('/home');
+      setError('مشکلی پیش اومد، دوباره تلاش کن');
+      setLoading(false);
     } catch (err) {
       console.error('[login] failed', err);
       setError('مشکلی پیش اومد، دوباره تلاش کن');

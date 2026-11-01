@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { adminJson, adminList, API_BASE } from '../lib/api';
 
 interface OptionRow {
   id: string;
@@ -18,7 +18,6 @@ interface QuestionRow {
 }
 
 const PAGE_SIZE = 20;
-const BUCKET = 'audio';
 
 type Target =
   | { kind: 'question'; questionId: string }
@@ -38,16 +37,18 @@ export default function RecordQuestionAudio() {
   const streamRef = useRef<MediaStream | null>(null);
 
   const load = useCallback(async () => {
-    let query = supabase
-      .from('questions')
-      .select('id, node_id, question_text, question_audio_url, options, correct_answer, ord', { count: 'exact' })
-      .order('ord', { ascending: true })
-      .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
-    if (search.trim()) query = query.ilike('question_text', `%${search.trim()}%`);
-    if (onlyMissing) query = query.or('question_audio_url.is.null,question_audio_url.eq.');
-    const { data, count } = await query;
-    setRows((data as QuestionRow[]) ?? []);
-    setTotal(count ?? null);
+    const q = new URLSearchParams({ order: 'ord', limit: String(PAGE_SIZE), offset: String(page * PAGE_SIZE) });
+    if (search.trim()) q.set('q', search.trim());
+    if (onlyMissing) q.set('missing_audio', '1');
+    try {
+      const { rows, total } = await adminList<QuestionRow>(`/api/v1/admin/questions?${q}`);
+      setRows(rows);
+      setTotal(total);
+    } catch (e) {
+      console.error('[record] load failed', e);
+      setRows([]);
+      setTotal(null);
+    }
   }, [page, search, onlyMissing]);
 
   useEffect(() => { load(); }, [load]);
@@ -86,35 +87,35 @@ export default function RecordQuestionAudio() {
 
     const blob = new Blob(chunks.current, { type: mediaRecorder.current.mimeType });
     const ext = blob.type.includes('webm') ? 'webm' : 'ogg';
-    const path = target.kind === 'question'
-      ? `questions/${target.questionId}.${ext}`
-      : `questions/${target.questionId}__${target.optionId}.${ext}`;
 
     setStatusByKey((s) => ({ ...s, [key]: 'uploading' }));
 
-    const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, blob, { upsert: true });
-    if (upErr) {
-      console.error('[record] upload failed', upErr);
+    // The server names the file (unique per upload), so re-recording never overwrites a clip.
+    let audioUrl: string;
+    try {
+      const q = new URLSearchParams({ folder: 'questions', ext });
+      const up = await adminJson<{ url: string }>(`/api/v1/admin/audio?${q}`, {
+        method: 'POST', body: blob, headers: { 'Content-Type': blob.type || 'audio/webm' },
+      });
+      audioUrl = up.url.startsWith('http') ? up.url : `${API_BASE}${up.url}`;
+    } catch (e) {
+      console.error('[record] upload failed', e);
       setStatusByKey((s) => ({ ...s, [key]: 'error' }));
       return;
     }
-    const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
-    const audioUrl = urlData.publicUrl;
 
     if (target.kind === 'question') {
-      const { error } = await supabase.from('questions')
-        .update({ question_audio_url: audioUrl })
-        .eq('id', target.questionId);
-      if (error) { console.error('[record] db update failed', error); setStatusByKey((s) => ({ ...s, [key]: 'error' })); return; }
+      try {
+        await adminJson(`/api/v1/admin/questions/${encodeURIComponent(target.questionId)}`, { method: 'PATCH', body: { question_audio_url: audioUrl } });
+      } catch (e) { console.error('[record] db update failed', e); setStatusByKey((s) => ({ ...s, [key]: 'error' })); return; }
       setRows((prev) => prev.map((r) => r.id === target.questionId ? { ...r, question_audio_url: audioUrl } : r));
     } else {
       const row = rows.find((r) => r.id === target.questionId);
       if (!row) return;
       const newOptions = row.options.map((o) => o.id === target.optionId ? { ...o, audioUrl } : o);
-      const { error } = await supabase.from('questions')
-        .update({ options: newOptions })
-        .eq('id', target.questionId);
-      if (error) { console.error('[record] db update failed', error); setStatusByKey((s) => ({ ...s, [key]: 'error' })); return; }
+      try {
+        await adminJson(`/api/v1/admin/questions/${encodeURIComponent(target.questionId)}`, { method: 'PATCH', body: { options: newOptions } });
+      } catch (e) { console.error('[record] db update failed', e); setStatusByKey((s) => ({ ...s, [key]: 'error' })); return; }
       setRows((prev) => prev.map((r) => r.id === target.questionId ? { ...r, options: newOptions } : r));
     }
     setStatusByKey((s) => ({ ...s, [key]: 'saved' }));

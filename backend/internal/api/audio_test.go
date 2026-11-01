@@ -92,6 +92,20 @@ func TestAudioUploadServeVersions(t *testing.T) {
 		t.Fatalf("library upload: %d %s", rec.Code, rec.Body)
 	}
 
+	// list: only direct children of the folder, newest first
+	var listed []struct{ Name, URL string }
+	call(t, h, "GET", "/api/v1/admin/audio?folder=library/images", nil, adminHdr, &listed)
+	if len(listed) != 1 || !strings.HasSuffix(listed[0].Name, ".png") || strings.Contains(listed[0].Name, "/") {
+		t.Fatalf("list library/images: %+v", listed)
+	}
+	call(t, h, "GET", "/api/v1/admin/audio?folder=library", nil, adminHdr, &listed)
+	if len(listed) != 0 {
+		t.Fatalf("parent folder must not list nested files: %+v", listed)
+	}
+	if rec := call(t, h, "GET", "/api/v1/admin/audio?folder=words", nil, nil, nil); rec.Code != 403 {
+		t.Fatalf("list needs admin key: %d", rec.Code)
+	}
+
 	// rejections
 	cases := map[string]struct {
 		q, ct string

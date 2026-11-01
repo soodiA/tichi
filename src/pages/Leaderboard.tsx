@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
-import { supabase } from '../lib/supabase';
-import { ensureAnonSession, getMyFriendIds, getPublicProfiles, searchProfilesByUsername, type PublicProfile } from '../lib/sync';
+import { getMyFriendIds, getPublicProfiles, searchProfilesByUsername, type PublicProfile } from '../lib/sync';
 
 type Scope = 'friends' | 'all';
 type Metric = 'score' | 'streak';
@@ -37,15 +36,7 @@ const Leaderboard: React.FC = () => {
     if (!me) return;
     let cancelled = false;
     (async () => {
-      await ensureAnonSession();
-      let ids = await getMyFriendIds(me);
-      if (!ids) {
-        const { data: { user } } = await supabase.auth.getUser();
-        const { data } = user
-          ? await supabase.from('friendships').select('friend_id').eq('user_id', user.id)
-          : { data: [] as { friend_id: string }[] };
-        ids = (data ?? []).map((r) => r.friend_id);
-      }
+      const ids = (await getMyFriendIds(me)) ?? [];
       const all = await searchProfilesByUsername('', true);
       // Stats (streak/score) come from get_public_profiles; include everyone so "all" ranks too.
       const stats = await getPublicProfiles(all.map((p) => p.id));
@@ -54,7 +45,7 @@ const Leaderboard: React.FC = () => {
       const merged = all.map((p) => byId.get(p.id) ?? p);
       setFriendIds(ids);
       setEveryone(merged);
-      setFriends(merged.filter((p) => ids!.includes(p.id)));
+      setFriends(merged.filter((p) => ids.includes(p.id)));
       setLoading(false);
     })();
     return () => { cancelled = true; };

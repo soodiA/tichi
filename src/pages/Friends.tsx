@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
-import { supabase } from '../lib/supabase';
-import { searchProfilesByUsername, ensureAnonSession, syncProfileToCloud, getPublicProfiles, addFriendSecure, getMyFriendIds, type PublicProfile } from '../lib/sync';
+import { searchProfilesByUsername, serverProfileId, syncProfileToCloud, getPublicProfiles, addFriendSecure, getMyFriendIds, getFriendsOfFriends, type PublicProfile } from '../lib/sync';
 import PageBg from '../components/ui/PageBg';
 
 type Profile = PublicProfile;
@@ -80,14 +79,9 @@ const Friends: React.FC = () => {
   const [addError, setAddError] = useState(false);
   const [addErrorCode, setAddErrorCode] = useState('');
 
-  // friendships RLS requires user_id = auth.uid(), and `profiles` rows of other
-  // users are hidden from direct selects. So: key friendships by the auth uid
-  // (not the local profile id) and read candidates via the public RPC.
-  const getAuthUid = async (): Promise<string | null> => {
-    await ensureAnonSession();
-    const { data: { user } } = await supabase.auth.getUser();
-    return user?.id ?? null;
-  };
+  // The server-side id of this account (differs from the local id for accounts that existed
+  // before the move to the Go backend); used to keep "me" out of suggestions and search.
+  const getAuthUid = async (): Promise<string | null> => currentUser ? serverProfileId(currentUser) : null;
 
   // Load existing friendships, then load suggestions
   useEffect(() => {
@@ -99,14 +93,7 @@ const Friends: React.FC = () => {
       if (!uid || cancelled) { setSuggestLoading(false); setFriendsLoading(false); return; }
       setAuthUid(uid);
 
-      let ids = await getMyFriendIds(currentUser);
-      if (!ids) {
-        const { data: friendData } = await supabase
-          .from('friendships')
-          .select('friend_id')
-          .eq('user_id', uid);
-        ids = (friendData ?? []).map((r: any) => r.friend_id);
-      }
+      const ids = (await getMyFriendIds(currentUser)) ?? [];
       const friendIds = new Set<string>(ids);
       if (cancelled) return;
       setAdded(friendIds);
@@ -131,11 +118,7 @@ const Friends: React.FC = () => {
       // 1) friends of my friends (needs the policy to allow reading them; empty otherwise)
       let fof: Profile[] = [];
       if (friendIds.size > 0) {
-        const { data: fofData } = await supabase
-          .from('friendships')
-          .select('friend_id')
-          .in('user_id', [...friendIds]);
-        fof = shuffle(candidates((fofData ?? []).map((r: any) => r.friend_id)));
+        fof = shuffle(candidates(await getFriendsOfFriends(currentUser)));
       }
       // 2) top up with random people
       const picked = new Set(fof.map((p) => p.id));
@@ -172,16 +155,10 @@ const Friends: React.FC = () => {
     setAdded((prev) => new Set([...prev, friendId]));
     // Preferred: authenticated by the account's password hash (works on any device).
     let error: { code?: string; message: string } | null = null;
-    if (await addFriendSecure(currentUser, friendId)) {
-      error = null;
-    } else {
-    // Fallback (older DB): friendships.user_id FK needs a cloud profile for this auth uid.
-    await syncProfileToCloud(currentUser);
-    ({ error } = await supabase.from('friendships').upsert({
-      user_id: uid,
-      friend_id: friendId,
-      created_at: new Date().toISOString(),
-    }));
+    if (!(await addFriendSecure(currentUser, friendId))) {
+      // The account may not exist on the server yet (created offline): register it and retry once.
+      await syncProfileToCloud(currentUser).catch(() => {});
+      if (!(await addFriendSecure(currentUser, friendId))) error = { message: 'add_friend_failed' };
     }
     const added_ = [...suggestions, ...results].find((p) => p.id === friendId);
     if (!error && added_) setFriends((prev) => (prev.some((f) => f.id === friendId) ? prev : [...prev, added_]));

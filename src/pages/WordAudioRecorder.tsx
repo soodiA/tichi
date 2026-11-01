@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { adminJson } from '../lib/api';
 import { uploadVersioned, getLatestUrls } from '../lib/versionedUpload';
 import { pickRecordingMimeType } from '../lib/recordingFormat';
 
@@ -37,24 +37,14 @@ const WordAudioRecorder: React.FC = () => {
   useEffect(() => {
     (async () => {
       setLoadingWords(true);
-      const pageSize = 1000;
       const labels = new Set<string>();
-      for (let offset = 0; ; offset += pageSize) {
-        const { data } = await supabase
-          .from('questions')
-          .select('media_label')
-          .not('media_label', 'is', null)
-          .range(offset, offset + pageSize - 1);
-        if (!data || data.length === 0) break;
-        data.forEach((r) => {
-          const label = (r as { media_label: string }).media_label;
-          if (label && !label.includes('،') && !label.includes(',')) {
-            const base = label.replace(/[ً-ْ]/g, ''); // strip diacritics
-            if (base.length > 1) labels.add(label);
-          }
-        });
-        if (data.length < pageSize) break;
-      }
+      const all = await adminJson<string[]>('/api/v1/admin/media-labels').catch(() => [] as string[]);
+      all.forEach((label) => {
+        if (label && !label.includes('،') && !label.includes(',')) {
+          const base = label.replace(/[ً-ْ]/g, ''); // strip diacritics
+          if (base.length > 1) labels.add(label);
+        }
+      });
       setWords(Array.from(labels).sort());
       setLoadingWords(false);
     })();
@@ -123,7 +113,7 @@ const WordAudioRecorder: React.FC = () => {
     }
 
     if (folder === 'words') {
-      await supabase.from('questions').update({ question_audio_url: audioUrl }).eq('media_label', text);
+      await adminJson('/api/v1/admin/media-labels/audio', { method: 'POST', body: { label: text, url: audioUrl } }).catch((e) => console.error('[words] linking clip to questions failed', e));
     }
 
     setStatuses((prev) => ({ ...prev, [key]: { audioUrl, state: 'done' } }));

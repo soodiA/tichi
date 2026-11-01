@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { apiJson } from './api';
 import { db } from '../db/db';
 import type { Unit, Node, Question } from '../types';
 import { promptKeyFor, AUDIO_PICTURE_END_KEY } from './questionTypeAudio';
@@ -110,51 +110,14 @@ export async function loadCurriculum(): Promise<Unit[]> {
   return applyDemoLimit(await loadCurriculumUnfiltered());
 }
 
-// PostgREST enforces its own server-side max-rows cap (1000 on this project) that a
-// client-requested .range() past that size CANNOT override — a single .range(0, 19999)
-// call silently comes back truncated at row 1000 once the table grows past it (confirmed
-// directly: server replies "Content-Range: 0-999/*" no matter how large a range is asked
-// for). `ord` is only unique per-node, not globally, so sorting the whole table by it
-// alone also ties heavily across nodes — added `id` as a secondary sort key so repeated
-// paged requests return a stable, non-overlapping sequence. Fetch in pages of 1000 and
-// concatenate until a page comes back short, which is the only way to get every row.
-const QUESTIONS_PAGE_SIZE = 1000;
-
-async function fetchAllQuestions(): Promise<{ data: RawQuestion[] | null; error: unknown }> {
-  const all: RawQuestion[] = [];
-  let offset = 0;
-  while (true) {
-    const { data, error } = await supabase
-      .from('questions')
-      .select('*')
-      .order('ord')
-      .order('id')
-      .range(offset, offset + QUESTIONS_PAGE_SIZE - 1);
-    if (error) return { data: null, error };
-    if (!data) break;
-    all.push(...(data as RawQuestion[]));
-    if (data.length < QUESTIONS_PAGE_SIZE) break;
-    offset += QUESTIONS_PAGE_SIZE;
-  }
-  return { data: all, error: null };
-}
-
 async function loadCurriculumUnfiltered(): Promise<Unit[]> {
   if (navigator.onLine) {
     try {
-      const [
-        { data: rawUnits, error: unitsError },
-        { data: rawNodes, error: nodesError },
-        { data: rawQuestions, error: questionsError },
-      ] = await Promise.all([
-        supabase.from('units').select('*').order('ord'),
-        supabase.from('nodes').select('*').order('ord'),
-        fetchAllQuestions(),
-      ]);
-
-      if (unitsError) console.error('[curriculum] units fetch failed', unitsError);
-      if (nodesError) console.error('[curriculum] nodes fetch failed', nodesError);
-      if (questionsError) console.error('[curriculum] questions fetch failed', questionsError);
+      const { units: rawUnits, nodes: rawNodes, questions: rawQuestions } = await apiJson<{
+        units: RawUnit[];
+        nodes: RawNode[];
+        questions: RawQuestion[];
+      }>('/api/v1/curriculum');
 
       if (rawUnits && rawNodes && rawQuestions) {
         const questions = withTypePromptAudio((rawQuestions as RawQuestion[]).map(toQuestion));

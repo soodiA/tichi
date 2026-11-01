@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { adminJson, API_BASE } from '../../lib/api';
 import type { Option } from '../../types';
 import { getClipUrl } from '../../lib/clipAudio';
 import { uploadVersioned } from '../../lib/versionedUpload';
@@ -16,13 +16,14 @@ const LIBRARY_PREFIX: Record<'image' | 'audio', string> = {
 };
 
 export async function uploadToStorage(kind: 'image' | 'audio', file: Blob, ext: string): Promise<string> {
-  const path = `${LIBRARY_PREFIX[kind]}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  // Path is unique per upload, so no upsert: the anon key only has INSERT on the
-  // bucket, and `upsert: true` makes Storage check UPDATE RLS and reject with
-  // "new row violates row-level security policy" (see lib/versionedUpload.ts).
-  const { error } = await supabase.storage.from('audio').upload(path, file, { contentType: file.type || undefined });
-  if (error) throw error;
-  return supabase.storage.from('audio').getPublicUrl(path).data.publicUrl;
+  // The server names the file (unique per upload) inside the kind-scoped library folder.
+  const q = new URLSearchParams({ folder: LIBRARY_PREFIX[kind], ext });
+  const res = await adminJson<{ url: string }>(`/api/v1/admin/audio?${q}`, {
+    method: 'POST',
+    body: file,
+    headers: { 'Content-Type': file.type || (kind === 'image' ? 'image/png' : 'audio/webm') },
+  });
+  return res.url.startsWith('http') ? res.url : `${API_BASE}${res.url}`;
 }
 
 export const genOptionId = () => `opt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -59,15 +60,15 @@ export const NumberInput: React.FC<{ value: number | ''; onChange: (v: number | 
 // uploaded for this field instead of uploading a duplicate.
 interface StorageFile { name: string; url: string }
 
-async function listStorageFiles(bucket: string, prefix: string): Promise<StorageFile[]> {
-  const { data } = await supabase.storage.from(bucket).list(prefix, { limit: 200 });
-  if (!data) return [];
-  return data
-    .filter((f) => f.id) // skip sub-folder placeholder entries
-    .map((f) => ({
-      name: f.name,
-      url: supabase.storage.from(bucket).getPublicUrl(`${prefix}/${f.name}`).data.publicUrl,
-    }));
+async function listStorageFiles(_bucket: string, prefix: string): Promise<StorageFile[]> {
+  try {
+    const q = new URLSearchParams({ folder: prefix });
+    const list = await adminJson<{ name: string; url: string }[]>(`/api/v1/admin/audio?${q}`);
+    return list.map((f) => ({ name: f.name, url: f.url.startsWith('http') ? f.url : `${API_BASE}${f.url}` }));
+  } catch (e) {
+    console.error('[editor] listing files failed', e);
+    return [];
+  }
 }
 
 // Modal listing existing files already uploaded under a storage prefix, so the

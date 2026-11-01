@@ -1,7 +1,9 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -133,5 +135,61 @@ func TestAudioSlots(t *testing.T) {
 	}
 	if rec := call(t, h, "PUT", "/api/v1/admin/audio-slots/phoneme", map[string]string{}, adminHdr, nil); rec.Code != 422 {
 		t.Fatalf("empty url: %d", rec.Code)
+	}
+}
+
+func TestAdminSearchPatchAndLabels(t *testing.T) {
+	s, h := newTestServer(t)
+	seedContent(t, s)
+	s.DB.Exec(t.Context(), `UPDATE questions SET media_label='سیب', question_audio_url='http://x/a' WHERE id='q1'; UPDATE questions SET media_label='سیب' WHERE id='q2'; UPDATE questions SET media_label='آب، باد' WHERE id='q3'`)
+
+	// search + paging + total header
+	rec := call(t, h, "GET", "/api/v1/admin/questions?q=%D8%A2%D8%AE%D8%B1&limit=10", nil, adminHdr, nil)
+	var found []questionRow
+	json.Unmarshal(rec.Body.Bytes(), &found)
+	if len(found) != 1 || found[0].ID != "q2" || rec.Header().Get("X-Total-Count") != "1" {
+		t.Fatalf("search: %s total=%s", rec.Body, rec.Header().Get("X-Total-Count"))
+	}
+	rec = call(t, h, "GET", "/api/v1/admin/questions?limit=2&offset=2&order=ord", nil, adminHdr, nil)
+	json.Unmarshal(rec.Body.Bytes(), &found)
+	if len(found) != 1 || found[0].ID != "q3" || rec.Header().Get("X-Total-Count") != "3" {
+		t.Fatalf("paging: %s total=%s", rec.Body, rec.Header().Get("X-Total-Count"))
+	}
+	rec = call(t, h, "GET", "/api/v1/admin/questions?missing_audio=1", nil, adminHdr, nil)
+	json.Unmarshal(rec.Body.Bytes(), &found)
+	if len(found) != 2 {
+		t.Fatalf("missing_audio: %s", rec.Body)
+	}
+	// a literal % in the search must not match everything
+	rec = call(t, h, "GET", "/api/v1/admin/questions?q=%25", nil, adminHdr, nil)
+	json.Unmarshal(rec.Body.Bytes(), &found)
+	if len(found) != 0 {
+		t.Fatalf("LIKE wildcard not escaped: %s", rec.Body)
+	}
+
+	// patch keeps untouched fields; options replaced when given
+	var q questionRow
+	rec = call(t, h, "PATCH", "/api/v1/admin/questions/q1", map[string]any{"question_audio_url": "http://x/new"}, adminHdr, &q)
+	if rec.Code != 200 || *q.QuestionAudioURL != "http://x/new" || !strings.Contains(string(q.Options), `"o1"`) {
+		t.Fatalf("patch url: %d %s", rec.Code, rec.Body)
+	}
+	rec = call(t, h, "PATCH", "/api/v1/admin/questions/q1", map[string]any{"options": []map[string]string{{"id": "o9", "audioUrl": "http://x/o"}}}, adminHdr, &q)
+	if !strings.Contains(string(q.Options), "o9") || *q.QuestionAudioURL != "http://x/new" {
+		t.Fatalf("patch options: %s", rec.Body)
+	}
+	if rec := call(t, h, "PATCH", "/api/v1/admin/questions/ghost", map[string]any{}, adminHdr, nil); rec.Code != 404 {
+		t.Fatalf("patch ghost: %d", rec.Code)
+	}
+
+	// labels
+	var labels []string
+	call(t, h, "GET", "/api/v1/admin/media-labels", nil, adminHdr, &labels)
+	if len(labels) != 2 {
+		t.Fatalf("labels: %v", labels)
+	}
+	var res map[string]int64
+	call(t, h, "POST", "/api/v1/admin/media-labels/audio", map[string]string{"label": "سیب", "url": "http://x/apple"}, adminHdr, &res)
+	if res["updated"] != 2 {
+		t.Fatalf("label audio updated %v", res)
 	}
 }

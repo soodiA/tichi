@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 import DiamondDisplay from '../components/ui/DiamondDisplay';
 import PageBg from '../components/ui/PageBg';
 import { syncProfileToCloud } from '../lib/sync';
-import { supabase } from '../lib/supabase';
+import { forgetSessions } from '../lib/api';
 import { db } from '../db/db';
 import { toJalaliDisplay } from '../components/ui/JalaliDatePicker';
 
@@ -24,7 +24,7 @@ const Profile: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut().catch(() => {});
+    forgetSessions();
     if (currentUser) {
       await db.profiles.delete(currentUser.id).catch(() => {});
     }

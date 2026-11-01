@@ -235,3 +235,38 @@ func (s *Server) latestAudio(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.JSON(w, http.StatusOK, out)
 }
+
+// adminListAudio lists the files directly inside a folder (newest first, max 200) so the editor
+// can offer "reuse an existing file".
+func (s *Server) adminListAudio(w http.ResponseWriter, r *http.Request) {
+	folder := r.URL.Query().Get("folder")
+	if !validFolder(folder) {
+		httpx.Error(w, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "bad folder")
+		return
+	}
+	rows, err := s.DB.Query(r.Context(), `
+		SELECT path, size_bytes FROM audio_objects
+		WHERE path LIKE $1 ESCAPE '\' AND position('/' in substr(path, $2)) = 0
+		ORDER BY created_at DESC, path DESC LIMIT 200`, escapeLike(folder)+"/%", len(folder)+2)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	defer rows.Close()
+	type item struct {
+		Name string `json:"name"`
+		URL  string `json:"url"`
+		Size int64  `json:"size"`
+	}
+	out := []item{}
+	for rows.Next() {
+		var p string
+		var n int64
+		if err := rows.Scan(&p, &n); err != nil {
+			serverError(w, err)
+			return
+		}
+		out = append(out, item{Name: p[len(folder)+1:], URL: s.audioURL(p), Size: n})
+	}
+	httpx.JSON(w, http.StatusOK, out)
+}

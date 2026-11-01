@@ -54,8 +54,12 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/v1/admin/questions", a(s.adminCreateQuestion))
 	mux.HandleFunc("PUT /api/v1/admin/questions/{id}", a(s.adminUpdateQuestion))
 	mux.HandleFunc("DELETE /api/v1/admin/questions/{id}", a(s.adminDeleteQuestion))
+	mux.HandleFunc("PATCH /api/v1/admin/questions/{id}", a(s.adminPatchQuestion))
+	mux.HandleFunc("GET /api/v1/admin/media-labels", a(s.adminMediaLabels))
+	mux.HandleFunc("POST /api/v1/admin/media-labels/audio", a(s.adminSetLabelAudio))
 	mux.HandleFunc("POST /api/v1/admin/questions/{id}/swap/{other}", a(s.adminSwapQuestions))
 	mux.HandleFunc("POST /api/v1/admin/audio", a(s.adminUploadAudio))
+	mux.HandleFunc("GET /api/v1/admin/audio", a(s.adminListAudio))
 	mux.HandleFunc("GET /api/v1/admin/reports", a(s.adminListReports))
 	mux.HandleFunc("PUT /api/v1/admin/reports/{id}/status", a(s.adminSetReportStatus))
 	mux.HandleFunc("GET /api/v1/admin/audio-slots/{slot}", a(s.adminGetAudioSlot))
@@ -96,6 +100,7 @@ func (s *Server) cors(next http.Handler) http.Handler {
 			w.Header().Set("Access-Control-Allow-Origin", o)
 			w.Header().Set("Vary", "Origin")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-Key")
+			w.Header().Set("Access-Control-Expose-Headers", "X-Total-Count")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		}
 		if r.Method == http.MethodOptions {

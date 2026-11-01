@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { adminJson } from '../lib/api';
 import { uploadVersioned } from '../lib/versionedUpload';
 import { QUESTION_TYPE_PROMPT, AUDIO_PICTURE_END_KEY } from '../lib/questionTypeAudio';
 import { TYPE_LABELS, ALL_TYPES } from '../lib/questionTypes';
@@ -8,7 +8,6 @@ import type { QuestionType } from '../types';
 // One recording slot per question type, plus a second slot for the audio_picture
 // "end" phrasing (its spoken prompt differs from the "start" one).
 type SlotKey = QuestionType | typeof AUDIO_PICTURE_END_KEY;
-const END_FILTER = 'question_text.ilike.%آخر%,question_text.ilike.%ختم%'; // keep in sync with isAudioPictureEnd
 const SLOTS: SlotKey[] = ALL_TYPES.flatMap((t) => (t === 'audio_picture' ? [t, AUDIO_PICTURE_END_KEY] : [t]));
 const SLOT_LABELS: Record<string, string> = {
   ...TYPE_LABELS,
@@ -20,15 +19,6 @@ const SLOT_PROMPT: Partial<Record<string, string>> = {
   audio_picture: 'کدام یکی با این صدا شروع می‌شود؟',
   [AUDIO_PICTURE_END_KEY]: 'صدای آخر کدام یکی شبیه این صداست؟',
 };
-const slotType = (k: SlotKey): QuestionType => (k === AUDIO_PICTURE_END_KEY ? 'audio_picture' : k);
-// Narrows a questions query to the rows that belong to a slot.
-const forSlot = <Q extends { eq: any; or: any; not: any }>(q: Q, k: SlotKey): Q => {
-  const base = q.eq('type', slotType(k));
-  if (k === AUDIO_PICTURE_END_KEY) return base.or(END_FILTER);
-  if (k === 'audio_picture') return base.not('question_text', 'ilike', '%آخر%').not('question_text', 'ilike', '%ختم%');
-  return base;
-};
-
 interface ExampleRow {
   type: QuestionType;
   question_text: string;
@@ -51,14 +41,11 @@ const AudioRecorder: React.FC = () => {
       const found: Partial<Record<SlotKey, ExampleRow>> = {};
       const clipsFound: Partial<Record<SlotKey, { url: string; count: number }>> = {};
       for (const t of SLOTS) {
-        const { data } = await forSlot(supabase
-          .from('questions')
-          .select('type, question_text, node_id, question_audio_url'), t)
-          .order('id', { ascending: true })
-          .limit(1);
-        if (data && data.length > 0) {
-          found[t] = data[0] as ExampleRow;
-          const url = (data[0] as { question_audio_url?: string }).question_audio_url;
+        const ex = await adminJson<(ExampleRow & { question_audio_url: string | null }) | null>(
+          `/api/v1/admin/audio-slots/${encodeURIComponent(t)}`).catch(() => null);
+        if (ex) {
+          found[t] = ex;
+          const url = ex.question_audio_url ?? undefined;
           // End rows used to share the start recording; that doesn't count as recorded.
           const isEndClip = url?.includes('/audio/types/YXVkaW9fcGljdHVyZV9lbmQ');
           if (url && (t !== AUDIO_PICTURE_END_KEY || isEndClip) && !(t === 'audio_picture' && isEndClip)) clipsFound[t] = { url, count: 0 };
@@ -101,9 +88,10 @@ const AudioRecorder: React.FC = () => {
     }
 
     // Every question of this type shares the same recorded prompt.
-    const { error: updErr } = await forSlot(supabase
-      .from('questions')
-      .update({ question_audio_url: url }), t);
+    let updErr: Error | null = null;
+    try {
+      await adminJson(`/api/v1/admin/audio-slots/${encodeURIComponent(t)}`, { method: 'PUT', body: { url } });
+    } catch (e) { updErr = e as Error; }
     setUploading(false);
     if (updErr) {
       alert(`فایل آپلود شد ولی وصل کردنش به سوال‌ها خطا داد: ${updErr.message}`);

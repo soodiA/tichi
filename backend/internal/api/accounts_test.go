@@ -87,6 +87,10 @@ func TestAccountsLoginProgressFriends(t *testing.T) {
 		t.Fatalf("token wrong hash: %d", rec.Code)
 	}
 
+	if rec := call(t, h, "POST", "/api/v1/auth/token", map[string]any{"profile_id": "99999999-9999-4999-8999-999999999999", "password_hash": hA}, nil, nil); rec.Code != 404 {
+		t.Fatalf("token unknown profile should be 404 (client then registers): %d", rec.Code)
+	}
+
 	// auth required / tampered tokens
 	if rec := call(t, h, "GET", "/api/v1/me", nil, nil, nil); rec.Code != 401 {
 		t.Fatalf("me without token: %d", rec.Code)

@@ -66,9 +66,29 @@ func (s *Server) adminListQuestions(w http.ResponseWriter, r *http.Request) {
 	if q.Get("with_audio") == "1" {
 		where = append(where, "question_audio_url IS NOT NULL")
 	}
-	sql := `SELECT ` + questionCols + ` FROM questions WHERE ` + strings.Join(where, " AND ") + ` ORDER BY node_id, ord, id`
+	if q.Get("missing_audio") == "1" {
+		where = append(where, "(question_audio_url IS NULL OR question_audio_url = '')")
+	}
+	if v := strings.TrimSpace(q.Get("q")); v != "" {
+		add("question_text ILIKE ? ESCAPE '\\'", "%"+escapeLike(v)+"%")
+	}
+	cond := strings.Join(where, " AND ")
+	var total int
+	if err := s.DB.QueryRow(r.Context(), `SELECT count(*) FROM questions WHERE `+cond, args...).Scan(&total); err != nil {
+		serverError(w, err)
+		return
+	}
+	w.Header().Set("X-Total-Count", strconv.Itoa(total))
+	order := ` ORDER BY node_id, ord, id`
+	if q.Get("order") == "ord" {
+		order = ` ORDER BY ord, id`
+	}
+	sql := `SELECT ` + questionCols + ` FROM questions WHERE ` + cond + order
 	if l, err := strconv.Atoi(q.Get("limit")); err == nil && l > 0 && l <= 10000 {
 		sql += ` LIMIT ` + strconv.Itoa(l)
+		if o, err := strconv.Atoi(q.Get("offset")); err == nil && o > 0 {
+			sql += ` OFFSET ` + strconv.Itoa(o)
+		}
 	}
 	rows, err := s.DB.Query(r.Context(), sql, args...)
 	if err != nil {
@@ -243,6 +263,75 @@ func (s *Server) adminSetAudioSlot(w http.ResponseWriter, r *http.Request) {
 	cond = strings.Replace(cond, "$1", "$2", 1)
 	tag, err := s.DB.Exec(r.Context(),
 		`UPDATE questions SET question_audio_url=$1, updated_at=now() WHERE NOT is_deleted AND `+cond, append([]any{in.URL}, args...)...)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]int64{"updated": tag.RowsAffected()})
+}
+
+// adminPatchQuestion changes only the audio url and/or options (used by the per-question recorder).
+func (s *Server) adminPatchQuestion(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		QuestionAudioURL *string         `json:"question_audio_url"`
+		Options          json.RawMessage `json:"options"`
+	}
+	if !httpx.Decode(w, r, &in) {
+		return
+	}
+	var opts any
+	if len(in.Options) > 0 && string(in.Options) != "null" {
+		opts = []byte(in.Options)
+	}
+	row := s.DB.QueryRow(r.Context(), `
+		UPDATE questions SET question_audio_url=COALESCE($2, question_audio_url), options=COALESCE($3::jsonb, options), updated_at=now()
+		WHERE id=$1 AND NOT is_deleted RETURNING `+questionCols, r.PathValue("id"), in.QuestionAudioURL, opts)
+	q, err := scanQuestion(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		httpx.Error(w, http.StatusNotFound, "NOT_FOUND", "question not found")
+		return
+	}
+	if err != nil {
+		writeDBError(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, q)
+}
+
+// adminMediaLabels lists the distinct single-word media labels (for the word recorder).
+func (s *Server) adminMediaLabels(w http.ResponseWriter, r *http.Request) {
+	rows, err := s.DB.Query(r.Context(), `SELECT DISTINCT media_label FROM questions WHERE NOT is_deleted AND media_label IS NOT NULL AND media_label <> '' ORDER BY 1`)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	defer rows.Close()
+	out := []string{}
+	for rows.Next() {
+		var l string
+		if err := rows.Scan(&l); err != nil {
+			serverError(w, err)
+			return
+		}
+		out = append(out, l)
+	}
+	httpx.JSON(w, http.StatusOK, out)
+}
+
+// adminSetLabelAudio points every question with this media_label at a recorded word clip.
+func (s *Server) adminSetLabelAudio(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Label string `json:"label"`
+		URL   string `json:"url"`
+	}
+	if !httpx.Decode(w, r, &in) {
+		return
+	}
+	if in.Label == "" || in.URL == "" {
+		httpx.Error(w, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "label and url are required")
+		return
+	}
+	tag, err := s.DB.Exec(r.Context(), `UPDATE questions SET question_audio_url=$2, updated_at=now() WHERE media_label=$1 AND NOT is_deleted`, in.Label, in.URL)
 	if err != nil {
 		serverError(w, err)
 		return
