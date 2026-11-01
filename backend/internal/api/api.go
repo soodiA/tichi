@@ -25,6 +25,22 @@ func (s *Server) Handler() http.Handler {
 	// public, read-only content
 	mux.HandleFunc("GET /api/v1/curriculum", s.getCurriculum)
 
+	// accounts
+	mux.HandleFunc("POST /api/v1/auth/register", s.register)
+	mux.HandleFunc("GET /api/v1/auth/salt", s.getSalt)
+	mux.HandleFunc("GET /api/v1/auth/lookup", s.lookupUsername)
+	mux.HandleFunc("POST /api/v1/auth/login", s.login)
+	mux.HandleFunc("POST /api/v1/auth/token", s.tokenFromHash)
+	mux.HandleFunc("GET /api/v1/me", s.authed(s.getMe))
+	mux.HandleFunc("PATCH /api/v1/me", s.authed(s.updateMe))
+	mux.HandleFunc("PUT /api/v1/me/progress", s.authed(s.saveProgress))
+	mux.HandleFunc("POST /api/v1/me/question-stats", s.authed(s.recordQuestionStat))
+	mux.HandleFunc("GET /api/v1/me/friends", s.authed(s.myFriendIDs))
+	mux.HandleFunc("POST /api/v1/me/friends", s.authed(s.addFriend))
+	mux.HandleFunc("GET /api/v1/me/friends-of-friends", s.authed(s.friendsOfFriends))
+	mux.HandleFunc("GET /api/v1/profiles", s.listPublicProfiles)
+	mux.HandleFunc("POST /api/v1/reports", s.submitReport)
+
 	// admin content editing (X-Admin-Key)
 	a := s.admin
 	mux.HandleFunc("GET /api/v1/admin/units", a(s.adminListUnits))
@@ -35,6 +51,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PUT /api/v1/admin/questions/{id}", a(s.adminUpdateQuestion))
 	mux.HandleFunc("DELETE /api/v1/admin/questions/{id}", a(s.adminDeleteQuestion))
 	mux.HandleFunc("POST /api/v1/admin/questions/{id}/swap/{other}", a(s.adminSwapQuestions))
+	mux.HandleFunc("GET /api/v1/admin/reports", a(s.adminListReports))
+	mux.HandleFunc("PUT /api/v1/admin/reports/{id}/status", a(s.adminSetReportStatus))
 	mux.HandleFunc("GET /api/v1/admin/audio-slots/{slot}", a(s.adminGetAudioSlot))
 	mux.HandleFunc("PUT /api/v1/admin/audio-slots/{slot}", a(s.adminSetAudioSlot))
 
