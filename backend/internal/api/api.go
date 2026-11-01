@@ -25,6 +25,10 @@ func (s *Server) Handler() http.Handler {
 	// public, read-only content
 	mux.HandleFunc("GET /api/v1/curriculum", s.getCurriculum)
 
+	// audio files
+	mux.HandleFunc("GET /audio/{path...}", s.serveAudio)
+	mux.HandleFunc("POST /api/v1/audio/latest", s.latestAudio)
+
 	// accounts
 	mux.HandleFunc("POST /api/v1/auth/register", s.register)
 	mux.HandleFunc("GET /api/v1/auth/salt", s.getSalt)
@@ -51,6 +55,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PUT /api/v1/admin/questions/{id}", a(s.adminUpdateQuestion))
 	mux.HandleFunc("DELETE /api/v1/admin/questions/{id}", a(s.adminDeleteQuestion))
 	mux.HandleFunc("POST /api/v1/admin/questions/{id}/swap/{other}", a(s.adminSwapQuestions))
+	mux.HandleFunc("POST /api/v1/admin/audio", a(s.adminUploadAudio))
 	mux.HandleFunc("GET /api/v1/admin/reports", a(s.adminListReports))
 	mux.HandleFunc("PUT /api/v1/admin/reports/{id}/status", a(s.adminSetReportStatus))
 	mux.HandleFunc("GET /api/v1/admin/audio-slots/{slot}", a(s.adminGetAudioSlot))
