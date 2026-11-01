@@ -18,5 +18,3 @@ TOKEN=$(curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: appli
 sudo ./svc.sh install ubuntu
 sudo ./svc.sh start
 sudo ./svc.sh status | head -5
-# the deploy scripts call docker and write /srv/tichi through sudo: allow exactly that for the runner user
-echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/90-tichi >/dev/null 2>&1 || true
