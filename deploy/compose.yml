@@ -1,0 +1,42 @@
+# Tichi stack. Only host nginx binds a public port; everything here binds 127.0.0.1.
+# All persistent data are bind mounts under /srv/tichi (survive `docker system prune` / `docker volume prune`).
+name: tichi
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tichi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: tichi
+    volumes:
+      - /srv/tichi/postgres:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tichi -d tichi"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    image: tichi-api:${TICHI_VERSION:-dev}
+    build:
+      context: ../backend
+      args:
+        VERSION: ${TICHI_VERSION:-dev}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://tichi:${POSTGRES_PASSWORD}@db:5432/tichi?sslmode=disable
+      LISTEN_ADDR: 0.0.0.0:8080
+      AUDIO_DIR: /data/audio
+      TOKEN_SECRET: ${TOKEN_SECRET}
+      ADMIN_KEY: ${ADMIN_KEY}
+      PUBLIC_URL: ${PUBLIC_URL}
+    volumes:
+      - /srv/tichi/audio:/data/audio
+    ports:
+      - "127.0.0.1:8080:8080"
