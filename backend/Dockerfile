@@ -7,10 +7,10 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 ARG VERSION=dev
-RUN CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION}" -o /out/tichi-api ./cmd/server
+RUN CGO_ENABLED=0 go build -ldflags "-s -w" -o /out/tichi-api ./cmd/server && CGO_ENABLED=0 go build -ldflags "-s -w" -o /out/tichi-import ./cmd/import
 
 FROM alpine:3.20
 RUN adduser -D -u 10001 tichi && mkdir -p /data/audio && chown tichi /data/audio
 USER tichi
-COPY --from=build /out/tichi-api /usr/local/bin/tichi-api
+COPY --from=build /out/tichi-api /out/tichi-import /usr/local/bin/
 ENTRYPOINT ["tichi-api"]
