@@ -13,6 +13,7 @@ type Config struct {
 	TokenSecret string
 	AdminKey    string
 	PublicURL   string
+	CORSOrigins string
 }
 
 func Load() (Config, error) {
@@ -23,6 +24,7 @@ func Load() (Config, error) {
 		TokenSecret: os.Getenv("TOKEN_SECRET"),
 		AdminKey:    os.Getenv("ADMIN_KEY"),
 		PublicURL:   getenv("PUBLIC_URL", "http://localhost:8080"),
+		CORSOrigins: getenv("CORS_ORIGINS", ""),
 	}
 	switch {
 	case c.DatabaseURL == "":
