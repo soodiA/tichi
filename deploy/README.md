@@ -43,3 +43,7 @@ Restore drill: unzip, then `restore.sh tichi-db.dump tichi-files.tar [target-db]
 5. Build the GitHub Pages app with `VITE_API_URL=https://tichikids.ir` (base `/tichi/`) and publish it, so devices that
    installed the old PWA update to the new client; `https://tichikids.ir` serves the same app from this VM.
 6. Keep Supabase running (read-only use) until the owner confirms; only then retire it.
+
+
+## CDN origin mode (current)
+The CDN fronting tichikids.ir terminates TLS and fetches from this VM over plain HTTP :80. Run `deploy/setup-cdn-origin.sh` (nginx `nginx-tichi-cdn.conf`; ufw allows :80 only from the CDN edges 95.156.253.236/237). The CDN->origin hop is unencrypted. `setup-tls.sh` is only for pointing the domain straight at the VM.
