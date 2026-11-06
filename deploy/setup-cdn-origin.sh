@@ -3,7 +3,7 @@
 # ONLY the CDN edge addresses reach it. (Use setup-tls.sh instead if the domain points straight at this VM.)
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
-EDGES="${CDN_EDGES:-95.156.253.236 95.156.253.237}"
+EDGES="${CDN_EDGES:-95.156.253.236 95.156.253.237 95.156.253.225}"
 sudo cp "$HERE/nginx-tichi-cdn.conf" /etc/nginx/sites-available/tichi
 sudo ln -sf /etc/nginx/sites-available/tichi /etc/nginx/sites-enabled/tichi
 sudo nginx -t
