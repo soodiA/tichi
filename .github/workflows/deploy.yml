@@ -44,5 +44,7 @@ jobs:
 
       - name: Tag release
         run: |
+          git config user.name "tichi-deploy"
+          git config user.email "tichi-deploy@users.noreply.github.com"
           git tag -a "${{ steps.v.outputs.version }}" -m "Deployed by workflow run ${GITHUB_RUN_NUMBER}" "$GITHUB_SHA"
           git push origin "${{ steps.v.outputs.version }}"
