@@ -10,9 +10,17 @@ const pass = 'Pass-' + Math.random().toString(36).slice(2, 8);
 const results = [];
 const check = (name, ok, extra = '') => { results.push({ name, ok }); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${extra ? '  ' + extra : ''}`); };
 
-const browser = await chromium.launch(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {});
+// AIRGAP=1: the browser may not resolve any host except the one under test, and any request that leaves
+// that origin is a failure (checked at the end). Catches fonts/CDNs/analytics the static scan cannot see.
+const AIRGAP = process.env.AIRGAP === '1';
+const launchOpts = process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {};
+if (AIRGAP) launchOpts.args = ['--host-resolver-rules=MAP * ~NOTFOUND , EXCLUDE 127.0.0.1 , EXCLUDE localhost'];
+const browser = await chromium.launch(launchOpts);
 const problems = [];
+const external = new Set();
+const BASE_ORIGIN = new URL(BASE).origin;
 const watch = (page) => {
+  page.on('request', (r) => { const u = r.url(); if (!/^(data|blob|about):/.test(u) && new URL(u).origin !== BASE_ORIGIN) external.add(u.slice(0, 160)); });
   page.on('console', (m) => { if (m.type() === 'error') problems.push('console: ' + m.text().slice(0, 200)); });
   page.on('pageerror', (e) => problems.push('pageerror: ' + e.message.slice(0, 200)));
   page.on('response', (r) => { if (r.status() >= 400 && !r.url().includes('/auth/')) problems.push(`HTTP ${r.status()} ${r.url()}`); });
@@ -45,7 +53,7 @@ await p2.waitForURL('**/home', { timeout: 15000 }).then(() => check('login on a 
 
 // wrong password is rejected
 const ctx3 = await browser.newContext();
-const p3 = await ctx3.newPage();
+const p3 = await ctx3.newPage(); watch(p3);
 await p3.goto(BASE + '/login');
 await p3.getByPlaceholder('مثلاً: ali123').fill(uname);
 await p3.locator('input[type=password]').fill('wrong-' + pass);
@@ -85,6 +93,10 @@ check('profile/friends/leaderboard/editor render without crashing', true);
 const lb = await (await p1.request.get(BASE + '/api/v1/profiles?q=' + uname)).json();
 check('new user visible in public search', lb.length === 1 && !JSON.stringify(lb).includes('hash'));
 
+if (AIRGAP) {
+  // the wrong-password page (p3) is not watched on purpose in the original script; include it by visiting nothing new here
+  check('air-gap: no request left the origin', external.size === 0, [...external].slice(0, 5).join(' | '));
+}
 await browser.close();
 const unexpected = problems.filter((x) => !/favicon/.test(x));
 console.log('\nconsole/network problems:', unexpected.length ? '\n  ' + unexpected.join('\n  ') : 'none');

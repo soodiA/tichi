@@ -36,6 +36,9 @@ jobs:
       - name: Build frontend (pnpm)
         run: ./deploy/build-web.sh
 
+      - name: Air-gap guard (no external hosts in source or build)
+        run: ./deploy/check-no-external.sh dist
+
       - name: Deploy
         run: ./deploy/release.sh "${{ steps.v.outputs.version }}" "$PWD/dist"
 
