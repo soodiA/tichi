@@ -5,7 +5,7 @@ import { useStore } from '../store/useStore';
 import { db } from '../db/db';
 import { syncProfileToCloud, syncProgressToCloud } from '../lib/sync';
 import Mascot from '../components/ui/Mascot';
-import { playApplause } from '../lib/applause';
+import { playSfx } from '../lib/sfx';
 
 interface LocationState { accuracy?: number; nodeId?: string; }
 
@@ -108,7 +108,7 @@ const LessonComplete: React.FC = () => {
   const coinsEarned = 10 + (starCount - 1) * 5;
   const perf = getPerf(accuracy);
 
-  useEffect(() => { playApplause(); }, []);
+  useEffect(() => { playSfx('victory'); }, []);
 
   useEffect(() => {
     if (savedRef.current || !currentUser) return;

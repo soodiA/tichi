@@ -11,6 +11,7 @@ import PageBg from '../components/ui/PageBg';
 import ReportButton from '../components/ui/ReportButton';
 import Mascot from '../components/ui/Mascot';
 import { UNIT_INTROS } from '../data/unitIntros';
+import { playSfx } from '../lib/sfx';
 import type { Node } from '../types';
 
 // Star burst on correct answer
@@ -107,6 +108,7 @@ const Lesson: React.FC = () => {
       }
 
       if (correct) setPraiseText(randomPraise());
+      playSfx(correct ? 'correct' : 'wrong');
       setFeedback(correct ? 'correct' : 'wrong');
     },
     [node, currentIndex, feedback]
