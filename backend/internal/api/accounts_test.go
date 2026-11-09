@@ -238,3 +238,46 @@ func TestReports(t *testing.T) {
 		t.Fatalf("status not saved: %+v", list[0])
 	}
 }
+
+// A device that was offline pushes its old profile on startup; it must not undo what another device earned.
+func TestStaleProfilePushDoesNotRegress(t *testing.T) {
+	_, h := newTestServer(t)
+	a := register(t, h, idA, "stale", hashFor("saltS", "c"))
+	tok := bearer(a.Token)
+	patch := func(body map[string]any) profileDTO {
+		t.Helper()
+		var p profileDTO
+		if rec := call(t, h, "PATCH", "/api/v1/me", body, tok, &p); rec.Code != 200 {
+			t.Fatalf("patch: %d %s", rec.Code, rec.Body)
+		}
+		return p
+	}
+	// laptop: two lessons on Nov 6, a gap, then Nov 8
+	patch(map[string]any{"diamonds": 35, "total_score": 35, "streak_days": 1, "last_active_date": "2026-11-06"})
+	p := patch(map[string]any{"diamonds": 50, "total_score": 50, "streak_days": 1, "last_active_date": "2026-11-08"})
+	if p.StreakDays != 1 || p.TotalScore != 50 {
+		t.Fatalf("setup: %+v", p)
+	}
+	// phone, last used Nov 6, opens on Nov 9 and pushes its stale copy together with a rename
+	nm := "Renamed"
+	p = patch(map[string]any{"name": nm, "diamonds": 35, "total_score": 35, "streak_days": 1, "last_active_date": "2026-11-06"})
+	if p.Diamonds != 50 || p.TotalScore != 50 || p.StreakDays != 1 || p.LastActiveDate == nil || *p.LastActiveDate != "2026-11-08" {
+		t.Fatalf("stale push regressed the game state: diamonds=%d score=%d streak=%d last=%v", p.Diamonds, p.TotalScore, p.StreakDays, p.LastActiveDate)
+	}
+	if p.Name != nm {
+		t.Fatalf("name should still apply from a stale device, got %q", p.Name)
+	}
+	// legitimate moves still work: earning, spending coins (score unchanged), and resetting the streak the same day
+	p = patch(map[string]any{"diamonds": 65, "total_score": 65, "streak_days": 2, "last_active_date": "2026-11-09"})
+	if p.Diamonds != 65 || p.StreakDays != 2 {
+		t.Fatalf("earning should apply: %+v", p)
+	}
+	p = patch(map[string]any{"diamonds": 25, "total_score": 65, "streak_days": 2, "last_active_date": "2026-11-09"})
+	if p.Diamonds != 25 {
+		t.Fatalf("spending coins must apply: %+v", p)
+	}
+	p = patch(map[string]any{"streak_days": 0, "last_active_date": "2026-11-09"})
+	if p.StreakDays != 0 {
+		t.Fatalf("same-day streak reset must apply: %+v", p)
+	}
+}

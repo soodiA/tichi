@@ -51,6 +51,29 @@ const toProgress = (userId: string, p: ServerProgress): NodeProgress => ({
 });
 
 /**
+ * The server only moves game state forward (see updateMe), so a device that was offline for days gets the
+ * current streak/diamonds/score back in the PATCH response instead of overwriting them. Take those values
+ * into the local copy unless the user changed them while the request was in flight.
+ */
+async function adoptServerGameState(sent: UserProfile, server: ServerProfile): Promise<void> {
+  const next = {
+    diamonds: server.diamonds ?? 0,
+    streakDays: server.streak_days ?? 0,
+    lastActiveDate: server.last_active_date ?? undefined,
+    totalScore: server.total_score ?? 0,
+  };
+  const same = (u: UserProfile) =>
+    u.diamonds === next.diamonds && u.streakDays === next.streakDays && u.lastActiveDate === next.lastActiveDate && u.totalScore === next.totalScore;
+  if (same(sent)) return;
+  const stored = await db.profiles.get(sent.id);
+  if (stored) await db.profiles.put({ ...stored, ...next });
+  const cur = useStore.getState().currentUser;
+  const untouched = cur && cur.id === sent.id && cur.diamonds === sent.diamonds && cur.streakDays === sent.streakDays &&
+    cur.lastActiveDate === sent.lastActiveDate && cur.totalScore === sent.totalScore;
+  if (untouched) useStore.getState().setCurrentUser({ ...cur, ...next });
+}
+
+/**
  * Push the local profile to the server. A profile the server has never seen (created offline, or
  * before the account existed there) is registered first; otherwise only the mutable fields are patched.
  */
@@ -65,7 +88,8 @@ export async function syncProfileToCloud(profile: UserProfile): Promise<void> {
     total_score: profile.totalScore,
   };
   try {
-    await authedJson(profile, '/api/v1/me', { method: 'PATCH', body: patch });
+    const server = await authedJson<ServerProfile>(profile, '/api/v1/me', { method: 'PATCH', body: patch });
+    await adoptServerGameState(profile, server);
   } catch (e) {
     if (!(e instanceof ApiError) || e.status !== 404) throw e;
     try {

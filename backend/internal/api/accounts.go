@@ -36,6 +36,9 @@ type profileDTO struct {
 	TotalScore     int        `json:"total_score"`
 }
 
+// profileColsP is profileCols qualified with the table name, for UPDATE ... FROM queries.
+const profileColsP = `profiles.id::text, profiles.name, profiles.username, profiles.dob, profiles.avatar_url, profiles.joined_at, profiles.diamonds, profiles.streak_days, profiles.last_active_date, profiles.total_score`
+
 const profileCols = `id::text, name, username, dob, avatar_url, joined_at, diamonds, streak_days, last_active_date, total_score`
 
 func scanProfile(row pgx.Row) (profileDTO, error) {
@@ -302,11 +305,25 @@ func (s *Server) updateMe(w http.ResponseWriter, r *http.Request, pid string) {
 		httpx.Error(w, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "name cannot be empty")
 		return
 	}
+	// A device that was offline for days pushes its old copy of the profile on startup. Without a guard
+	// that copy overwrites what another device has earned since (streak reset, lost diamonds). So the
+	// game-state fields only move forward: total_score never decreases, and the streak/last_active/diamonds
+	// group is applied only when the sender is not behind the server (its last_active_date and total_score
+	// are not older). Name and avatar always apply. The response carries the server's current values so
+	// the client can adopt them.
 	row := s.DB.QueryRow(r.Context(), `
-		UPDATE profiles SET name=COALESCE($2,name), avatar_url=COALESCE($3,avatar_url), diamonds=COALESCE($4,diamonds),
-		  streak_days=COALESCE($5,streak_days), last_active_date=COALESCE($6,last_active_date),
-		  total_score=COALESCE($7,total_score), updated_at=now()
-		WHERE id=$1 AND NOT is_deleted RETURNING `+profileCols,
+		UPDATE profiles SET
+		  name=COALESCE($2,name), avatar_url=COALESCE($3,avatar_url),
+		  diamonds   = CASE WHEN fresh.ok THEN COALESCE($4::int,diamonds) ELSE diamonds END,
+		  streak_days= CASE WHEN fresh.ok THEN COALESCE($5::int,streak_days) ELSE streak_days END,
+		  last_active_date = CASE WHEN fresh.ok THEN COALESCE($6::text,last_active_date) ELSE last_active_date END,
+		  total_score = GREATEST(total_score, COALESCE($7::int,total_score)),
+		  updated_at=now()
+		FROM (SELECT id,
+		        (($7::int IS NULL OR $7::int >= total_score)
+		         AND ($6::text IS NULL OR last_active_date IS NULL OR $6::text >= last_active_date)) AS ok
+		      FROM profiles WHERE id=$1) AS fresh
+		WHERE profiles.id=$1 AND fresh.id=profiles.id AND NOT is_deleted RETURNING `+profileColsP,
 		pid, in.Name, in.AvatarURL, in.Diamonds, in.StreakDays, in.LastActiveDate, in.TotalScore)
 	p, err := scanProfile(row)
 	if errors.Is(err, pgx.ErrNoRows) {

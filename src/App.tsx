@@ -19,7 +19,7 @@ import RecordQuestionAudio from './pages/RecordQuestionAudio';
 import WordAudioRecorder from './pages/WordAudioRecorder';
 import IntroAudioRecorder from './pages/IntroAudioRecorder';
 import Admin from './pages/Admin';
-import { db } from './db/db';
+import { useStore } from './store/useStore';
 import { syncProfileToCloud } from './lib/sync';
 
 const NAV_ROUTES = ['/home', '/profile', '/friends', '/leaderboard'];
@@ -118,9 +118,10 @@ const App: React.FC = () => {
   const isAdminRoute = ADMIN_ROUTES.some((r) => location.pathname === r);
 
   React.useEffect(() => {
-    db.profiles.toCollection().first().then((profile) => {
-      if (profile) syncProfileToCloud(profile).catch((e) => console.error('[sync] startup sync failed', e));
-    });
+    // Sync the account that is actually signed in (not whichever profile happens to be first in the local DB,
+    // which is the wrong one when two accounts were used on this device).
+    const me = useStore.getState().currentUser;
+    if (me) syncProfileToCloud(me).catch((e) => console.error('[sync] startup sync failed', e));
   }, []);
 
   return (
