@@ -93,6 +93,36 @@ check('profile/friends/leaderboard/editor render without crashing', true);
 const lb = await (await p1.request.get(BASE + '/api/v1/profiles?q=' + uname)).json();
 check('new user visible in public search', lb.length === 1 && !JSON.stringify(lb).includes('hash'));
 
+// 8. star rule: 3 stars minus one per wrong answer; 4+ wrong = not passed (no celebration, nothing saved).
+// The router state is set by hand, which is how Lesson.tsx hands its result to the result pages.
+const puts = [];
+p2.on('console', (m) => { if (process.env.DEBUG_E2E) console.log('  [p2 console]', m.type(), m.text().slice(0, 200)); });
+p2.on('request', (r) => { if (process.env.DEBUG_E2E && r.url().includes('/api/')) console.log('  [p2 req]', r.method(), r.url().slice(0, 100)); });
+p2.on('request', (r) => { if (r.method() === 'PUT' && r.url().includes('/me/progress')) puts.push(JSON.parse(r.postData() ?? '{}')); });
+const waitPut = async (n) => { for (let i = 0; i < 40 && puts.length < n; i++) await p2.waitForTimeout(150); };
+const showResult = async (path, usr) => {
+  await p2.goto(BASE + '/home');
+  await p2.evaluate(([path, usr]) => {
+    window.history.pushState({ usr, key: 'e2e' + Math.random(), idx: 1 }, '', path);
+    window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }));
+  }, [path, usr]);
+  await p2.waitForTimeout(1500);
+};
+await showResult('/lesson-complete', { nodeId: node.id, accuracy: 60, wrong: 4 });
+check('4 wrong answers: result page redirects to the failed page', p2.url().endsWith('/lesson-failed'));
+check('failed page shows the retry button and no celebration', (await p2.getByRole('button', { name: 'دوباره تلاش کن' }).count()) === 1 && (await p2.getByText('سکه گرفتی').count()) === 0);
+check('failed attempt saved no progress', puts.length === 0);
+await showResult('/lesson-complete', { nodeId: node.id, accuracy: 80, wrong: 1 });
+await waitPut(1);
+check('1 wrong answer: celebration page stays', p2.url().endsWith('/lesson-complete') && (await p2.getByText('سکه گرفتی').count()) === 1);
+check('1 wrong answer = 2 stars saved', puts.length === 1 && puts[0].stars === 2 && puts[0].completed === true, JSON.stringify(puts[0] ?? {}));
+await showResult('/lesson-complete', { nodeId: node.id, accuracy: 100, wrong: 0 });
+await waitPut(2);
+check('0 wrong answers = 3 stars saved', puts.length === 2 && puts[1].stars === 3, JSON.stringify(puts[1] ?? {}));
+await showResult('/lesson-complete', { nodeId: node.id, accuracy: 70, wrong: 3 });
+await waitPut(3);
+check('replay with 3 wrong keeps the best stars (3)', puts.length === 3 && puts[2].stars === 3, JSON.stringify(puts[2] ?? {}));
+
 if (AIRGAP) {
   // the wrong-password page (p3) is not watched on purpose in the original script; include it by visiting nothing new here
   check('air-gap: no request left the origin', external.size === 0, [...external].slice(0, 5).join(' | '));

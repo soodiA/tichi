@@ -6,8 +6,9 @@ import { db } from '../db/db';
 import { syncProfileToCloud, syncProgressToCloud } from '../lib/sync';
 import Mascot from '../components/ui/Mascot';
 import { playSfx } from '../lib/sfx';
+import { starsForWrong, lessonPassed } from '../lib/stars';
 
-interface LocationState { accuracy?: number; nodeId?: string; }
+interface LocationState { accuracy?: number; nodeId?: string; wrong?: number; }
 
 // ── Performance config ────────────────────────────────────────────────────────
 function getPerf(acc: number) {
@@ -104,22 +105,42 @@ const LessonComplete: React.FC = () => {
   const incrementStreak = useStore((s) => s.incrementStreak);
   const savedRef = useRef(false);
 
-  const starCount = accuracy === 100 ? 3 : accuracy >= 80 ? 2 : 1;
-  const coinsEarned = 10 + (starCount - 1) * 5;
+  // Stars follow the number of wrong answers (3 minus one per mistake). Old navigation states without
+  // `wrong` fall back to the accuracy bands.
+  const wrong = state.wrong;
+  const starCount = wrong != null ? starsForWrong(wrong) : accuracy === 100 ? 3 : accuracy >= 80 ? 2 : 1;
+  const coinsEarned = 10 + Math.max(0, starCount - 1) * 5;
+  const failed = wrong != null && !lessonPassed(wrong);
   const perf = getPerf(accuracy);
 
-  useEffect(() => { playSfx('victory'); }, []);
+  // Reached directly with a failing result (e.g. a stale link or back button): no celebration, no saving.
+  useEffect(() => {
+    if (failed) navigate('/lesson-failed', { replace: true, state: { accuracy, nodeId, wrong } });
+  }, []);
+
+  useEffect(() => { if (!failed) playSfx('victory'); }, []);
 
   useEffect(() => {
-    if (savedRef.current || !currentUser) return;
+    if (failed || savedRef.current || !currentUser) return;
     savedRef.current = true;
     addDiamonds(coinsEarned);
     incrementStreak();
     const streaked = useStore.getState().currentUser ?? currentUser;
-    const progress = { nodeId, userId: currentUser.id, completed: true, stars: starCount, accuracy, completedAt: new Date().toISOString(), attempts: 1 };
-    db.progress.put(progress).then(() => { syncProgressToCloud(progress).catch((e) => console.error('[sync] progress sync failed', e)); });
+    // A replay never lowers what was already earned on this lesson.
+    db.progress.get([nodeId, currentUser.id]).then((prev) => {
+      const progress = {
+        nodeId, userId: currentUser.id, completed: true,
+        stars: Math.max(starCount, prev?.stars ?? 0),
+        accuracy: Math.max(accuracy, prev?.accuracy ?? 0),
+        completedAt: new Date().toISOString(),
+        attempts: (prev?.attempts ?? 0) + 1,
+      };
+      return db.progress.put(progress).then(() => syncProgressToCloud(progress));
+    }).catch((e) => console.error('[sync] progress sync failed', e));
     syncProfileToCloud({ ...streaked, diamonds: currentUser.diamonds + coinsEarned, totalScore: currentUser.totalScore + coinsEarned }).catch((e) => console.error('[sync] lesson-complete profile sync failed', e));
   }, []);
+
+  if (failed) return null;
 
   return (
     <div dir="rtl" className={`min-h-full relative flex flex-col items-center justify-between overflow-hidden bg-gradient-to-b ${perf.bg}`}>

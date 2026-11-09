@@ -12,6 +12,7 @@ import ReportButton from '../components/ui/ReportButton';
 import Mascot from '../components/ui/Mascot';
 import { UNIT_INTROS } from '../data/unitIntros';
 import { playSfx } from '../lib/sfx';
+import { lessonPassed } from '../lib/stars';
 import type { Node } from '../types';
 
 // Star burst on correct answer
@@ -123,21 +124,10 @@ const Lesson: React.FC = () => {
       const totalQ = node.questions.length;
       const correctCount = Object.values(answersRef.current).filter(Boolean).length;
       const accuracy = totalQ > 0 ? Math.round((correctCount / totalQ) * 100) : 100;
+      const wrong = Object.values(answersRef.current).filter((ok) => !ok).length;
 
-      if (currentUser) {
-        const stars = accuracy === 100 ? 3 : accuracy >= 80 ? 2 : 1;
-        await db.progress.put({
-          nodeId: node.id,
-          userId: currentUser.id,
-          completed: true,
-          stars,
-          accuracy,
-          completedAt: new Date().toISOString(),
-          attempts: 1,
-        });
-      }
-
-      navigate('/lesson-complete', { state: { accuracy, nodeId: node.id } });
+      // Progress is saved by the result page, and only for a passed lesson.
+      navigate(lessonPassed(wrong) ? '/lesson-complete' : '/lesson-failed', { state: { accuracy, nodeId: node.id, wrong } });
     } else {
       setCurrentIndex(nextIndex);
     }

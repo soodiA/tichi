@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Home from './pages/Home';
 import Lesson from './pages/Lesson';
 import LessonComplete from './pages/LessonComplete';
+import LessonFailed from './pages/LessonFailed';
 import Profile from './pages/Profile';
 import Friends from './pages/Friends';
 import Leaderboard from './pages/Leaderboard';
@@ -134,6 +135,7 @@ const App: React.FC = () => {
           <Route path="/home" element={<Home />} />
           <Route path="/lesson/:nodeId" element={<Lesson />} />
           <Route path="/lesson-complete" element={<LessonComplete />} />
+          <Route path="/lesson-failed" element={<LessonFailed />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/friends" element={<Friends />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
