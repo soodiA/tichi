@@ -13,6 +13,11 @@ import PageBg from '../components/ui/PageBg';
 import { UNIT_INTROS } from '../data/unitIntros';
 import type { Unit, NodeProgress } from '../types';
 
+// Soft path colors, cycled by unit position so two neighbouring units never share a color
+// (the curriculum's own colors are mostly the same violet, which made the path monotone).
+const PATH_COLORS = ['#A78BFA', '#F472B6', '#FB923C', '#34D399', '#60A5FA', '#2DD4BF', '#FB7185', '#818CF8', '#F5B041'];
+const pathColor = (unitIndex: number) => PATH_COLORS[unitIndex % PATH_COLORS.length];
+
 const Home: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -76,7 +81,7 @@ const Home: React.FC = () => {
 
   // Exclude intro nodes from the path — intro is shown via UnitDivider book button
   const allNodes = units.flatMap((u) =>
-    u.nodes.filter((n) => n.type !== 'intro').map((n) => ({ ...n, unitColor: u.color }))
+    u.nodes.filter((n) => n.type !== 'intro').map((n) => ({ ...n, unitColor: pathColor(units.indexOf(u)) }))
   );
 
   const isNodeCompleted = (nodeId: string) => !!progressMap[nodeId]?.completed;
@@ -144,7 +149,8 @@ const Home: React.FC = () => {
         {units.length === 0 ? (
           <p className="text-gray-400 text-center py-10">محتوایی یافت نشد</p>
         ) : (
-          units.map((unit) => {
+          units.map((unit, unitIdx) => {
+            const unitColor = pathColor(unitIdx);
             const lessonNodes = unit.nodes.filter((n) => n.type !== 'intro');
             const introAvailable = !!UNIT_INTROS[unit.letter];
 
@@ -153,7 +159,7 @@ const Home: React.FC = () => {
                 <div className="w-full">
                   <UnitDivider
                     letter={unit.letter}
-                    color={unit.color}
+                    color={unitColor}
                     unitNumber={unit.order}
                     onPlayIntro={introAvailable ? () => setIntroUnit(unit) : undefined}
                   />
@@ -175,7 +181,7 @@ const Home: React.FC = () => {
                         isUnlocked={unlocked}
                         isCurrent={isCurrent}
                         isCompleted={completed}
-                        unitColor={unit.color}
+                        unitColor={unitColor}
                         stars={progressMap[node.id]?.stars ?? 0}
                         onClick={() => {
                           if (unlocked || completed) navigate(`/lesson/${node.id}`);
