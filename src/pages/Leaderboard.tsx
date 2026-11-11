@@ -110,7 +110,7 @@ const Leaderboard: React.FC = () => {
           ))}
         </div>
         <div className="flex gap-2 mb-5">
-          {([['score', '⭐ امتیاز'], ['streak', '🔥 استریک']] as const).map(([k, label]) => (
+          {([['score', '🪙 امتیاز'], ['streak', '🔥 استریک']] as const).map(([k, label]) => (
             <button
               key={k}
               onClick={() => setMetric(k)}
@@ -151,7 +151,7 @@ const Leaderboard: React.FC = () => {
                 </div>
                 <div className="text-left flex-shrink-0">
                   <p className={`font-extrabold ${metric === 'score' ? 'text-amber-500' : 'text-orange-500'}`}>
-                    {metric === 'score' ? '⭐' : '🔥'} {value(p)}
+                    {metric === 'score' ? '🪙' : '🔥'} {value(p)}
                   </p>
                   {p.streak_days != null && metric === 'score' && (
                     <p className="text-xs text-orange-400">🔥 {streakOf(p).toLocaleString('fa-IR')}</p>
