@@ -45,6 +45,17 @@ const WordAudioRecorder: React.FC = () => {
           if (base.length > 1) labels.add(label);
         }
       });
+      // Option words of the audio question types are played from the same 'words' clips, but they are not
+      // media labels, so they never showed up here. Include them so they can be recorded too.
+      const AUDIO_TYPES = new Set(['audio_picture', 'audio_options', 'sound_to_text', 'fill_blanks']);
+      const qs = await adminJson<{ type: string; options: { id: string; text?: string }[] | null }[]>('/api/v1/admin/questions').catch(() => []);
+      qs.filter((q) => AUDIO_TYPES.has(q.type)).forEach((q) =>
+        (q.options ?? []).forEach((o) => {
+          const t = o.text?.trim();
+          if (!t || o.id === '__template__' || t.includes('،') || t.includes(',') || /\s/.test(t)) return;
+          if (t.replace(/[ً-ْـ]/g, '').length > 1) labels.add(t);
+        })
+      );
       setWords(Array.from(labels).sort());
       setLoadingWords(false);
     })();
