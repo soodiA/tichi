@@ -106,8 +106,21 @@ function applyDemoLimit(units: Unit[]): Unit[] {
 // the next report can confirm/rule out this cause immediately instead of guessing.
 export let lastLoadWasFromCache = false;
 
+// The curriculum payload is ~1.5 MB; Home, every lesson and the editors each asked for it again. Share one
+// in-flight/recent result for a short time (a failed or cache-fallback load is not remembered, so it retries).
+const CURRICULUM_TTL_MS = 60_000;
+let curriculumMemo: { at: number; p: Promise<Unit[]> } | null = null;
+
 export async function loadCurriculum(): Promise<Unit[]> {
-  return applyDemoLimit(await loadCurriculumUnfiltered());
+  if (curriculumMemo && Date.now() - curriculumMemo.at < CURRICULUM_TTL_MS) {
+    return applyDemoLimit(await curriculumMemo.p);
+  }
+  const p = loadCurriculumUnfiltered();
+  const entry = { at: Date.now(), p };
+  curriculumMemo = entry;
+  p.then(() => { if (lastLoadWasFromCache && curriculumMemo === entry) curriculumMemo = null; })
+   .catch(() => { if (curriculumMemo === entry) curriculumMemo = null; });
+  return applyDemoLimit(await p);
 }
 
 async function loadCurriculumUnfiltered(): Promise<Unit[]> {

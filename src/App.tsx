@@ -12,16 +12,18 @@ import LessonFailed from './pages/LessonFailed';
 import Profile from './pages/Profile';
 import Friends from './pages/Friends';
 import Leaderboard from './pages/Leaderboard';
-import PathEditor from './pages/PathEditor';
-import AudioRecorder from './pages/AudioRecorder';
-import QuestionEditor from './pages/QuestionEditor';
-import RecordCombos from './pages/RecordCombos';
-import RecordQuestionAudio from './pages/RecordQuestionAudio';
-import WordAudioRecorder from './pages/WordAudioRecorder';
-import IntroAudioRecorder from './pages/IntroAudioRecorder';
-import Admin from './pages/Admin';
 import { useStore } from './store/useStore';
 import { syncProfileToCloud } from './lib/sync';
+
+// Admin/editor/recorder pages are only for the owners; load them on demand so kids don't download them.
+const PathEditor = React.lazy(() => import('./pages/PathEditor'));
+const AudioRecorder = React.lazy(() => import('./pages/AudioRecorder'));
+const QuestionEditor = React.lazy(() => import('./pages/QuestionEditor'));
+const RecordCombos = React.lazy(() => import('./pages/RecordCombos'));
+const RecordQuestionAudio = React.lazy(() => import('./pages/RecordQuestionAudio'));
+const WordAudioRecorder = React.lazy(() => import('./pages/WordAudioRecorder'));
+const IntroAudioRecorder = React.lazy(() => import('./pages/IntroAudioRecorder'));
+const Admin = React.lazy(() => import('./pages/Admin'));
 
 const NAV_ROUTES = ['/home', '/profile', '/friends', '/leaderboard'];
 
@@ -128,6 +130,7 @@ const App: React.FC = () => {
   return (
     <div className={`flex flex-col min-h-full relative ${isAdminRoute ? '' : 'max-w-md mx-auto'}`}>
       <AnimatePresence mode="wait">
+        <React.Suspense fallback={null}>
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<Splash />} />
           <Route path="/onboarding" element={<Onboarding />} />
@@ -148,6 +151,7 @@ const App: React.FC = () => {
           <Route path="/word-audio-recorder" element={<WordAudioRecorder />} />
           <Route path="/intro-audio-recorder" element={<IntroAudioRecorder />} />
         </Routes>
+        </React.Suspense>
       </AnimatePresence>
       <BottomNav />
     </div>
