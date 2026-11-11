@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { adminJson } from '../lib/api';
+import { setQuestionReportStatus } from '../lib/reports';
 import type { QuestionType, Option } from '../types';
 import { TYPE_LABELS, ALL_TYPES, UNSUPPORTED_TYPES, QUESTION_TYPE_DEFAULT_TEXT } from '../lib/questionTypes';
 import { QUESTION_TYPE_PROMPT } from '../lib/questionTypeAudio';
@@ -106,6 +108,10 @@ type ViewMode = 'tree' | 'flat';
 
 const QuestionEditor: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('tree');
+  // Opened from an admin error report: ?q=<question id>&node=<node id>&report=<report id>
+  const [params] = useSearchParams();
+  const reportId = params.get('report');
+  const [reportDone, setReportDone] = useState<boolean | null>(null);
   const [nodes, setNodes] = useState<NodeRow[]>([]);
   const [nodeFilter, setNodeFilter] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -170,6 +176,40 @@ const QuestionEditor: React.FC = () => {
   const nodeLabel = (nodeId: string) => {
     const n = nodes.find(x => x.id === nodeId);
     return n ? `${n.unit_letter} · ${n.type} #${n.ord}` : nodeId;
+  };
+
+  // One-shot: jump straight to the reported question's edit form.
+  const openedFromReport = React.useRef(false);
+  useEffect(() => {
+    const qid = params.get('q');
+    if (!qid || nodes.length === 0 || openedFromReport.current) return;
+    openedFromReport.current = true;
+    (async () => {
+      let nodeId = params.get('node');
+      let rows: QuestionRow[] = [];
+      if (nodeId) {
+        rows = await adminJson<QuestionRow[]>(`/api/v1/admin/questions?node_id=${encodeURIComponent(nodeId)}`).catch(() => []);
+      }
+      let row = rows.find(r => r.id === qid);
+      if (!row) {
+        const all = await adminJson<QuestionRow[]>('/api/v1/admin/questions').catch(() => []);
+        row = all.find(r => r.id === qid);
+        if (row) {
+          nodeId = row.node_id;
+          rows = all.filter(r => r.node_id === nodeId);
+        }
+      }
+      if (!row || !nodeId) return;
+      setSelectedNodeId(nodeId);
+      setQuestions(rows.slice().sort((a, b) => a.ord - b.ord));
+      startEdit(row);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes]);
+
+  const markReportResolved = async () => {
+    if (!reportId) return;
+    setReportDone(await setQuestionReportStatus('', reportId, 'resolved'));
   };
 
   const selectNode = (nodeId: string) => {
@@ -297,6 +337,16 @@ const QuestionEditor: React.FC = () => {
 
   return (
     <div dir="rtl" className="min-h-screen bg-violet-50 flex flex-col items-center p-4 md:p-8 gap-4 pb-16">
+      {reportId && (
+        <div className="w-full bg-amber-50 border border-amber-300 rounded-2xl p-3 flex flex-wrap items-center gap-3">
+          <p className="text-sm text-amber-800 font-bold">این سوال از یک گزارش خطا باز شده. بعد از اصلاح و ذخیره، رسیدگی شد رو بزن.</p>
+          <button onClick={markReportResolved} disabled={reportDone === true}
+            className="mr-auto text-sm font-bold text-emerald-700 bg-white border border-emerald-300 rounded-xl px-3 py-2 disabled:opacity-60">
+            {reportDone === true ? '✓ رسیدگی شد' : 'رسیدگی شد ✓'}
+          </button>
+          {reportDone === false && <p className="text-sm text-red-500 basis-full">ثبت نشد، دوباره امتحان کن.</p>}
+        </div>
+      )}
       <div className="w-full flex items-center justify-between">
         <h1 className="text-xl md:text-2xl font-bold text-violet-800">ورود و ویرایش سوال‌ها</h1>
 

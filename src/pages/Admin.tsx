@@ -138,7 +138,7 @@ const Admin: React.FC = () => {
                   <p className="text-xs font-bold text-gray-400">توضیح کاربر</p>
                   <p className="text-gray-700 mb-3 whitespace-pre-wrap">{r.description || '(بدون توضیح)'}</p>
                   <div className="flex gap-3 items-center">
-                    <Link to="/question-editor" className="text-sm font-bold text-violet-600">ویرایش سوال ←</Link>
+                    <Link to={`/question-editor?q=${encodeURIComponent(r.question_id)}${r.node_id ? `&node=${encodeURIComponent(r.node_id)}` : ''}&report=${encodeURIComponent(r.id)}`} className="text-sm font-bold text-violet-600">ویرایش سوال ←</Link>
                     <button onClick={() => toggle(r)} className="text-sm font-bold text-emerald-600 mr-auto">
                       {r.status === 'open' ? '✓ رسیدگی شد' : 'باز کردن دوباره'}
                     </button>
