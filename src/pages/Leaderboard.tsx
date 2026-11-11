@@ -68,9 +68,21 @@ const Leaderboard: React.FC = () => {
       total_score: me.totalScore,
     };
     const list = [...base.filter((p) => p.username.toLowerCase() !== me.username.toLowerCase()), mine];
-    const key = metric === 'score' ? scoreOf : streakOf;
-    return list.sort((a, b) => key(b) - key(a) || scoreOf(b) - scoreOf(a));
+    // Primary metric first; if equal, the other metric decides.
+    const [first, second] = metric === 'score' ? [scoreOf, streakOf] : [streakOf, scoreOf];
+    return list.sort((a, b) => first(b) - first(a) || second(b) - second(a));
   }, [scope, metric, friends, everyone, me]);
+
+  // Competition ranking: people equal on BOTH metrics share a rank (1, 2, 2, 4).
+  const ranks = useMemo(() => {
+    const [first, second] = metric === 'score' ? [scoreOf, streakOf] : [streakOf, scoreOf];
+    const out: number[] = [];
+    rows.forEach((r, i) => {
+      const prev = rows[i - 1];
+      out.push(prev && first(prev) === first(r) && second(prev) === second(r) ? out[i - 1] : i + 1);
+    });
+    return out;
+  }, [rows, metric]);
 
   // Open on the user's own position (CONTEXT_ROWS above and below); the rest of the list stays reachable by scrolling.
   // Near the top there is nothing above to skip, so the page stays at the top with the header visible.
@@ -83,7 +95,8 @@ const Leaderboard: React.FC = () => {
   }, [loading, scope, metric]);
 
   if (!me) return null;
-  const myRank = rows.findIndex((r) => r.id === 'me') + 1;
+  const myIdxForRank = rows.findIndex((r) => r.id === 'me');
+  const myRank = myIdxForRank >= 0 ? ranks[myIdxForRank] : 0;
   const value = (p: PublicProfile) => (metric === 'score' ? scoreOf(p) : streakOf(p)).toLocaleString('fa-IR');
 
   return (
@@ -142,7 +155,7 @@ const Leaderboard: React.FC = () => {
                 className={`card flex items-center gap-3 ${isMe ? 'ring-2 ring-violet-500' : ''}`}
               >
                 <div className="w-9 text-center text-xl font-extrabold text-gray-500 flex-shrink-0">
-                  {i < 3 ? MEDALS[i] : (i + 1).toLocaleString('fa-IR')}
+                  {ranks[i] <= 3 ? MEDALS[ranks[i] - 1] : ranks[i].toLocaleString('fa-IR')}
                 </div>
                 <Avatar url={p.avatar_url} />
                 <div className="flex-1 min-w-0">
