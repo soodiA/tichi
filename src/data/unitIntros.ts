@@ -471,9 +471,10 @@ export const UNIT_INTROS: Record<string, UnitIntroData> = {
       { text: 'ه',   label: 'آخر تنها',    color: '#E11D48' },
     ],
     examples: [
-      { emoji: '🌬️', word: 'هوا',     highlight: 'ه', pos: 'اول' },
-      { emoji: '🍉',  word: 'هندوانه', highlight: 'ه', pos: 'اول' },
-      { emoji: '🌙',  word: 'ماه',     highlight: 'ه', pos: 'آخر' },
+      { emoji: '🌬️', word: 'هوا',  highlight: 'ه', pos: 'اول' },
+      { emoji: '🐋',  word: 'نهنگ', highlight: 'ه', pos: 'وسط' },
+      { emoji: '🏠',  word: 'خانه', highlight: 'ه', pos: 'آخر' },
+      { emoji: '🌙',  word: 'ماه',  highlight: 'ه', pos: 'آخر' },
     ],
   },
 
@@ -576,8 +577,9 @@ export const UNIT_INTROS: Record<string, UnitIntroData> = {
     ],
     examples: [
       { emoji: '👰', word: 'عروس', highlight: 'ع', pos: 'اول' },
-      { emoji: '🚩', word: 'علم',  highlight: 'ع', pos: 'اول' },
+      { emoji: '🧑‍🏫', word: 'معلم', highlight: 'ع', pos: 'وسط' },
       { emoji: '➕', word: 'جمع',  highlight: 'ع', pos: 'آخر' },
+      { emoji: '🏁', word: 'شروع', highlight: 'ع', pos: 'آخر' },
     ],
   },
 
@@ -657,9 +659,10 @@ export const UNIT_INTROS: Record<string, UnitIntroData> = {
       { text: 'غ',   label: 'آخر تنها',  color: '#E11D48' },
     ],
     examples: [
-      { emoji: '🍽️', word: 'غذا', highlight: 'غ', pos: 'اول' },
-      { emoji: '👹', word: 'غول', highlight: 'غ', pos: 'اول' },
-      { emoji: '🌳', word: 'باغ', highlight: 'غ', pos: 'آخر' },
+      { emoji: '🍽️', word: 'غذا',   highlight: 'غ', pos: 'اول' },
+      { emoji: '🧠', word: 'مغز',   highlight: 'غ', pos: 'وسط' },
+      { emoji: '📢', word: 'تبلیغ', highlight: 'غ', pos: 'آخر' },
+      { emoji: '🌳', word: 'باغ',   highlight: 'غ', pos: 'آخر' },
     ],
   },
 

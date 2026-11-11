@@ -4,6 +4,28 @@ import type { Question } from '../../types';
 const SIZE = 300;
 const PEN_WIDTH = 5;      // thin pen line, not a fat brush
 const HIT_RADIUS = 32;
+// Ink further than this from the letter's path counts as "extra drawing". If too much of the ink is extra
+// (a doodle beside the letter), finishing the strokes does NOT pass the question — the canvas is reset instead.
+const STRAY_RADIUS = 48;
+const MAX_STRAY_RATIO = 0.2;
+
+function distToSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
+  const vx = bx - ax, vy = by - ay;
+  const len2 = vx * vx + vy * vy;
+  const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * vx + (py - ay) * vy) / len2));
+  return Math.hypot(px - (ax + t * vx), py - (ay + t * vy));
+}
+
+function distToLetterPath(x: number, y: number, strokes: number[][][]): number {
+  let best = Infinity;
+  for (const st of strokes) {
+    if (st.length === 1) best = Math.min(best, Math.hypot(x - st[0][0], y - st[0][1]));
+    for (let i = 0; i + 1 < st.length; i++) {
+      best = Math.min(best, distToSegment(x, y, st[i][0], st[i][1], st[i + 1][0], st[i + 1][1]));
+    }
+  }
+  return best;
+}
 const PEN_COLOR = '#1e1b4b';
 
 // Paths below are drawn/calibrated by Soodeh via /path-editor (2026-08-28), keyed by the
@@ -357,6 +379,10 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
   // coverage fallback
   const [coverage, setCoverage] = useState(0);
 
+  // total ink length vs. ink length far from the letter's path (see STRAY_RADIUS)
+  const inkRef = useRef({ total: 0, stray: 0 });
+  const [rejected, setRejected] = useState(false);
+
   const fontSize = Math.round(SIZE * 0.78);
   const cy = Math.round(SIZE * 0.62);
   // Wrap with ZWNJ on both sides to force isolated (non-joining) Arabic glyph form
@@ -419,6 +445,22 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
     setTimeout(() => onAnswer(true), 700);
   }, [onAnswer]);
 
+  // Too much extra ink beside the letter: wipe the canvas and restart the strokes, with a hint.
+  const rejectDrawing = useCallback(() => {
+    paintRef.current?.getContext('2d')!.clearRect(0, 0, SIZE, SIZE);
+    inkRef.current = { total: 0, stray: 0 };
+    setCoverage(0);
+    currentStrokeRef.current = 0;
+    setCurrentStroke(0);
+    nextWptRef.current = 0;
+    setNextWpt(0);
+    strokeDoneRef.current = false;
+    setStrokeDone(false);
+    setRejected(true);
+    setTimeout(() => setRejected(false), 2500);
+    render();
+  }, [render]);
+
   const drawAt = useCallback((x: number, y: number) => {
     if (doneRef.current) return;
     const paint = paintRef.current;
@@ -432,6 +474,11 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
     pCtx.lineJoin = 'round';
     pCtx.beginPath();
     const last = lastPosRef.current;
+    if (allStrokes) {
+      const segLen = last ? Math.hypot(x - last.x, y - last.y) : 1;
+      inkRef.current.total += segLen;
+      if (distToLetterPath(x, y, allStrokes) > STRAY_RADIUS) inkRef.current.stray += segLen;
+    }
     if (last) {
       pCtx.moveTo(last.x, last.y);
       pCtx.lineTo(x, y);
@@ -468,7 +515,13 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
             setStrokeDone(true);
             // If last stroke, finish; otherwise wait for finger lift
             if (currentStrokeRef.current + 1 >= allStrokes.length) {
-              complete();
+              const { total, stray } = inkRef.current;
+              if (total > 0 && stray / total > MAX_STRAY_RATIO) {
+                // Letter strokes were hit, but there is too much extra drawing: not an accepted answer.
+                rejectDrawing();
+              } else {
+                complete();
+              }
             }
           }
         }
@@ -477,7 +530,7 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
       // Coverage mode — just track that user has drawn something (no auto-complete)
       setCoverage((prev) => Math.min(prev + 5, 99));
     }
-  }, [render, complete, allStrokes]);
+  }, [render, complete, rejectDrawing, allStrokes]);
 
   // On finger/mouse lift: if current stroke just finished, advance to next stroke
   const handleDrawEnd = useCallback(() => {
@@ -502,6 +555,8 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
     const paint = paintRef.current;
     if (!paint) return;
     paint.getContext('2d')!.clearRect(0, 0, SIZE, SIZE);
+    inkRef.current = { total: 0, stray: 0 };
+    setRejected(false);
     setCoverage(0);
     setGuideVisible(true);
     currentStrokeRef.current = 0;
@@ -636,6 +691,10 @@ const Q6_Handwriting: React.FC<Props> = ({ question, onAnswer }) => {
           </svg>
         )}
       </div>
+
+      {rejected && (
+        <p className="text-rose-600 font-bold text-sm">فقط خود حرف رو بنویس، بدون نقاشی اضافه ✍️ دوباره امتحان کن</p>
+      )}
 
       {/* Lift-finger prompt between strokes */}
       {strokeDone && !isLastStroke && !done && (
