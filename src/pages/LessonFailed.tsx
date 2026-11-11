@@ -1,18 +1,29 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import Mascot from '../components/ui/Mascot';
+import { syncProfileToCloud } from '../lib/sync';
 
 interface LocationState { nodeId?: string; wrong?: number; accuracy?: number; }
 
-// Shown when a lesson had too many wrong answers. Nothing is saved: no stars, no coins, no streak, and
-// the next lesson stays locked until this one is passed.
+// Shown when a lesson had too many wrong answers. No stars, no coins, no completion (the next lesson stays
+// locked until this one is passed) — but the daily streak still counts, since the child came and tried.
 const LessonFailed: React.FC = () => {
   const navigate = useNavigate();
   const state = (useLocation().state as LocationState) ?? {};
   const currentUser = useStore((s) => s.currentUser);
   const nodeId = state.nodeId;
+  const incrementStreak = useStore((s) => s.incrementStreak);
+  const streakedRef = useRef(false);
+
+  useEffect(() => {
+    if (streakedRef.current || !currentUser) return;
+    streakedRef.current = true;
+    incrementStreak();
+    const streaked = useStore.getState().currentUser ?? currentUser;
+    syncProfileToCloud(streaked).catch((e) => console.error('[sync] lesson-failed profile sync failed', e));
+  }, []);
 
   return (
     <div dir="rtl" className="min-h-full flex flex-col items-center justify-center gap-6 px-6 py-10 bg-gradient-to-b from-sky-400 via-blue-400 to-indigo-400">
