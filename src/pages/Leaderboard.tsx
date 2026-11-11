@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { getMyFriendIds, getPublicProfiles, searchProfilesByUsername, type PublicProfile } from '../lib/sync';
@@ -7,6 +7,8 @@ type Scope = 'friends' | 'all';
 type Metric = 'score' | 'streak';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
+// On open, the list is scrolled so the user sits in the middle with about this many rows visible above and below.
+const CONTEXT_ROWS = 5;
 
 const scoreOf = (p: PublicProfile) => p.total_score ?? p.diamonds ?? 0;
 const streakOf = (p: PublicProfile) => p.streak_days ?? 0;
@@ -31,6 +33,7 @@ const Leaderboard: React.FC = () => {
   const [everyone, setEveryone] = useState<PublicProfile[]>([]);
   const [friends, setFriends] = useState<PublicProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const myRowRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!me) return;
@@ -68,6 +71,16 @@ const Leaderboard: React.FC = () => {
     const key = metric === 'score' ? scoreOf : streakOf;
     return list.sort((a, b) => key(b) - key(a) || scoreOf(b) - scoreOf(a));
   }, [scope, metric, friends, everyone, me]);
+
+  // Open on the user's own position (CONTEXT_ROWS above and below); the rest of the list stays reachable by scrolling.
+  // Near the top there is nothing above to skip, so the page stays at the top with the header visible.
+  useEffect(() => {
+    if (loading) return;
+    const myIdx = rows.findIndex((r) => r.id === 'me');
+    if (myIdx <= CONTEXT_ROWS) return;
+    const t = requestAnimationFrame(() => myRowRef.current?.scrollIntoView({ block: 'center' }));
+    return () => cancelAnimationFrame(t);
+  }, [loading, scope, metric]);
 
   if (!me) return null;
   const myRank = rows.findIndex((r) => r.id === 'me') + 1;
@@ -122,6 +135,7 @@ const Leaderboard: React.FC = () => {
             return (
               <motion.div
                 key={p.id}
+                ref={isMe ? myRowRef : undefined}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(i, 10) * 0.04 }}

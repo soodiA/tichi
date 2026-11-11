@@ -447,8 +447,9 @@ export const UNIT_INTROS: Record<string, UnitIntroData> = {
   },
 
   // ── 26 ─ ـُ استثنا  (blue) ────────────────────────────────────────────────
-  'ـُ استثنا': {
-    letter: 'و', name: 'اُ استثنا',
+  // Key must equal the curriculum unit's `letter` (tatweel + damma) or Lesson.tsx finds no intro to show.
+  'ـُ': {
+    letter: 'ـُ', name: 'اُ استثنا',
     description: 'گاهی «و» صدای «اُ» میده بدون علامت — مثل خورشید، نوک، دو',
     ...C.blue,
     examples: [
