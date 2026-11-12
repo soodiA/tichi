@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, useLocation, Link } from 'react-router-dom';
+import { Routes, Route, useLocation, Link, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import Splash from './pages/Splash';
@@ -14,6 +14,7 @@ import Friends from './pages/Friends';
 import Leaderboard from './pages/Leaderboard';
 import { useStore } from './store/useStore';
 import { syncProfileToCloud } from './lib/sync';
+import { LEADERBOARD_ENABLED } from './lib/features';
 
 // Admin/editor/recorder pages are only for the owners; load them on demand so kids don't download them.
 const PathEditor = React.lazy(() => import('./pages/PathEditor'));
@@ -25,7 +26,7 @@ const WordAudioRecorder = React.lazy(() => import('./pages/WordAudioRecorder'));
 const IntroAudioRecorder = React.lazy(() => import('./pages/IntroAudioRecorder'));
 const Admin = React.lazy(() => import('./pages/Admin'));
 
-const NAV_ROUTES = ['/home', '/profile', '/friends', '/leaderboard'];
+const NAV_ROUTES = ['/home', '/profile', '/friends', ...(LEADERBOARD_ENABLED ? ['/leaderboard'] : [])];
 
 interface NavItem {
   path: string;
@@ -85,7 +86,7 @@ const BottomNav: React.FC = () => {
                  flex justify-around items-center py-2 px-2"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)' }}
     >
-      {navItems.map((item) => {
+      {navItems.filter((item) => LEADERBOARD_ENABLED || item.path !== '/leaderboard').map((item) => {
         const active = location.pathname === item.path;
         return (
           <Link
@@ -141,7 +142,7 @@ const App: React.FC = () => {
           <Route path="/lesson-failed" element={<LessonFailed />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/friends" element={<Friends />} />
-          <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/leaderboard" element={LEADERBOARD_ENABLED ? <Leaderboard /> : <Navigate to="/home" replace />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/path-editor" element={<PathEditor />} />
           <Route path="/audio-recorder" element={<AudioRecorder />} />
