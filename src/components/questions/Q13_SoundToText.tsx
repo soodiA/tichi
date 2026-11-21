@@ -24,10 +24,18 @@ const Q13_SoundToText: React.FC<Props> = ({ question, onAnswer, disabled }) => {
     onAnswer(correct);
   };
 
-  // mediaLabel is the hidden letter/combo whose sound plays (never rendered). Older
-  // questions without one keep using their recorded audio URL.
-  const label = question.mediaLabel?.trim();
-  const audioUrl = label ? question.mediaAudioUrl : (question.questionAudioUrl ?? question.mediaAudioUrl);
+  // mediaLabel is the hidden letter/combo whose sound plays (never rendered). Rows without
+  // one (e.g. questions made before the field existed) only carry the shared prompt
+  // recording in question_audio_url, so the big button read the QUESTION instead of the
+  // combination. For those, the correct option's text is the combination to speak.
+  // A per-row recording of a word/letter/combo (not the shared prompt) is still honoured.
+  const ownClip = question.questionAudioUrl && /\/audio\/(words|letters|combos|intro)\//.test(question.questionAudioUrl)
+    ? question.questionAudioUrl
+    : undefined;
+  const correctId = Array.isArray(question.correctAnswer) ? question.correctAnswer[0] : question.correctAnswer;
+  const correctText = question.options.find((o) => o.id === correctId)?.text?.trim();
+  const label = question.mediaLabel?.trim() || (ownClip ? undefined : correctText);
+  const audioUrl = label ? question.mediaAudioUrl : (ownClip ?? question.mediaAudioUrl);
 
   return (
     <div className="flex flex-col items-center gap-6">
