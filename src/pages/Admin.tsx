@@ -68,22 +68,26 @@ const Admin: React.FC = () => {
       <div className="max-w-5xl mx-auto">
         <h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 mb-6">پنل مدیریت تیچی</h1>
 
-        <h2 className="text-lg font-bold text-violet-700 mb-3">ابزارها</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-8">
-          {TOOLS.map((t) => (
-            <Link
-              key={t.path}
-              to={t.path}
-              className="bg-white rounded-2xl border border-gray-200 p-4 flex items-center gap-3 hover:border-violet-400 transition-colors"
-            >
-              <span className="text-3xl">{t.icon}</span>
-              <span>
-                <span className="block font-bold text-gray-800">{t.title}</span>
-                <span className="block text-xs text-gray-500">{t.desc}</span>
-              </span>
-            </Link>
-          ))}
-        </div>
+        {authed && (
+          <>
+          <h2 className="text-lg font-bold text-violet-700 mb-3">ابزارها</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-8">
+            {TOOLS.map((t) => (
+              <Link
+                key={t.path}
+                to={t.path}
+                className="bg-white rounded-2xl border border-gray-200 p-4 flex items-center gap-3 hover:border-violet-400 transition-colors"
+              >
+                <span className="text-3xl">{t.icon}</span>
+                <span>
+                  <span className="block font-bold text-gray-800">{t.title}</span>
+                  <span className="block text-xs text-gray-500">{t.desc}</span>
+                </span>
+              </Link>
+            ))}
+          </div>
+          </>
+        )}
 
         <div className="flex items-center gap-3 mb-3">
           <h2 className="text-lg font-bold text-violet-700">
