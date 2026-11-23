@@ -56,10 +56,13 @@ const QuestionWrapper: React.FC<QuestionWrapperProps> = ({ question, onAnswer, d
   const displayText = typePrompt
     ?? (audioPictureTarget ? AUDIO_PICTURE_GENERIC_TEXT[audioPictureTarget.position] : question.questionText);
   // fill_blanks per-row question_audio_url can leak the answer (it may speak the full
-  // word), so never play it for that type — only the safe generic TTS button remains.
+  // word, e.g. the per-word recordings under /audio/words/). Play it ONLY when it is the
+  // shared per-type prompt recorded in /audio-recorder (stored under /audio/types/, the
+  // same file for every question of the type); otherwise only the generic TTS button remains.
   // Other typePrompt types (e.g. color_letter) use a shared, non-leaky recorded prompt
   // and keep playing question.questionAudioUrl as before.
-  const audioUrl = question.type === 'fill_blanks' ? undefined : question.questionAudioUrl;
+  const isSharedTypeAudio = !!question.questionAudioUrl && question.questionAudioUrl.includes('/audio/types/');
+  const audioUrl = question.type === 'fill_blanks' && !isSharedTypeAudio ? undefined : question.questionAudioUrl;
 
   return (
     <div className="flex flex-col gap-4 h-full">
