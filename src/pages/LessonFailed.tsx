@@ -50,7 +50,7 @@ const LessonFailed: React.FC = () => {
           </button>
         )}
         <button
-          onClick={() => navigate('/home', { state: nodeId ? { scrollToNode: nodeId } : undefined })}
+          onClick={() => navigate('/home', { replace: true, state: nodeId ? { scrollToNode: nodeId } : undefined })}
           className="w-full py-3 rounded-3xl bg-white/25 text-white font-bold text-lg border border-white/40"
         >
           برگشت به مسیر

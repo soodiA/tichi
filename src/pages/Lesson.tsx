@@ -127,7 +127,7 @@ const Lesson: React.FC = () => {
       const wrong = Object.values(answersRef.current).filter((ok) => !ok).length;
 
       // Progress is saved by the result page, and only for a passed lesson.
-      navigate(lessonPassed(wrong) ? '/lesson-complete' : '/lesson-failed', { state: { accuracy, nodeId: node.id, wrong } });
+      navigate(lessonPassed(wrong) ? '/lesson-complete' : '/lesson-failed', { replace: true, state: { accuracy, nodeId: node.id, wrong } });
     } else {
       setCurrentIndex(nextIndex);
     }

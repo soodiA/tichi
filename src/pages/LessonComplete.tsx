@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useMemo } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { db } from '../db/db';
@@ -93,7 +93,7 @@ const Blob: React.FC<{ x: string; y: string; size: number; delay: number }> = ({
 );
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-const LessonComplete: React.FC = () => {
+const LessonCompleteInner: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const state = (location.state as LocationState) ?? {};
@@ -243,7 +243,7 @@ const LessonComplete: React.FC = () => {
           transition={{ opacity: { delay: 0.88 }, y: { delay: 0.88 }, boxShadow: { duration: 2, repeat: Infinity, delay: 1.2 } }}
           whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.96 }}
-          onClick={() => navigate('/home', { state: { scrollToNode: nodeId } })}
+          onClick={() => navigate('/home', { replace: true, state: { scrollToNode: nodeId } })}
           className="w-full max-w-sm py-4 rounded-3xl bg-white font-extrabold text-xl shadow-2xl transition-transform"
           style={{ color: '#7C3AED' }}
         >
@@ -252,6 +252,14 @@ const LessonComplete: React.FC = () => {
       </div>
     </div>
   );
+};
+
+// Reached without a lesson result (stale history entry / back button): nothing to celebrate or save.
+const LessonComplete: React.FC = () => {
+  const location = useLocation();
+  const hasResult = !!(location.state as LocationState | null)?.nodeId;
+  if (!hasResult) return <Navigate to="/home" replace />;
+  return <LessonCompleteInner />;
 };
 
 export default LessonComplete;
