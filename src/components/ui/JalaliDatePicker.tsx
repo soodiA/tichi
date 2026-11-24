@@ -33,7 +33,7 @@ const JalaliDatePicker: React.FC<Props> = ({ value, onChange }) => {
     onChange(`${gy}-${String(gm).padStart(2, '0')}-${String(gd).padStart(2, '0')}`);
   };
 
-  const years = Array.from({ length: 40 }, (_, i) => currentJY - 5 - i);
+  const years = Array.from({ length: 43 }, (_, i) => currentJY - 2 - i);
 
   return (
     <div className="flex gap-2 w-full" dir="rtl">
