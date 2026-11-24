@@ -7,6 +7,8 @@ interface UnitDividerProps {
   unitNumber: number;
   subtitle?: string;
   onPlayIntro?: () => void;
+  onPlayExtra?: () => void; // optional second lesson button (e.g. section ی: words with ای+ی)
+  extraLabel?: string;
 }
 
 const BookIcon: React.FC<{ color: string }> = ({ color }) => (
@@ -22,7 +24,7 @@ const BookIcon: React.FC<{ color: string }> = ({ color }) => (
   </svg>
 );
 
-const UnitDivider: React.FC<UnitDividerProps> = ({ letter, color, unitNumber, subtitle, onPlayIntro }) => {
+const UnitDivider: React.FC<UnitDividerProps> = ({ letter, color, unitNumber, subtitle, onPlayIntro, onPlayExtra, extraLabel }) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -58,7 +60,18 @@ const UnitDivider: React.FC<UnitDividerProps> = ({ letter, color, unitNumber, su
           </span>
         </div>
 
-        {/* Right: intro button */}
+        {/* Right: intro button(s) */}
+        <div className="flex items-center gap-2">
+        {onPlayExtra && (
+          <button
+            onClick={onPlayExtra}
+            aria-label={extraLabel ?? 'آموزش بیشتر'}
+            className="flex flex-col items-center justify-center w-14 h-14 rounded-2xl active:scale-90 transition-transform"
+            style={{ backgroundColor: 'rgba(255,255,255,0.20)' }}
+          >
+            <span className="text-white font-black text-lg leading-none" style={{ fontFamily: 'Vazirmatn, serif' }}>{extraLabel ?? '+'}</span>
+          </button>
+        )}
         <button
           onClick={onPlayIntro}
           disabled={!onPlayIntro}
@@ -81,6 +94,7 @@ const UnitDivider: React.FC<UnitDividerProps> = ({ letter, color, unitNumber, su
             </motion.span>
           )}
         </button>
+        </div>
       </div>
     </motion.div>
   );

@@ -11,6 +11,7 @@ import DiamondDisplay from '../components/ui/DiamondDisplay';
 import UnitIntroGeneric from '../components/questions/UnitIntroGeneric';
 import PageBg from '../components/ui/PageBg';
 import { UNIT_INTROS } from '../data/unitIntros';
+import YeWordsLesson from '../components/questions/YeWordsLesson';
 import type { Unit, NodeProgress } from '../types';
 
 // Soft path colors, cycled by unit position so two neighbouring units never share a color
@@ -27,6 +28,7 @@ const Home: React.FC = () => {
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
   const [introUnit, setIntroUnit] = useState<Unit | null>(null);
+  const [yeWordsOpen, setYeWordsOpen] = useState(false);
   const didScrollRef = useRef(false);
   const restoreStreak = useStore((s) => s.restoreStreak);
   const resetStreak = useStore((s) => s.resetStreak);
@@ -117,6 +119,8 @@ const Home: React.FC = () => {
         />
       )}
 
+      {yeWordsOpen && <YeWordsLesson onClose={() => setYeWordsOpen(false)} />}
+
       {missed > 0 && (
         <StreakRecoveryModal
           streakDays={currentUser.streakDays}
@@ -162,6 +166,8 @@ const Home: React.FC = () => {
                     color={unitColor}
                     unitNumber={unit.order}
                     onPlayIntro={introAvailable ? () => setIntroUnit(unit) : undefined}
+                    onPlayExtra={unit.letter === 'ی' ? () => setYeWordsOpen(true) : undefined}
+                    extraLabel={unit.letter === 'ی' ? 'بیا' : undefined}
                   />
                 </div>
 
