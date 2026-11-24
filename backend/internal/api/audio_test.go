@@ -172,3 +172,17 @@ func TestAudioConcurrentUploadsGetDistinctVersions(t *testing.T) {
 		t.Fatalf("expected 12 distinct versions, got %d: %v", len(seen), seen)
 	}
 }
+
+func TestIntroConfigJSONUploadOnlyForIntrocfg(t *testing.T) {
+	_, h := newTestServer(t)
+	cfg := []byte(`{"6":{"emoji":"","imageUrl":""}}`)
+	if rec := upload(t, h, "folder=introcfg&key=%D8%A7%D9%8E", "application/json", cfg, adminHdr); rec.Code != 201 {
+		t.Fatalf("introcfg json: %d %s", rec.Code, rec.Body)
+	}
+	if rec := upload(t, h, "folder=introcfg&key=a", "audio/webm", cfg, adminHdr); rec.Code != 415 {
+		t.Fatalf("introcfg must only take json, got %d", rec.Code)
+	}
+	if rec := upload(t, h, "folder=words&key=a", "application/json", cfg, adminHdr); rec.Code != 415 {
+		t.Fatalf("json outside introcfg must stay rejected, got %d", rec.Code)
+	}
+}

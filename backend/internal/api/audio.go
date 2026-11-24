@@ -35,6 +35,16 @@ func allowedContentType(ct string) bool {
 	return strings.HasPrefix(ct, "audio/") || strings.HasPrefix(ct, "image/") || ct == "video/webm"
 }
 
+// allowedUpload decides per folder. introcfg holds the per-letter intro scene config (a small JSON
+// document written by the admin intro editor); it is served back as application/json with nosniff,
+// so it can never be interpreted as HTML/JS. Every other folder stays audio/image only.
+func allowedUpload(folder, ct string) bool {
+	if folder == "introcfg" {
+		return strings.ToLower(strings.TrimSpace(strings.SplitN(ct, ";", 2)[0])) == "application/json"
+	}
+	return allowedContentType(ct)
+}
+
 // encodeKey mirrors the frontend's encodeKey: base64url (no padding) of the UTF-8 bytes.
 func encodeKey(key string) string { return base64.RawURLEncoding.EncodeToString([]byte(key)) }
 
@@ -79,7 +89,7 @@ func (s *Server) adminUploadAudio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ct := r.Header.Get("Content-Type")
-	if !allowedContentType(ct) {
+	if !allowedUpload(folder, ct) {
 		httpx.Error(w, http.StatusUnsupportedMediaType, "UNSUPPORTED_TYPE", "only audio/image types are accepted")
 		return
 	}

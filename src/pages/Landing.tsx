@@ -21,27 +21,26 @@ interface Subject {
 
 const SUBJECTS: Subject[] = [
   {
-    key: 'persian', title: 'فارسی اول دبستان', hint: 'الفبا را با تیچی یاد بگیر', emoji: '📖',
+    key: 'persian', title: 'فارسی اول دبستان', hint: 'الفبا را با تیچی یاد بگیر', emoji: 'الف',
     face: 'from-fuchsia-400 to-violet-500', edge: 'shadow-[0_8px_0_0_#6d28d9]',
     action: { kind: 'route', to: '/start' },
   },
   {
-    key: 'math', title: 'ریاضی اول دبستان', hint: 'عددها و شمردن', emoji: '🔢',
+    key: 'math', title: 'ریاضی اول دبستان', hint: 'عددها و شمردن', emoji: '۱۲۳',
     face: 'from-emerald-300 to-teal-400', edge: 'shadow-[0_8px_0_0_#0f766e]',
     action: { kind: 'soon' },
   },
   {
-    key: 'kangaroo', title: 'کانگورو', hint: 'مسابقه‌ی ریاضی و فکر کردن', emoji: '🦘',
+    key: 'kangaroo', title: 'کانگورو', hint: 'مسابقه‌ی ریاضی و فکر کردن', emoji: 'ک',
     face: 'from-amber-300 to-orange-400', edge: 'shadow-[0_8px_0_0_#c2410c]',
     action: { kind: 'soon' },
   },
 ];
 
 const FLOATERS = [
-  { e: '⭐', x: '8%', y: '10%', d: 0 }, { e: '☁️', x: '78%', y: '6%', d: 0.6 },
-  { e: '🌈', x: '84%', y: '34%', d: 1.1 }, { e: '🎈', x: '6%', y: '42%', d: 0.3 },
-  { e: '✨', x: '70%', y: '78%', d: 0.9 }, { e: '🍎', x: '12%', y: '82%', d: 0.5 },
-  { e: '🔤', x: '24%', y: '30%', d: 1.4 },
+  { c: 'bg-yellow-300', s: 22, x: '8%', y: '10%', d: 0 }, { c: 'bg-pink-300', s: 34, x: '80%', y: '7%', d: 0.6 },
+  { c: 'bg-sky-300', s: 26, x: '86%', y: '36%', d: 1.1 }, { c: 'bg-violet-300', s: 18, x: '6%', y: '42%', d: 0.3 },
+  { c: 'bg-emerald-300', s: 30, x: '72%', y: '80%', d: 0.9 }, { c: 'bg-orange-300', s: 24, x: '12%', y: '84%', d: 0.5 },
 ];
 
 const Landing: React.FC = () => {
@@ -68,13 +67,11 @@ const Landing: React.FC = () => {
         <motion.span
           key={i}
           aria-hidden
-          className="absolute text-3xl select-none pointer-events-none opacity-80"
-          style={{ left: f.x, top: f.y }}
-          animate={reduce ? {} : { y: [0, -14, 0], rotate: [0, 8, -8, 0] }}
+          className={`absolute rounded-full opacity-70 pointer-events-none ${f.c}`}
+          style={{ left: f.x, top: f.y, width: f.s, height: f.s }}
+          animate={reduce ? {} : { y: [0, -14, 0], scale: [1, 1.12, 1] }}
           transition={{ duration: 4 + (i % 3), repeat: Infinity, ease: 'easeInOut', delay: f.d }}
-        >
-          {f.e}
-        </motion.span>
+        />
       ))}
 
       <motion.div
@@ -105,7 +102,7 @@ const Landing: React.FC = () => {
                         focus:outline-none focus-visible:ring-4 focus-visible:ring-white`}
             aria-label={s.title}
           >
-            <span className="shrink-0 w-[68px] h-[68px] rounded-full bg-white/90 flex items-center justify-center text-4xl shadow-inner">
+            <span className="shrink-0 w-[68px] h-[68px] rounded-full bg-white/90 flex items-center justify-center text-3xl font-extrabold text-violet-600 shadow-inner" aria-hidden>
               {s.emoji}
             </span>
             <span className="flex-1 min-w-0">
@@ -119,7 +116,7 @@ const Landing: React.FC = () => {
             )}
             {soonKey === s.key && (
               <span role="status" className="absolute inset-x-6 -bottom-9 z-20 bg-white text-violet-700 text-sm font-bold rounded-2xl px-4 py-2 shadow-lg text-center">
-                این بخش به‌زودی باز می‌شود 🎉
+                این بخش به‌زودی باز می‌شود
               </span>
             )}
           </motion.button>
