@@ -41,7 +41,6 @@ const Landing: React.FC = () => {
       <span className="tichi-star s3" aria-hidden="true">✦</span>
       <header className="tichi-header">
         <div className="tichi-brand" aria-label="تیچی">Ti<span>chi</span></div>
-        <div className="tichi-grade">کلاس اول دبستان</div>
       </header>
       <main className="tichi-main">
         <section className="tichi-hero">
