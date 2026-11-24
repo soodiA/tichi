@@ -25,6 +25,7 @@ const RecordQuestionAudio = React.lazy(() => import('./pages/RecordQuestionAudio
 const WordAudioRecorder = React.lazy(() => import('./pages/WordAudioRecorder'));
 const IntroAudioRecorder = React.lazy(() => import('./pages/IntroAudioRecorder'));
 const Admin = React.lazy(() => import('./pages/Admin'));
+const Landing = React.lazy(() => import('./pages/Landing'));
 
 const NAV_ROUTES = ['/home', '/profile', '/friends', ...(LEADERBOARD_ENABLED ? ['/leaderboard'] : [])];
 
@@ -119,7 +120,7 @@ const ADMIN_ROUTES = ['/admin', '/path-editor', '/audio-recorder', '/question-ed
 
 const App: React.FC = () => {
   const location = useLocation();
-  const isAdminRoute = ADMIN_ROUTES.some((r) => location.pathname === r);
+  const isAdminRoute = ADMIN_ROUTES.some((r) => location.pathname === r) || location.pathname === '/';
 
   React.useEffect(() => {
     // Sync the account that is actually signed in (not whichever profile happens to be first in the local DB,
@@ -133,7 +134,8 @@ const App: React.FC = () => {
       <AnimatePresence mode="wait">
         <React.Suspense fallback={null}>
         <Routes location={location} key={location.pathname}>
-          <Route path="/" element={<Splash />} />
+          <Route path="/" element={<Landing />} />
+          <Route path="/start" element={<Splash />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/login" element={<Login />} />
           <Route path="/home" element={<Home />} />
