@@ -28,7 +28,7 @@ const Onboarding: React.FC = () => {
     const errs: { name?: string; username?: string; password?: string } = {};
     if (!name.trim()) errs.name = 'نام الزامی است';
     if (!username.trim()) errs.username = 'نام کاربری الزامی است';
-    else if (!/^[\p{L}\p{N}_.]{2,32}$/u.test(username.trim())) errs.username = 'نام کاربری فقط می‌تواند حرف، عدد، _ و . باشد (بدون فاصله، حداقل ۴ و حداکثر ۳۲ کاراکتر)';
+    else if (!/^[\p{L}\p{N}_.]{4,32}$/u.test(username.trim())) errs.username = 'نام کاربری فقط می‌تواند حرف، عدد، _ و . باشد (بدون فاصله، حداقل ۴ و حداکثر ۳۲ کاراکتر)';
     if (!password || password.length < 4) errs.password = 'رمز عبور باید حداقل ۴ کاراکتر باشه';
     setErrors(errs);
     return Object.keys(errs).length === 0;
