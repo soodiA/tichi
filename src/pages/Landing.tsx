@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import Mascot from '../components/ui/Mascot';
 
-// Public front door of tichikids.ir: pick a subject. Only the Persian app lives in this codebase;
-// the other cards are separate apps (see SUBJECTS).
-const KANGAROO_URL = 'https://soodia.github.io/lumio/';
+// Public front door of tichikids.ir: pick a subject. Only the Persian app lives in this codebase.
+// Math and Kangaroo are "soon" until they are hosted on this domain: the air-gap guard
+// (deploy/check-no-external.sh) rejects links to other hosts. To enable one, switch its action to
+// { kind: 'link', href: '/path-on-this-domain/' }.
 
 interface Subject {
   key: string;
@@ -32,7 +33,7 @@ const SUBJECTS: Subject[] = [
   {
     key: 'kangaroo', title: 'کانگورو', hint: 'مسابقه‌ی ریاضی و فکر کردن', emoji: '🦘',
     face: 'from-amber-300 to-orange-400', edge: 'shadow-[0_8px_0_0_#c2410c]',
-    action: { kind: 'link', href: KANGAROO_URL },
+    action: { kind: 'soon' },
   },
 ];
 
