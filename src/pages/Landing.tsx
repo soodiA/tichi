@@ -21,17 +21,17 @@ interface Subject {
 
 const SUBJECTS: Subject[] = [
   {
-    key: 'persian', title: 'فارسی اول دبستان', hint: 'الفبا را با تیچی یاد بگیر', emoji: 'الف',
+    key: 'persian', title: 'فارسی اول دبستان', hint: 'الفبا را با تیچی یاد بگیر', emoji: '📖',
     face: 'from-fuchsia-400 to-violet-500', edge: 'shadow-[0_8px_0_0_#6d28d9]',
     action: { kind: 'route', to: '/start' },
   },
   {
-    key: 'math', title: 'ریاضی اول دبستان', hint: 'عددها و شمردن', emoji: '۱۲۳',
+    key: 'math', title: 'ریاضی اول دبستان', hint: 'عددها و شمردن', emoji: '🔢',
     face: 'from-emerald-300 to-teal-400', edge: 'shadow-[0_8px_0_0_#0f766e]',
     action: { kind: 'soon' },
   },
   {
-    key: 'kangaroo', title: 'کانگورو', hint: 'مسابقه‌ی ریاضی و فکر کردن', emoji: 'ک',
+    key: 'kangaroo', title: 'کانگورو', hint: 'مسابقه‌ی ریاضی و فکر کردن', emoji: '🦘',
     face: 'from-amber-300 to-orange-400', edge: 'shadow-[0_8px_0_0_#c2410c]',
     action: { kind: 'soon' },
   },
@@ -102,7 +102,7 @@ const Landing: React.FC = () => {
                         focus:outline-none focus-visible:ring-4 focus-visible:ring-white`}
             aria-label={s.title}
           >
-            <span className="shrink-0 w-[68px] h-[68px] rounded-full bg-white/90 flex items-center justify-center text-3xl font-extrabold text-violet-600 shadow-inner" aria-hidden>
+            <span className="shrink-0 w-[68px] h-[68px] rounded-full bg-white/90 flex items-center justify-center text-4xl shadow-inner" aria-hidden>
               {s.emoji}
             </span>
             <span className="flex-1 min-w-0">
