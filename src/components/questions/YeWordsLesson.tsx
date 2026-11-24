@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Mascot from '../ui/Mascot';
 import { getComboClipUrl } from '../../lib/clipAudio';
-import { YE_WORDS } from '../../data/yeWords';
+import { YE_WORDS, YE_RULE } from '../../data/yeWords';
 
 const ACCENT = '#E11D48';
 const BG = '#FFF1F2';
@@ -45,13 +45,19 @@ const YeWordsLesson: React.FC<Props> = ({ onClose }) => {
   const [index, setIndex] = useState(0);
   const [active, setActive] = useState<number | 'word' | null>(null);
   const runId = useRef(0);
-  const item = YE_WORDS[index];
-  const isLast = index === YE_WORDS.length - 1;
+  const isRule = index === 0;
+  const item = YE_WORDS[Math.max(0, index - 1)];
+  const isLast = index === YE_WORDS.length;
 
   // part by part, then the whole word
   const playAll = useCallback(async () => {
     const id = ++runId.current;
     const stale = () => runId.current !== id;
+    if (isRule) {
+      setActive(null);
+      await speak(YE_RULE.replace(/[«»]/g, ''), stale);
+      return;
+    }
     for (let i = 0; i < item.parts.length; i++) {
       if (stale()) return;
       setActive(i);
@@ -61,7 +67,7 @@ const YeWordsLesson: React.FC<Props> = ({ onClose }) => {
     setActive('word');
     await speak(item.word, stale);
     if (!stale()) setActive(null);
-  }, [item]);
+  }, [item, isRule]);
 
   const playOne = async (what: number | 'word') => {
     const id = ++runId.current;
@@ -83,7 +89,7 @@ const YeWordsLesson: React.FC<Props> = ({ onClose }) => {
       <div className="w-full px-6 pt-12 pb-2 flex items-center gap-3 z-10">
         <button onClick={close} aria-label="بستن" className="w-10 h-10 rounded-full bg-white/80 text-gray-500 font-bold text-lg shadow-sm active:scale-90">✕</button>
         <div className="flex-1 flex gap-1.5">
-          {YE_WORDS.map((_, i) => (
+          {[0, ...YE_WORDS.map((_, i) => i + 1)].map((i) => (
             <div key={i} className="flex-1 h-1.5 rounded-full" style={{ backgroundColor: i <= index ? ACCENT : ACCENT + '33' }} />
           ))}
         </div>
@@ -91,7 +97,7 @@ const YeWordsLesson: React.FC<Props> = ({ onClose }) => {
 
       <AnimatePresence mode="wait">
         <motion.div
-          key={item.word}
+          key={isRule ? 'rule' : item.word}
           initial={{ opacity: 0, x: -30 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 30 }}
@@ -99,6 +105,18 @@ const YeWordsLesson: React.FC<Props> = ({ onClose }) => {
           className="flex flex-col items-center gap-5 px-6 flex-1 justify-center w-full max-w-sm pb-6"
         >
           <Mascot size={110} expression="happy" />
+          {isRule ? (
+            <>
+              <div className="bg-white rounded-3xl px-6 py-5 shadow-md text-center w-full">
+                <p className="font-bold text-lg text-gray-800 leading-loose">{YE_RULE}</p>
+              </div>
+              <div className="bg-white rounded-3xl shadow-md px-4 py-4 w-full text-center">
+                <span style={{ fontSize: '2rem', fontFamily: 'Vazirmatn, serif', fontWeight: 900, color: ACCENT }}>بی + یا = بیا</span>
+              </div>
+              <button onClick={playAll} className="px-6 py-3 rounded-2xl bg-white shadow-md font-extrabold text-gray-700 active:scale-95 transition-transform">🔊 دوباره بشنو</button>
+            </>
+          ) : (
+          <>
           <div className="text-5xl -mt-3">{item.emoji}</div>
 
           {/* Equation: part + part = word */}
@@ -129,10 +147,9 @@ const YeWordsLesson: React.FC<Props> = ({ onClose }) => {
           </div>
 
           <div className="bg-white rounded-3xl px-6 py-4 shadow-md text-center w-full">
-            <p className="font-extrabold text-lg text-gray-800">دو تا «ی» کنار هم می‌آیند</p>
-            <p className="text-gray-500 text-sm mt-1.5 font-medium leading-relaxed">
-              آخر «{item.parts[0]}» یک «ی» هست و اول «{item.parts[1]}» هم یک «ی».
-              فقط یکی‌اش را می‌نویسیم ولی هر دو را می‌خوانیم.
+            <p className="text-gray-600 text-sm font-medium leading-relaxed">
+              «ی» آخر «{item.parts[0]}» و «ی» اول «{item.parts[1]}» کنار هم‌اند؛
+              یکی را می‌نویسیم ولی هر دو را می‌خوانیم.
             </p>
           </div>
 
@@ -142,6 +159,8 @@ const YeWordsLesson: React.FC<Props> = ({ onClose }) => {
           >
             🔊 دوباره بشنو
           </button>
+          </>
+          )}
         </motion.div>
       </AnimatePresence>
 

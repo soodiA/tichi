@@ -12,4 +12,10 @@ export const YE_WORDS: YeWord[] = [
   { word: 'سیاه',    parts: ['سی', 'یاه'],       emoji: '⚫' },
   { word: 'بیابان',  parts: ['بی', 'یا', 'بان'], emoji: '🏜️' },
   { word: 'پیاز',    parts: ['پی', 'یاز'],       emoji: '🧅' },
+  { word: 'کیان',    parts: ['کی', 'یان'],       emoji: '👦' },
+  { word: 'خیار',    parts: ['خی', 'یار'],       emoji: '🥒' },
 ];
+
+// Spoken + shown on the opening page, before the examples.
+export const YE_RULE =
+  'وقتی حرف «ی» و حرف «ی» کنار هم قرار می‌گیرند، به طوری که «ی» در آخر بخش اول و «ی» در اول بخش دوم باشد، یکی از آن‌ها را می‌نویسیم ولی هر دو را می‌خوانیم. مثل:';
