@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Mascot from '../ui/Mascot';
 import { getComboClipUrl } from '../../lib/clipAudio';
-import { YE_WORDS, YE_RULE } from '../../data/yeWords';
+import { getLatestUrls } from '../../lib/versionedUpload';
+import { YE_WORDS, YE_RULE, YE_PAGE_COUNT, yeClipKey } from '../../data/yeWords';
 
 const ACCENT = '#E11D48';
 const BG = '#FFF1F2';
@@ -13,11 +14,11 @@ interface Props {
 
 // Plays one piece of text (recorded word/letter clip if there is one, else browser TTS)
 // and resolves when it has finished (or after a safety timeout), so pieces can be chained.
-function speak(text: string, cancelled: () => boolean): Promise<void> {
+function speak(text: string, cancelled: () => boolean, clipUrl?: string): Promise<void> {
   return new Promise((resolve) => {
     (async () => {
       if (cancelled()) return resolve();
-      const url = await getComboClipUrl(text).catch(() => undefined);
+      const url = clipUrl ?? (await getComboClipUrl(text).catch(() => undefined));
       if (cancelled()) return resolve();
       const done = () => resolve();
       if (url) {
@@ -25,7 +26,7 @@ function speak(text: string, cancelled: () => boolean): Promise<void> {
         a.onended = done;
         a.onerror = done;
         a.play().catch(done);
-        setTimeout(done, 8000);
+        setTimeout(done, clipUrl ? 30000 : 8000);
         return;
       }
       if (!window.speechSynthesis) return done();
@@ -45,6 +46,16 @@ const YeWordsLesson: React.FC<Props> = ({ onClose }) => {
   const [index, setIndex] = useState(0);
   const [active, setActive] = useState<number | 'word' | null>(null);
   const runId = useRef(0);
+  // null = still looking up the recorded page narrations; {} = none recorded
+  const [pageClips, setPageClips] = useState<Record<number, string> | null>(null);
+  useEffect(() => {
+    let off = false;
+    const keys = Array.from({ length: YE_PAGE_COUNT }, (_, i) => yeClipKey(i));
+    getLatestUrls('intro', keys)
+      .then((m) => { if (!off) { const o: Record<number, string> = {}; keys.forEach((k, i) => { const u = m.get(k); if (u) o[i] = u; }); setPageClips(o); } })
+      .catch(() => { if (!off) setPageClips({}); });
+    return () => { off = true; };
+  }, []);
   const isRule = index === 0;
   const item = YE_WORDS[Math.max(0, index - 1)];
   const isLast = index === YE_WORDS.length;
@@ -53,6 +64,12 @@ const YeWordsLesson: React.FC<Props> = ({ onClose }) => {
   const playAll = useCallback(async () => {
     const id = ++runId.current;
     const stale = () => runId.current !== id;
+    const narration = pageClips?.[index];
+    if (narration) {
+      setActive(null);
+      await speak('', stale, narration);
+      return;
+    }
     if (isRule) {
       setActive(null);
       await speak(YE_RULE.replace(/[«»]/g, ''), stale);
@@ -67,7 +84,7 @@ const YeWordsLesson: React.FC<Props> = ({ onClose }) => {
     setActive('word');
     await speak(item.word, stale);
     if (!stale()) setActive(null);
-  }, [item, isRule]);
+  }, [item, isRule, index, pageClips]);
 
   const playOne = async (what: number | 'word') => {
     const id = ++runId.current;
@@ -78,6 +95,7 @@ const YeWordsLesson: React.FC<Props> = ({ onClose }) => {
   };
 
   useEffect(() => {
+    if (pageClips === null) return; // wait for the narration lookup so TTS doesn't start first
     const t = setTimeout(playAll, 400);
     return () => { clearTimeout(t); runId.current++; window.speechSynthesis?.cancel(); };
   }, [playAll]);

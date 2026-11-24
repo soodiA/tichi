@@ -24,6 +24,7 @@ const RecordCombos = React.lazy(() => import('./pages/RecordCombos'));
 const RecordQuestionAudio = React.lazy(() => import('./pages/RecordQuestionAudio'));
 const WordAudioRecorder = React.lazy(() => import('./pages/WordAudioRecorder'));
 const IntroAudioRecorder = React.lazy(() => import('./pages/IntroAudioRecorder'));
+const YeLessonRecorder = React.lazy(() => import('./pages/YeLessonRecorder'));
 const Admin = React.lazy(() => import('./pages/Admin'));
 const Landing = React.lazy(() => import('./pages/Landing'));
 
@@ -153,6 +154,7 @@ const App: React.FC = () => {
           <Route path="/record-audio" element={<RecordQuestionAudio />} />
           <Route path="/word-audio-recorder" element={<WordAudioRecorder />} />
           <Route path="/intro-audio-recorder" element={<IntroAudioRecorder />} />
+          <Route path="/ye-lesson-recorder" element={<YeLessonRecorder />} />
         </Routes>
         </React.Suspense>
       </AnimatePresence>

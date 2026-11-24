@@ -19,3 +19,8 @@ export const YE_WORDS: YeWord[] = [
 // Spoken + shown on the opening page, before the examples.
 export const YE_RULE =
   'وقتی حرف «ی» و حرف «ی» کنار هم قرار می‌گیرند، به طوری که «ی» در آخر بخش اول و «ی» در اول بخش دوم باشد، یکی از آن‌ها را می‌نویسیم ولی هر دو را می‌خوانیم. مثل:';
+
+// Narration clips for the lesson pages (recorded in /ye-lesson-recorder, stored in the 'intro' folder).
+// Page 0 is the rule page, pages 1..n are YE_WORDS in order.
+export const yeClipKey = (page: number) => `ye-lesson-${page}`;
+export const YE_PAGE_COUNT = YE_WORDS.length + 1;

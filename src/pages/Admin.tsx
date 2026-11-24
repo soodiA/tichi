@@ -9,6 +9,7 @@ const TOOLS: { path: string; icon: string; title: string; desc: string }[] = [
   { path: '/question-editor', icon: '✏️', title: 'ویرایش سوال‌ها', desc: 'ساخت و ویرایش سوال‌های هر درس' },
   { path: '/record-audio', icon: '🎙️', title: 'ضبط صدای سوال‌ها', desc: 'ضبط صدای متن هر سوال' },
   { path: '/intro-audio-recorder', icon: '🎬', title: 'ضبط صدای اینترو', desc: 'صدای صحنه‌های معرفی هر حرف' },
+  { path: '/ye-lesson-recorder', icon: '🗣️', title: 'ضبط صدای درس «بیا» (ی)', desc: 'صدای صفحه‌های بیا، خیابان، سیاه ...' },
   { path: '/word-audio-recorder', icon: '🔤', title: 'ضبط صدای کلمه‌ها', desc: 'صدای کلمه‌ها و حرف‌ها' },
   { path: '/record-combos', icon: '🔊', title: 'ضبط صدای ترکیب‌ها', desc: 'ترکیب حرف و حرکت' },
   { path: '/audio-recorder', icon: '🎤', title: 'ضبط صدا', desc: 'ضبط‌کننده‌ی عمومی' },
