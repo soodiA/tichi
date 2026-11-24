@@ -67,6 +67,7 @@ const Friends: React.FC = () => {
 
   const [search, setSearch] = useState('');
   const [suggestions, setSuggestions] = useState<Profile[]>([]);
+  const [visibleCount, setVisibleCount] = useState(10);
   const [results, setResults] = useState<Profile[]>([]);
   const [added, setAdded] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -124,7 +125,7 @@ const Friends: React.FC = () => {
       const picked = new Set(fof.map((p) => p.id));
       const random = shuffle(candidates(everyone.map((p) => p.id)).filter((p) => !picked.has(p.id)));
       if (cancelled) return;
-      setSuggestions([...fof, ...random].slice(0, 10));
+      setSuggestions([...fof, ...random]);
       setSuggestLoading(false);
     })();
 
@@ -285,10 +286,18 @@ const Friends: React.FC = () => {
               <p className="text-center text-gray-400 py-6 text-sm">کاربری برای پیشنهاد پیدا نشد</p>
             )}
             <div className="flex flex-col gap-3">
-              {suggestions.map((p, i) => (
-                <ProfileCard key={p.id} profile={p} isAdded={added.has(p.id)} onAdd={handleAdd} delay={i * 0.05} />
+              {suggestions.slice(0, visibleCount).map((p, i) => (
+                <ProfileCard key={p.id} profile={p} isAdded={added.has(p.id)} onAdd={handleAdd} delay={(i % 10) * 0.05} />
               ))}
             </div>
+            {!suggestLoading && suggestions.length > visibleCount && (
+              <button
+                onClick={() => setVisibleCount((n) => n + 10)}
+                className="w-full mt-4 py-3 rounded-2xl bg-violet-100 text-violet-700 font-extrabold active:scale-95 transition-transform"
+              >
+                نمایش بیشتر
+              </button>
+            )}
           </>
         )}
       </div>
