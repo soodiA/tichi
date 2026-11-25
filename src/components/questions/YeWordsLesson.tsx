@@ -103,7 +103,7 @@ const YeWordsLesson: React.FC<Props> = ({ onClose }) => {
   const close = () => { runId.current++; window.speechSynthesis?.cancel(); onClose(); };
 
   return (
-    <div dir="rtl" className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto select-none" style={{ backgroundColor: BG }}>
+    <div dir="rtl" className="fixed inset-0 z-[60] flex flex-col items-center overflow-y-auto select-none" style={{ backgroundColor: BG }}>
       <div className="w-full px-6 pt-12 pb-2 flex items-center gap-3 z-10">
         <button onClick={close} aria-label="بستن" className="w-10 h-10 rounded-full bg-white/80 text-gray-500 font-bold text-lg shadow-sm active:scale-90">✕</button>
         <div className="flex-1 flex gap-1.5">
@@ -182,7 +182,7 @@ const YeWordsLesson: React.FC<Props> = ({ onClose }) => {
         </motion.div>
       </AnimatePresence>
 
-      <div className="w-full max-w-sm px-6 pb-8 flex gap-3">
+      <div className="w-full max-w-sm px-6 flex gap-3" style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}>
         <button
           onClick={() => setIndex((i) => Math.max(0, i - 1))}
           disabled={index === 0}
